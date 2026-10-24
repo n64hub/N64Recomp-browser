@@ -224,11 +224,13 @@ frame.addEventListener('load', () => {
 // A phone's on-screen controller (touch_pad.js, at this page's top) goes into the game's frame from here, so every game
 // played here has it whatever its page was built from, and a change to it needs no page built: the frame is the same
 // origin, so the script runs in the game's own window, whose game reads it as a gamepad. A page that loads it itself
-// (frontend/shell.html) is left alone. A page built before the runtime said when its game starts (Module.gameStarted)
-// gets it shown from the start, over its launcher too, where Hide controls takes it away.
+// (frontend/shell.html, since v0.104.0) shows it once its game starts, past the launcher, and is left alone, as is one
+// that has a controller of its own (v0.103.0's shell, #pad). A page built before the runtime said when its game starts
+// (Module.gameStarted) gets it shown from the start, over its launcher too, where Hide controls takes it away: each
+// page's next build from a newer release does away with that, and no change to the controller needs one.
 frame.addEventListener('load', () => {
   const page = frame.contentWindow, doc = frame.contentDocument;
-  if (!phone.matches || !page.Module || doc.querySelector('script[src="/touch_pad.js"]')) return;
+  if (!phone.matches || !page.Module || doc.querySelector('#pad, script[src="/touch_pad.js"]')) return;
   if (!page.Module.gameStarted) page.Module.gameRunning = true;
   doc.head.append(Object.assign(doc.createElement('script'), { src: '/touch_pad.js' }));
 });
