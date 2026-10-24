@@ -268,7 +268,8 @@ and under it its credit, a link to the game's repo ("Web port") and the
 recomp it is based on (the Recomp cell); the art names the game, so no line does. The header says what the page is
 and whose the recomps are, and a line under the games that it is written with AI, with the link to this repo. It
 shows no frame rates: every game plays smoothly but in Firefox on a laptop's built-in graphics, so only there does
-the header warn (`site.js`); a retest that finds otherwise changes that warning. It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
+the header warn (`site.js`); a retest that finds otherwise changes that warning. Firefox on a phone plays no game, so
+there the header says so in red instead and a tile starts nothing. It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
 are every game's page, so they are one origin; `tools/publish_site.sh` publishes it (its header says how) after
 a change to `site/` merges, and a change to the Games table needs no publish. Its top also serves every game's page
 its on-screen controller on a phone, `site/touch_pad.js` (the header says why there), which it puts into the frame a

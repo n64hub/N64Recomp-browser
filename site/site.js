@@ -154,7 +154,27 @@ function landscape() {
 }
 turn.addEventListener('click', landscape);
 
+// Firefox on a phone or tablet plays no game: its WebGPU fails as the game's page starts, behind that page's notice to
+// turn the phone. So the header says so before a game is picked, more strongly than the built-in graphics warning
+// (below), and a tile only points at it. That is Firefox for Android, or it asking for a desktop site, whose UA then
+// names no Android but whose pointer is still a finger; Firefox on an iPhone is Safari's engine (its UA says FxiOS).
+const firefox = /\bFirefox\//.test(navigator.userAgent);
+const noGames = firefox && (phone.matches || /Android/.test(navigator.userAgent));
+const noGamesNote = document.getElementById('phone-firefox-note');
+noGamesNote.hidden = !noGames;
+document.body.classList.toggle('no-games', noGames);
+function pointAtNoGames() {
+  noGamesNote.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  noGamesNote.classList.remove('flash');
+  void noGamesNote.offsetWidth;  // so the animation starts again
+  noGamesNote.classList.add('flash');
+}
+
 async function openGame(game, push = true) {
+  if (noGames) {
+    pointAtNoGames();
+    return;
+  }
   const folder = sameOriginFolder(game.page);
   if (!folder || !window.crossOriginIsolated) {
     location.assign(game.page);
@@ -248,8 +268,7 @@ function webglRenderer() {
   const info = gl?.getExtension('WEBGL_debug_renderer_info');
   return (info && gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) || '';
 }
-document.getElementById('firefox-note').hidden = !/\bFirefox\//.test(navigator.userAgent)
-  || !builtInGraphics(webglRenderer());
+document.getElementById('firefox-note').hidden = !firefox || noGames || !builtInGraphics(webglRenderer());
 
 async function main() {
   const grid = document.getElementById('grid');
