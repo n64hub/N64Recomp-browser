@@ -64,10 +64,39 @@ playing a page, and docs/findings.md what was measured on desktops and laptops.
   at 1.04 of 2.8 and its Mali-G78 at 403 MHz of 858, and Rush 2049's race fell from 40-49 presents a second to 11-44.
   So every number from a phone has its clock caps and temperature beside it, the runs it compares are interleaved, and
   the phone rests between them with its tab blank, as a player's phone is cool when the game starts and warm after.
+  Neither Power saving (`settings put global low_power 0`, which a Galaxy keeps; `cmd power set-mode` it undoes) nor
+  its absence moved those caps: heat set them, and they stayed while the skin was at 39-43 °C.
+- `?present-stats` on the game's own page prints plume's presents, how long each took on the GPU, the waits for
+  presents in flight and the time spun to a present's slot, and RT64's game frames a second beside the rate the game
+  reports and the frames drawn for them. In the hub the game's frame has its own URL, so a `--preload` script that
+  adds the query to the game frame's (`history.replaceState` before the page's scripts run) turns it on there.
+- A settings file is put in the game's IndexedDB (`/home/web_user /<game>/`, store `FILE_DATA`, the file's path as
+  the key, `{ timestamp, mode, contents }`) by an `eval` step before the tile is touched: a file written through
+  `FS` once the game has booted is read only at its next start.
 - The DevTools trace (Tracing over the browser's socket) of a race showed the GPU process's main thread ~53% and the
   page's ~49%, both with the trace's own cost; a trace slowed the page to 25-28 presents a second.
 - Never scan the wasm heap from a sampler: `page_driver.mjs`'s RDRAM helpers search the whole heap, 13 s of the
   page's thread a call on a phone, so a sample that used them froze the page it was measuring.
+
+## What holds a page back
+
+A page presents short of the display's rate when the GPU falls behind or when the game's own frames do, and on a phone
+it is often the second: each game frame is a run of CPU work, on threads that wait for each other, and a phone's cores
+(capped by heat) are 2-4 times slower than a desktop's. RT64 interpolates to the display, so presents can stay up
+while game frames fall. Telling them apart:
+
+- `?present-stats`'s RT64 line: game frames a second under the rate the game reports is the CPU. plume's line: a
+  present done on the GPU more than a display frame after it, and no time waiting for fewer presents in flight, is the
+  GPU.
+- A `profile` step in play_phone.mjs's steps profiles every thread of the page for a while and prints each one's busy
+  share and top functions; the `.cpuprofile` files open in DevTools' Performance panel for the call paths. Build the
+  page linked with `--profiling-funcs` for this: without it a profile names a wasm function only by its index. The
+  threads a game frame waits on are the ones to cut: the display list thread (RT64's `send_dl`, `State::fullSync`),
+  the game's threads (the recompiled `func_` ones) and the scheduler thread that starts each graphics task.
+- What costs on a phone that a desktop hides: a clock read (`emscripten_get_now`, `clock_gettime`) leaves wasm for
+  JavaScript, and one per texture uploaded took 9.6% of the display list thread; the web build's `memcmp` (musl's)
+  compares a byte at a time, and one over 6 MB a frame took 5 ms; a byte-at-a-time copy (RT64's TMEM loads) is slow
+  where a word at a time vectorizes.
 
 ## What a phone does differently
 
@@ -89,3 +118,15 @@ An Exynos 2100 (Mali-G78), 8 cores, a 60 Hz screen, Chrome 124 then 156, the pag
   frames in): the launcher drew 60, the race 28-50, as on every later visit. So neither the shaders' first build, nor
   the wasm's first compile, nor the first ROM store makes a first race slow.
 - In the race the GPU was 90-96% busy at its capped clock.
+- The race's game frames came at 19-25 a second, where the game reports 30 (or 20 or 60), while RT64 drew about 46
+  frames a second for them and the page presented 40-44: the CPU's work in each game frame held it back. Its
+  profile (hot, CPU capped at 1.04 GHz): the display list thread 52% busy, 30% of that in `RT64::TMEMHasher::hash`
+  (about 900 textures hashed a game frame, few of them the same TMEM twice) and 5% in RT64's TMEM loads; the
+  scheduler thread 10.5% in Rush 2049's hi-res font scan, which runs before each graphics task goes to RT64 while no
+  other game thread runs; the frame loop's thread 10.9% in `memcmp`, Rewind comparing 6 MB of RAM with its copy.
+- The hi-res font scan copying a load into its TMEM only when a rectangle reads it (rush-2049-recomp's
+  `src/hires_font.cpp`): 26.5-27.2 game frames a second against 22.8-24.1 (3 pairs, interleaved, skin 39-40.5 °C,
+  big cores at 1.04 GHz, GPU at 403 MHz); presents 40-43 either way.
+- Presents in flight (plume's `?presents-in-flight=<n>`, default 2, rising to 3 after 30-90 s of play): 3 from the
+  start drew 43.7 a second, 4 drew 40.7 and never waited for one, against 42.4. The game's frame rate set to
+  Original (30) drew 43.3 against 42 at the default 60.
