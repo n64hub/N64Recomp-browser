@@ -166,3 +166,7 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
 - Super Mario 64, Castle Grounds: 59.9.
 - Banjo-Kazooie, its attract demo in Spiral Mountain: 59.7 (55-60), the GPU up to 90% busy at a low clock.
 - Perfect Dark, its intro: 48 (48-51), the GPU 50-75% busy at 130 MHz, so the CPU holds it.
+- Perfect Dark's intro with plume's device thread waiting one execution behind and RT64's TMEM loads by words, against
+  the page from Pages, interleaved (2 pairs, big cores at 1.35-1.56 GHz, skin 33-36 °C): presents 50-52 a second over
+  the intro against 50.6-52.6, and 40.7-40.9 over its last minute against 41.8-42.4, its game at 31.7-32.9. Its
+  cutscenes' own stops (docs/findings.md) come and go with the shots, so the intro doesn't tell a few presents apart.
