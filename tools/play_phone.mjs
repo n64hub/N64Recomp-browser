@@ -4,7 +4,7 @@
 // (docs/phones.md says how to connect a phone and what was measured this way).
 //
 //   node tools/play_phone.mjs <url> [--steps <steps.json>] [--seconds <n>] [--json <file>] [--adb <path>]
-//     [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>]
+//     [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>] [--no-cache]
 //
 // adb forwards --port (9333) to the phone's Chrome, which must be running with USB or wireless debugging on (adb
 // devices lists the phone). A new tab is opened and brought to the front, since Chrome on Android gives a tab in the
@@ -16,6 +16,7 @@
 // shaders (RT64:, plume, WebGPU, errors) are printed when they come, at the computer's time: the phone's clock is
 // read at the start and its lead taken off each line's.
 //
+// --no-cache loads everything from the network (a build served in place of another under the same URLs).
 // --preload adds a script to every frame as play_page.mjs's does (tools/pass_probe.js: its "passes:" lines are
 // printed with the rest). --steps plays the page from a JSON array of steps, one after another, while it is sampled: ["wait", ms]; ["until",
 // "<regex>", ms] waits for a console line; ["tapText", "<text>", "<selector>", "<inner>"] scrolls the top document's
@@ -51,15 +52,17 @@ const stepsFile = option('--steps', undefined);
 const seconds = Number(option('--seconds', '240'));
 const jsonFile = option('--json', undefined);
 const preload = option('--preload', undefined);
+const noCache = args.includes('--no-cache');
+if (noCache) args.splice(args.indexOf('--no-cache'), 1);
 let tab = option('--tab', undefined);
 const url = args[0];
 if (!url || args.length > 1) {
-  console.error('usage: node tools/play_phone.mjs <url> [--steps <steps.json>] [--seconds <n>] [--json <file>] [--adb <path>] [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>]');
+  console.error('usage: node tools/play_phone.mjs <url> [--steps <steps.json>] [--seconds <n>] [--json <file>] [--adb <path>] [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>] [--no-cache]');
   process.exit(1);
 }
 const steps = stepsFile ? JSON.parse(fs.readFileSync(stepsFile, 'utf8')) : [];
 
-const shell = (...command) => execFileSync(adb, [...(serial ? ['-s', serial] : []), ...command], { encoding: 'buffer' });
+const shell = (...command) => execFileSync(adb, [...(serial ? ['-s', serial] : []), ...command], { encoding: 'buffer', maxBuffer: 1 << 26 });
 // The GPU's load and clock, where the phone shows them to adb (a Mali in an Exynos does, at /sys/kernel/gpu).
 const gpu = () => new Promise((ok) => execFile(adb, [...(serial ? ['-s', serial] : []), 'shell',
   'cat /sys/kernel/gpu/gpu_busy /sys/kernel/gpu/gpu_clock /sys/kernel/gpu/gpu_max_clock'], (error, out) => {
@@ -158,6 +161,10 @@ listeners.push((m) => {
 }
 await send('Runtime.enable');
 await send('Page.enable');
+if (noCache) {
+  await send('Network.enable');
+  await send('Network.setCacheDisabled', { cacheDisabled: true });
+}
 await send('Page.addScriptToEvaluateOnNewDocument', { source: counters });
 if (preload) await send('Page.addScriptToEvaluateOnNewDocument', { source: fs.readFileSync(preload, 'utf8') });
 await send('Page.navigate', { url });
