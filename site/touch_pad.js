@@ -16,8 +16,13 @@
 // Start, Back for its menu, the stick the left stick, the C buttons the right stick. It comes and goes as a real pad
 // does, with gamepadconnected and gamepaddisconnected, and like one it connects at its first touch, not as it shows:
 // SDL takes a pad that is there when it starts as added before the program reads its events, and the program never
-// opened it, and the controller can show before SDL starts (the hub's, on a page that doesn't say when its game starts). It sits past the slots a browser gives real pads
-// (Chrome has 8, Firefox none until one connects). Each finger holds the control it is on, so the stick and buttons
+// opened it, and the controller can show before SDL starts (the hub's, on a page that doesn't say when its game
+// starts). What the game reads moves only as it reads the pad (navigator.getGamepads(), which SDL calls at each poll of
+// a pad it has open, then reads the pad from what it returned): the first read after a connect, SDL's own as the
+// program opens the pad, sees nothing held, since SDL_JoystickOpen updates a pad before the controller over it is made
+// and a button held then is taken as down already, its press never sent (MENU as the first touch opened no menu); and a
+// press is read at least once, so a tap that starts and ends between two of a slow phone's polls still reaches the game.
+// It sits past the slots a browser gives real pads (Chrome has 8, Firefox none until one connects). Each finger holds the control it is on, so the stick and buttons
 // go together, and slides from one button to the next; a touch on them never reaches the canvas, nor its mouse events
 // (the pointerdown's default). A real pad connecting unplugs and hides it until the last one goes, and #pad-toggle
 // does for a player who doesn't want it, remembered for the site. Everything is in a block, out of the program's
@@ -73,10 +78,33 @@ if (navigator.getGamepads) {
   const buttons = Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 }));
   const touchPad = { id: 'On-screen controller', index: Math.max(8, realPads().length), connected: false,
                      mapping: 'standard', timestamp: performance.now(), axes: [0, 0, 0, 0], buttons };
-  navigator.getGamepads = () => Object.assign(realPads(), touchPad.connected ? { [touchPad.index]: touchPad } : {});
+  const wanted = { buttons: new Set(), axes: [0, 0, 0, 0] };  // what the fingers hold now
+  const tapped = new Set();  // buttons pressed since the game last read the pad
+  let unread = false;  // connected, and not read since
+  const read = () => {
+    if (unread) { unread = false; return; }
+    const pressed = new Set([...wanted.buttons, ...tapped]);
+    tapped.clear();
+    let moved = false;
+    buttons.forEach((b, i) => {
+      if (b.pressed !== pressed.has(i)) moved = Object.assign(b, { pressed: !b.pressed, touched: !b.pressed, value: +!b.pressed });
+    });
+    wanted.axes.forEach((value, i) => {
+      if (touchPad.axes[i] !== value) moved = touchPad.axes[i] = value;
+    });
+    if (moved !== false) touchPad.timestamp = performance.now();  // SDL reads a pad again only when its timestamp moves
+  };
+  navigator.getGamepads = () => {
+    if (touchPad.connected) read();
+    return Object.assign(realPads(), touchPad.connected ? { [touchPad.index]: touchPad } : {});
+  };
   const plug = (connected) => {
     if (connected === touchPad.connected) return;
     touchPad.connected = connected;
+    unread = connected;
+    tapped.clear();
+    for (const b of buttons) Object.assign(b, { pressed: false, touched: false, value: 0 });
+    touchPad.axes.fill(0);
     dispatchEvent(Object.assign(new Event(connected ? 'gamepadconnected' : 'gamepaddisconnected'), { gamepad: touchPad }));
   };
   const pad = document.getElementById('pad');
@@ -84,8 +112,9 @@ if (navigator.getGamepads) {
   const stick = pad.querySelector('.stick');
   const held = new Map();  // pointerId: { control, x, y }
   const update = () => {
-    for (const b of buttons) Object.assign(b, { pressed: false, touched: false, value: 0 });
-    touchPad.axes.fill(0);
+    const was = new Set(wanted.buttons);
+    wanted.buttons.clear();
+    wanted.axes.fill(0);
     let knob = '';
     for (const { control, x, y } of held.values()) {
       if (control === stick) {
@@ -93,20 +122,20 @@ if (navigator.getGamepads) {
         let dx = (x - box.left - radius) / radius, dy = (y - box.top - radius) / radius;
         const length = Math.hypot(dx, dy);
         if (length > 1) { dx /= length; dy /= length; }
-        touchPad.axes[0] = dx;
-        touchPad.axes[1] = dy;
+        wanted.axes[0] = dx;
+        wanted.axes[1] = dy;
         knob = `translate(${dx * radius * 0.6}px, ${dy * radius * 0.6}px)`;
       } else if (control?.dataset.button) {
-        Object.assign(buttons[control.dataset.button], { pressed: true, touched: true, value: 1 });
+        wanted.buttons.add(Number(control.dataset.button));
       } else if (control?.dataset.axis) {
         const [axis, value] = control.dataset.axis.split(' ').map(Number);
-        touchPad.axes[axis] = value;
+        wanted.axes[axis] = value;
       }
     }
     stick.firstElementChild.style.transform = knob;
     const controls = new Set([...held.values()].map((h) => h.control));
     for (const control of pad.children) control.classList.toggle('held', controls.has(control));
-    touchPad.timestamp = performance.now();  // SDL reads a pad again only when its timestamp moves
+    for (const i of wanted.buttons) if (!was.has(i)) tapped.add(i);
   };
   const touch = (e) => {
     const h = held.get(e.pointerId);
