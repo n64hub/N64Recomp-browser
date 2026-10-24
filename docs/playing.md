@@ -269,8 +269,8 @@ shows no frame rates: every game plays smoothly but in Firefox on a laptop's bui
 the header warn (`site.js`); a retest that finds otherwise changes that warning. It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
 are every game's page, so they are one origin; `tools/publish_site.sh` publishes it (its header says how) after
 a change to `site/` merges, and a change to the Games table needs no publish. Its top also serves every game's page
-its on-screen controller on a phone, `site/touch_pad.js` (the header says why there), so that publish is what takes a
-change to the controller to every game. Served locally by `tools/serve_site.mjs`. Keep
+its on-screen controller on a phone, `site/touch_pad.js` (the header says why there), which it puts into the frame a
+game plays in, so that publish is what takes the controller and a change to it to every game. Served locally by `tools/serve_site.mjs`. Keep
 it current in the same work as what changes it:
 
 - It reads the table from main's README.md each visit (served locally, the checkout's), finding the columns by header

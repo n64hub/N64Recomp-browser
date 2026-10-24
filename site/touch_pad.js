@@ -1,20 +1,22 @@
 // The on-screen controller a game's page draws over the game on a phone or tablet, which the game reads as a gamepad.
-// The page (frontend/shell.html) loads it only where the pointer is a finger, from the top of the site that serves
-// it (/touch_pad.js), not from the page's own folder: it is one of the hub's own files (tools/publish_site.sh), so a
-// change here reaches every game's page with the hub's next publish, and no game's page is built or published again
-// for it.
-// A host without it at its top serves pages with no controller, and nothing else changes.
+// It is one of the hub's own files (tools/publish_site.sh), at the top of the site, and runs in the game's page only
+// where the pointer is a finger: the hub (site/site.js) puts it into the frame a game plays in, whatever the page was
+// built from, and a page opened on its own loads it from the site's top itself (frontend/shell.html), once it was
+// built with that. So a change here reaches every game with the hub's next publish, and no game's page is built or
+// published again for it. A host without it at its top serves pages with no controller, and nothing else changes.
 //
 // A phone has no keys and no pad, so #pad draws a controller over the game once it has started (Module.gameStarted,
 // called by the runtime as the game starts: N64ModernRuntime-web's recomp.cpp; the page notes a start that comes before
-// this script, Module.gameRunning), which the game reads as one more gamepad, the way it reads a real one: SDL's on
+// this script, Module.gameRunning, and the hub sets that for a page built before the runtime said, so there it shows
+// from the start, over the launcher too), which the game reads as one more gamepad, the way it reads a real one: SDL's on
 // Emscripten is the browser's Gamepad API, navigator.getGamepads() sampled at each poll, which then also gives this
 // one, as a pad of the standard mapping, which SDL maps itself (its "Standard Gamepad": triggers as buttons 6 and 7).
 // So it works for any recomp and its menus, and nothing in the program knows. The buttons are where RecompFrontend's
 // defaults take them (input_mapping.cpp): A south, B west, Z the left trigger, R the right, L the left shoulder,
 // Start, Back for its menu, the stick the left stick, the C buttons the right stick. It comes and goes as a real pad
-// does, with gamepadconnected and gamepaddisconnected: SDL takes a pad that is there when it starts as added before
-// the program reads its events, and the program never opened it. It sits past the slots a browser gives real pads
+// does, with gamepadconnected and gamepaddisconnected, and like one it connects at its first touch, not as it shows:
+// SDL takes a pad that is there when it starts as added before the program reads its events, and the program never
+// opened it, and the controller can show before SDL starts (the hub's, on a page that doesn't say when its game starts). It sits past the slots a browser gives real pads
 // (Chrome has 8, Firefox none until one connects). Each finger holds the control it is on, so the stick and buttons
 // go together, and slides from one button to the next; a touch on them never reaches the canvas, nor its mouse events
 // (the pointerdown's default). A real pad connecting unplugs and hides it until the last one goes, and #pad-toggle
@@ -110,6 +112,7 @@ if (navigator.getGamepads) {
     const h = held.get(e.pointerId);
     if (e.type === 'pointerdown') {
       e.preventDefault();
+      plug(true);
       held.set(e.pointerId, { control: e.target.closest('#pad > div'), x: e.clientX, y: e.clientY });
     } else if (!h) {
       return;
@@ -132,7 +135,7 @@ if (navigator.getGamepads) {
     toggle.hidden = !started || realPad;
     toggle.textContent = hidden ? 'Show controls' : 'Hide controls';
     if (pad.hidden) { held.clear(); update(); }
-    plug(!pad.hidden);
+    if (pad.hidden) plug(false);
   };
   toggle.addEventListener('click', () => {
     try { localStorage.setItem('touch-pad', pad.hidden ? 'shown' : 'hidden'); } catch {}

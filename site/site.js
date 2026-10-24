@@ -198,6 +198,18 @@ document.getElementById('player-full').addEventListener('click', () => frame.con
   .then(() => phone.matches && screen.orientation?.lock?.('landscape')).catch(refused));
 frame.addEventListener('load', () => frame.focus());
 
+// A phone's on-screen controller (touch_pad.js, at this page's top) goes into the game's frame from here, so every game
+// played here has it whatever its page was built from, and a change to it needs no page built: the frame is the same
+// origin, so the script runs in the game's own window, whose game reads it as a gamepad. A page that loads it itself
+// (frontend/shell.html) is left alone. A page built before the runtime said when its game starts (Module.gameStarted)
+// gets it shown from the start, over its launcher too, where Hide controls takes it away.
+frame.addEventListener('load', () => {
+  const page = frame.contentWindow, doc = frame.contentDocument;
+  if (!phone.matches || !page.Module || doc.querySelector('script[src="/touch_pad.js"]')) return;
+  if (!page.Module.gameStarted) page.Module.gameRunning = true;
+  doc.head.append(Object.assign(doc.createElement('script'), { src: '/touch_pad.js' }));
+});
+
 // Firefox on built-in graphics holds every game to 30-45 (its compositor), so those players get the header's warning:
 // an Intel chip's graphics but its Arc cards (A770, B580; a Core Ultra's own "Arc Graphics" is built in), or AMD's
 // "Radeon Graphics" or "Radeon 780M" in a laptop chip but its RX cards. The GPU is WebGL's renderer, which Firefox gives
