@@ -151,3 +151,18 @@ race on its first track with the gas held, cool unless said.
 - Presents in flight (plume's `?presents-in-flight=<n>`, default 2, rising to 3 after 30-90 s of play): 3 from the
   start drew 43.7 a second, 4 drew 40.7 and never waited for one, against 42.4. The game's frame rate set to
   Original (30) drew 43.3 against 42 at the default 60.
+- All of it (the font scan's change, Rewind's, TMEM loads by words and the device thread's), the page built with it
+  against the same page without, interleaved, big cores capped at 1.35 GHz, GPU not capped: 34.6 and 34.7 game frames
+  a second against 29.1, 40.7-41.5 drawn against 48.6, presents 40-41.9 against 43.6 (skin 33-35 °C). The page without
+  them reached 37.4 game frames only with its big cores at 2.08 GHz. With the game above 30, more of its frames are 1
+  VI long and RT64_UNEVEN_FRAME_RATES gives them fewer frames between, so presents stay about 42: what holds them there
+  is the GPU, 90-96% busy at its clock.
+
+## Other games on a Galaxy S21
+
+The page from Pages, the same phone and night, big cores capped at 1.35 GHz, skin 34-36 °C, about a minute of each.
+
+- Mario Kart 64, a race on Luigi Raceway with the gas held: 59.5 presents a second, the GPU 67-81% busy at 130 MHz.
+- Super Mario 64, Castle Grounds: 59.9.
+- Banjo-Kazooie, its attract demo in Spiral Mountain: 59.7 (55-60), the GPU up to 90% busy at a low clock.
+- Perfect Dark, its intro: 48 (48-51), the GPU 50-75% busy at 130 MHz, so the CPU holds it.
