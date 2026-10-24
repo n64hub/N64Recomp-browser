@@ -26,12 +26,15 @@
 // the top document at CSS pixels; ["key", code, key, keyCode, ms] holds a key down for ms (150 if left out), which goes
 // to the frame that has the focus, the game's once it was touched; ["eval", "<js>"] runs <js> in the top document
 // and prints what it returns (the hub's game is frames[0], its files frames[0].FS); ["shot", file] saves the phone's screen (adb
-// screencap). Without --steps a person plays on the phone while it measures. It ends after --seconds (240) or, with
+// screencap); ["profile", seconds, prefix] samples V8's profiler every 0.5 ms in the tab's page and each of its workers
+// (the game's threads) for that long, writes each thread's profile to <prefix>.<n>.cpuprofile (DevTools' Performance
+// panel opens one), and prints each thread's share of the time outside its waits and its top functions by self time,
+// which is how a game frame's work on the CPU is found (docs/phones.md, What holds a page back). Without --steps a person plays on the phone while it measures. It ends after --seconds (240) or, with
 // steps, 10 s after the last one, and --json writes the device, Chrome, the samples and the console lines.
 //
 // What it leaves out, and why: page_driver.mjs's RDRAM helpers (n64r) search the whole heap for the boot globals, which
 // on a phone took 13 s of the page's thread a call and found nothing in the hub's frame, so a sample that used them
-// froze the page it measured; the GPU's and the browser's load, which a phone keeps to itself. Chrome on the phone
+// froze the page it measured; the browser's own load, which a phone keeps to itself. Chrome on the phone
 // keeps its pipeline, code and HTTP caches between visits whatever this does: docs/phones.md says how to start from
 // none.
 import { execFile, execFileSync } from 'node:child_process';
@@ -90,10 +93,10 @@ ws.onmessage = (event) => {
   if (m.id) { pending.get(m.id)?.(m); pending.delete(m.id); } else listeners.forEach((listener) => listener(m));
 };
 ws.onclose = () => { console.error('the DevTools socket closed (Chrome closed the tab or stopped)'); finish(1); };
-const send = (method, params = {}) => new Promise((ok) => {
+const send = (method, params = {}, sessionId = undefined) => new Promise((ok) => {
   const i = ++id;
   pending.set(i, ok);
-  ws.send(JSON.stringify({ id: i, method, params }));
+  ws.send(JSON.stringify({ id: i, method, params, sessionId }));
 });
 const evaluate = async (expression) => {
   const m = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
@@ -203,6 +206,54 @@ const waitFor = (pattern, ms) => new Promise((ok, fail) => {
   setTimeout(() => { clearInterval(timer); fail(new Error(`no console line like ${pattern} in ${ms / 1000} s`)); }, ms);
 });
 
+// A profile of the page and every worker in it, attached to as the protocol's flat sessions. A wasm thread waiting shows
+// as samples of its wait (Atomics.wait under _do_futex_wait, a condition variable), so those are taken out of its busy
+// share along with the idle ones. (program) is the browser's own work on the thread, outside script: the page's WebGPU
+// calls, for one.
+const waits = /^\(idle\)$|futex_wait|_timedwait|cond_wait|condition_variable::wait|^__timedwait_cp$/;
+const profile = async (secs, prefix) => {
+  const sessions = new Map();
+  const start = async (sessionId) => {
+    await send('Profiler.enable', {}, sessionId);
+    await send('Profiler.setSamplingInterval', { interval: 500 }, sessionId);
+    await send('Profiler.start', {}, sessionId);
+  };
+  const attached = (m) => {
+    if (m.method !== 'Target.attachedToTarget') return;
+    const { sessionId, targetInfo } = m.params;
+    sessions.set(sessionId, targetInfo);
+    send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, sessionId);
+    if (targetInfo.type === 'worker' || targetInfo.type === 'iframe') start(sessionId);
+    send('Runtime.runIfWaitingForDebugger', {}, sessionId);
+  };
+  listeners.push(attached);
+  await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
+  await start(undefined);
+  await new Promise((ok) => setTimeout(ok, secs * 1000));
+  listeners.splice(listeners.indexOf(attached), 1);
+  let n = 0;
+  for (const sessionId of [undefined, ...sessions.keys()]) {
+    const p = (await send('Profiler.stop', {}, sessionId)).result?.profile;
+    if (!p) continue;
+    fs.writeFileSync(`${prefix}.${n}.cpuprofile`, JSON.stringify(p));
+    const byId = new Map(p.nodes.map((node) => [node.id, node]));
+    const self = new Map();
+    let total = 0, waiting = 0;
+    p.samples.forEach((nodeId, i) => {
+      const dt = p.timeDeltas[i] ?? 0;
+      const name = byId.get(nodeId).callFrame.functionName || '(anonymous)';
+      total += dt;
+      if (waits.test(name)) waiting += dt;
+      else self.set(name, (self.get(name) ?? 0) + dt);
+    });
+    const what = sessionId ? sessions.get(sessionId).type : 'page';
+    const top = [...self].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, t]) => `${(100 * t / total).toFixed(1)}% ${name.slice(0, 70)}`);
+    console.log(`${at().toFixed(1).padStart(6)}  profile ${n} (${what}): busy ${(100 * (total - waiting) / total).toFixed(0)}%: ${top.join(' · ')}`);
+    n++;
+  }
+  await send('Target.setAutoAttach', { autoAttach: false, waitForDebuggerOnStart: false, flatten: true });
+};
+
 const finish = (exitCode) => {
   done = true;
   if (jsonFile) fs.writeFileSync(jsonFile, JSON.stringify({ time: new Date(t0).toISOString(), device, chrome: version.Browser, url,
@@ -238,6 +289,7 @@ try {
       await send('Input.dispatchKeyEvent', { type: 'keyUp', ...event });
     } else if (kind === 'eval') console.log(`${at().toFixed(1).padStart(6)}  ${JSON.stringify(await evaluate(a[0]))}`);
     else if (kind === 'shot') fs.writeFileSync(a[0], shell('exec-out', 'screencap', '-p'));
+    else if (kind === 'profile') await profile(a[0], a[1]);
     else throw new Error(`unknown step ${JSON.stringify(step)}`);
   }
 } catch (error) {
