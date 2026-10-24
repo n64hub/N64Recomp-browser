@@ -131,14 +131,28 @@ function showFrame(url) {
 // page and then locks it to landscape, before the frame loads, so the game starts at that size. Chrome on Android locks
 // only in fullscreen and grants that only from a tap, and here, at the top, neither depends on what a frame may do. A
 // phone is where the pointer is a finger: never a computer, a laptop's touch screen included, whose pointer is its
-// mouse. Where either is refused (an iPhone has neither) the game's page asks for the phone to be turned
-// (frontend/shell.html, whose own tap does the same on a page opened on its own). Closing the game leaves fullscreen.
+// mouse. Closing the game leaves fullscreen.
+// Android leaves fullscreen, and so the lock, by itself: for the ROM picker, which hides the page, and at Back. So a
+// game is never shown upright: #player-turn covers it while a finger's screen is in portrait (site.css), and its tap
+// is the one that fullscreens and locks again. Where either is refused (an iPhone has neither) it asks for the phone
+// to be turned instead, as the game's own page does (frontend/shell.html, whose own tap fullscreens a page opened on
+// its own).
 const phone = matchMedia('(pointer: coarse)');
-const refused = (e) => console.log(`fullscreen or landscape refused: ${e.name}: ${e.message}`);
+const turn = document.getElementById('player-turn');
+const refused = (e) => {
+  console.log(`fullscreen or landscape refused: ${e.name}: ${e.message}`);
+  turn.textContent = 'Turn your phone sideways to play.';
+};
 function landscape() {
-  if (!phone.matches || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
-  document.documentElement.requestFullscreen().then(() => screen.orientation?.lock?.('landscape')).catch(refused);
+  if (!phone.matches) return Promise.resolve();
+  if (!document.documentElement.requestFullscreen || !screen.orientation?.lock) {
+    refused({ name: 'NotSupportedError', message: 'no fullscreen or orientation lock' });
+    return Promise.resolve();
+  }
+  return (document.fullscreenElement ? Promise.resolve() : document.documentElement.requestFullscreen())
+    .then(() => screen.orientation.lock('landscape')).catch(refused);
 }
+turn.addEventListener('click', landscape);
 
 async function openGame(game, push = true) {
   const folder = sameOriginFolder(game.page);
@@ -193,10 +207,19 @@ window.addEventListener('popstate', () => {
 });
 document.getElementById('player-close').addEventListener('click', closeGame);
 // The game's own page fullscreens, as on its own: a fullscreen element around the frame only resized it from outside,
-// and Banjo froze there (the picture, not the sound). The click's activation reaches a same-origin frame.
-document.getElementById('player-full').addEventListener('click', () => frame.contentDocument.documentElement.requestFullscreen()
-  .then(() => phone.matches && screen.orientation?.lock?.('landscape')).catch(refused));
+// and Banjo froze there (the picture, not the sound). The click's activation reaches a same-origin frame. A phone's
+// fullscreen is this page's (landscape()), so that ✕ stays over the game: the frame's own hid it, and only the phone's
+// Back left the game.
+document.getElementById('player-full').addEventListener('click', () => {
+  if (phone.matches) landscape();
+  else frame.contentDocument.documentElement.requestFullscreen().catch(refused);
+});
 frame.addEventListener('load', () => frame.focus());
+// A game's page asks for fullscreen at a phone's tap (frontend/shell.html), and inside this page its own fullscreen
+// would hide ✕ as the button's did: on a phone the request is this page's instead.
+frame.addEventListener('load', () => {
+  if (phone.matches && frame.contentDocument) frame.contentDocument.documentElement.requestFullscreen = landscape;
+});
 
 // A phone's on-screen controller (touch_pad.js, at this page's top) goes into the game's frame from here, so every game
 // played here has it whatever its page was built from, and a change to it needs no page built: the frame is the same
