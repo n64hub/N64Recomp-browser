@@ -32,7 +32,7 @@ for Windows and Linux on its repo's Releases page.
 | Mario Kart 64 | [MarioKart64Recomp](https://github.com/sonicdcer/MarioKart64Recomp) by sonicdcer | [MarioKart64Recomp-web](https://github.com/n64hub/MarioKart64Recomp-web) | [play](https://n64hub.com/mario-kart-64/) | 60; 358* | 43; 342* | 2026-10-24, v0.101.0; laptop 2026-10-18, v0.63.0 |
 | Star Fox 64 | [Starfox64Recomp](https://github.com/sonicdcer/Starfox64Recomp) by sonicdcer | [Starfox64Recomp-web](https://github.com/n64hub/Starfox64Recomp-web) | [play](https://n64hub.com/star-fox-64/) | 173* | 201* | 2026-10-24, v0.101.0 |
 | The Legend of Zelda: Ocarina of Time | [OoT: Recompiled](https://github.com/JonB-Dev/oot-recompiled) by JonB-Dev | [oot-recompiled-web](https://github.com/n64hub/oot-recompiled-web) | [play](https://n64hub.com/ocarina-of-time/) | 60; 320* | 37; 282* | 2026-10-24, v0.101.0; laptop 2026-10-18, v0.63.0 |
-| Diddy Kong Racing | [DKR-R](https://github.com/ThatGuyMcd/DKR-R) by ThatGuyMcd | [DKR-R-web](https://github.com/n64hub/DKR-R-web) | [play](https://n64hub.com/diddy-kong-racing/) | 275* | 217* | 2026-10-24, v0.101.0 |
+| Diddy Kong Racing | [DKR-R](https://github.com/ThatGuyMcd/DKR-R) by ThatGuyMcd | [DKR-R-web](https://github.com/n64hub/DKR-R-web) | [play](https://n64hub.com/diddy-kong-racing/) | 323* | 253* | 2026-10-24, v0.105.0 |
 | Jet Force Gemini | [Jet Force Gemini: Recompiled](https://github.com/VibinToast/JetForceGemini-Recomp) by VibinToast | [JetForceGemini-Recomp-web](https://github.com/n64hub/JetForceGemini-Recomp-web) | [play](https://n64hub.com/jet-force-gemini/) | 58; 334* | 44; 218* | 2026-10-24, v0.101.0; laptop 2026-10-18, v0.63.0 |
 | Pokémon Snap | [Snap64Recomp](https://github.com/JackandBeans/Snap64Recomp) by JackandBeans | [Snap64Recomp-web](https://github.com/n64hub/Snap64Recomp-web) | [play](https://n64hub.com/pokemon-snap/) | 358* | 206* | 2026-10-24, v0.101.0 |
 | Rush 2: Extreme Racing USA | [Rush 2 Recompiled](https://github.com/bryantmh/rush2recompiled) by bryantmh | [rush2recompiled-web](https://github.com/n64hub/rush2recompiled-web) | [play](https://n64hub.com/rush-2/) | 114* | 85* | 2026-10-24, v0.101.0 |
@@ -121,6 +121,9 @@ What changes in the game's own code (behind `__EMSCRIPTEN__`) and files:
 - No native file dialog (nfd: RecompFrontend asks the page; a recomp with menus of its own calls
   `n64recomp_browser::pick_files`, `frontend/file_picker.h`, and gets the picked files' paths) and no `SDL_INIT_HAPTIC`
   (Emscripten's SDL2 has no haptics, and `SDL_Init` fails as a whole when asked for them, gamepads with it).
+- Nothing for a menu drawn with ImGui through RT64's inspector (DKR-R's overlay): on a page the inspector draws through
+  plume (rt64-web 8b9dce2), with ImGui's font atlas as its only texture, so a menu that shows images of its own leaves
+  them out there.
 - Input read whatever SDL's window focus says. On a page SDL's keyboard focus follows the canvas's window focus events,
   which a page opened behind another window, or driven by a script, never gets, though its tab gets the keys: DKR-R
   read the controller only while its window had focus, and its page took no input (DKR-R-web's `runtime_platform.cpp`).

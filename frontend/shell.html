@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- The page of a recomp built with n64recomp_browser_frontend (CMakeLists.txt): a canvas filling the window, which SDL's window
-     is and RT64 draws on (SDL follows its CSS size), and a line saying what is loading or what went wrong. The program
+     is and RT64 draws on (SDL follows its CSS size, at each change of its box: below), and a line saying what is loading or what went wrong. The program
      sets the title through SDL. coi_serviceworker.js makes the page cross-origin isolated where the server doesn't,
      and the program starts only once it is (below).
      The #gpu notice (below) is for Firefox on Intel graphics. #shaders, in a corner, is the progress of the
@@ -167,6 +167,12 @@
       };
     }
   }
+  // SDL sizes the canvas's buffer to the canvas's box at each of the window's resize events. On a phone turned from
+  // upright to landscape in the hub's frame (Chrome 124 on Android) no event came after the box was landscape: the
+  // buffer kept its upright size, stretched to the wide box, and the game was a short strip with black above and below
+  // it. A ResizeObserver reports the box once it is laid out, so each change of it is a resize to SDL as well, which
+  // reads the box again. Chrome's phone emulation turns the page in one step and shows none of this.
+  new ResizeObserver(() => dispatchEvent(new Event('resize'))).observe(document.getElementById('canvas'));
   // A game is laid out for a wide window, and on a phone held upright the launcher's buttons fall off its narrow one.
   // So where the pointer is a finger (a phone or tablet, not a laptop's touch screen, whose pointer is its mouse), each
   // tap while the page isn't fullscreen asks for fullscreen and then for landscape: a browser locks the orientation
