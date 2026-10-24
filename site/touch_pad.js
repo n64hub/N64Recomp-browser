@@ -22,11 +22,11 @@
 // program opens the pad, sees nothing held, since SDL_JoystickOpen updates a pad before the controller over it is made
 // and a button held then is taken as down already, its press never sent (MENU as the first touch opened no menu); and a
 // press is read at least once, so a tap that starts and ends between two of a slow phone's polls still reaches the game.
-// It sits past the slots a browser gives real pads (Chrome has 8, Firefox none until one connects). Each finger holds the control it is on, so the stick and buttons
-// go together, and slides from one button to the next; a touch on them never reaches the canvas, nor its mouse events
-// (the pointerdown's default). A real pad connecting unplugs and hides it until the last one goes, and #pad-toggle
-// does for a player who doesn't want it, remembered for the site. Everything is in a block, out of the program's
-// global names.
+// It sits past the slots a browser gives real pads (Chrome has 8, Firefox none until one connects). Each finger holds
+// the control it is on, so the stick and buttons go together, and slides from one button to the next; a touch on them
+// never reaches the canvas, nor its mouse events (the pointerdown's default). A real pad connecting unplugs and hides it
+// until the last one goes, and #pad-toggle does for a player who doesn't want it, remembered for the site. Everything
+// is in a block, out of the program's global names.
 if (navigator.getGamepads) {
   document.head.append(Object.assign(document.createElement('style'), { textContent: `
     /* Sized by the screen's height (vmin, in landscape): the stick, L and Z at the left, the C buttons at the right with
@@ -87,12 +87,16 @@ if (navigator.getGamepads) {
     tapped.clear();
     let moved = false;
     buttons.forEach((b, i) => {
-      if (b.pressed !== pressed.has(i)) moved = Object.assign(b, { pressed: !b.pressed, touched: !b.pressed, value: +!b.pressed });
+      if (b.pressed === pressed.has(i)) return;
+      Object.assign(b, { pressed: !b.pressed, touched: !b.pressed, value: b.pressed ? 0 : 1 });
+      moved = true;
     });
     wanted.axes.forEach((value, i) => {
-      if (touchPad.axes[i] !== value) moved = touchPad.axes[i] = value;
+      if (touchPad.axes[i] === value) return;
+      touchPad.axes[i] = value;
+      moved = true;
     });
-    if (moved !== false) touchPad.timestamp = performance.now();  // SDL reads a pad again only when its timestamp moves
+    if (moved) touchPad.timestamp = performance.now();  // SDL reads a pad again only when its timestamp moves
   };
   navigator.getGamepads = () => {
     if (touchPad.connected) read();
