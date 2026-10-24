@@ -224,11 +224,13 @@ document.getElementById('firefox-note').hidden = !/\bFirefox\//.test(navigator.u
 
 // Signing in keeps the player's saves in their own Google Drive (frontend/save_sync.js, loaded before this). The hub's
 // OAuth client, a Google Cloud project's client of the Web application type, with this page's address (https://n64hub.com/,
-// and http://localhost:8742/ to try it locally) as an authorized redirect URI: empty, the hub offers no sign-in.
+// and http://localhost:8742/ to try it locally) as an authorized redirect URI and the origins as JavaScript origins, the
+// Google Drive API enabled and drive.appdata among its Data Access scopes: empty, the hub offers no sign-in. While its
+// consent screen is in Testing, only its test users can sign in.
 // Sign-in goes to Google and back here, not in a popup: a popup's answer reaches the page that opened it through
 // window.opener, which Cross-Origin-Opener-Policy: same-origin (coi_serviceworker.js) cuts. Google sends the token
 // back in the address's fragment with the state it was given, the same-origin address to return to.
-const GOOGLE_CLIENT_ID = '';
+const GOOGLE_CLIENT_ID = '254349962821-7ms1u77vb7mhisnq7dhcs5i12qobkm49.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const hub = location.origin + location.pathname;
 

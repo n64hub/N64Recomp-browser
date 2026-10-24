@@ -264,8 +264,8 @@ the game's page is on another origin; never a new tab; on a phone, fullscreen in
 recomp it is based on (the Recomp cell); the art names the game, so no line does. The header says what the page is
 and whose the recomps are, and a line under the games that it is written with AI, with the link to this repo. It
 shows no frame rates: every game plays smoothly but in Firefox on a laptop's built-in graphics, so only there does
-the header warn (`site.js`); a retest that finds otherwise changes that warning. With an OAuth client in `site.js`
-(`GOOGLE_CLIENT_ID`, empty until there is one) the header offers sign-in with Google, which keeps the player's saves in
+the header warn (`site.js`); a retest that finds otherwise changes that warning. With its OAuth client (`GOOGLE_CLIENT_ID` in
+`site.js`, which says how the client is set up) the header offers sign-in with Google, which keeps the player's saves in
 their own Google Drive (`frontend/save_sync.js` says how). It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
 are every game's page, so they are one origin; `tools/publish_site.sh` publishes it (its header says how) after
 a change to `site/` merges, and a change to the Games table needs no publish. Served locally by `tools/serve_site.mjs`. Keep
