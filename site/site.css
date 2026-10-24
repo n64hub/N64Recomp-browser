@@ -29,6 +29,7 @@ header .warning {
 }
 header .warning::before { content: "⚠ "; }
 header .tagline { color: var(--text); font-size: 18px; }
+#saves summary { color: var(--dim); cursor: pointer; }
 
 main { max-width: 1200px; margin: 0 auto; padding: 12px 24px 32px; }
 /* How it is made, under the games. The source link stays whole, on the next line when it doesn't fit. */

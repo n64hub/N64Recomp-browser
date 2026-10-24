@@ -266,7 +266,8 @@ and whose the recomps are, and a line under the games that it is written with AI
 shows no frame rates: every game plays smoothly but in Firefox on a laptop's built-in graphics, so only there does
 the header warn (`site.js`); a retest that finds otherwise changes that warning. With its OAuth client (`GOOGLE_CLIENT_ID` in
 `site.js`, which says how the client is set up) the header offers sign-in with Google, which keeps the player's saves in
-their own Google Drive (`frontend/save_sync.js` says how). It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
+their own Google Drive (`frontend/save_sync.js` says how); signed in, it asks which saves to keep of a game this
+browser and the Drive hold differently, and lists the earlier saves the Drive kept, to restore. It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
 are every game's page, so they are one origin; `tools/publish_site.sh` publishes it (its header says how) after
 a change to `site/` merges, and a change to the Games table needs no publish. Served locally by `tools/serve_site.mjs`. Keep
 it current in the same work as what changes it:

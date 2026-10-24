@@ -283,14 +283,14 @@ function syncStart() {
   return false;
 }
 
-// The saves this browser holds, in every game's database on this origin (frontend/persistent_home.js), uploaded where
-// the Drive has none, after a sign-in. One the Drive has another of is settled when its game next starts.
-async function uploadSaves() {
+// The saves this browser holds, in every game's database on this origin (frontend/persistent_home.js, each named
+// '/home/web_user <its page's folder>'): saves, path -> { data, time }, and folders, program id -> its page's folder.
+async function localSaves() {
   const home = '/home/web_user/', ask = (request) => new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
-  const local = new Map();
+  const local = new Map(), folders = new Map();
   for (const { name } of (await indexedDB.databases?.()) ?? []) {
     if (!name?.startsWith(home.slice(0, -1))) continue;
     const open = indexedDB.open(name);
@@ -305,11 +305,47 @@ async function uploadSaves() {
       const time = new Date(entry?.timestamp).getTime();
       if (entry?.contents && SaveSync.isSave(path, entry.contents.byteLength) && !(local.get(path)?.time >= time)) {
         local.set(path, { data: entry.contents, time });
+        folders.set(SaveSync.game(path), name.slice(home.length));
       }
     }
     db.close();
   }
-  await SaveSync.sync(local);
+  return { saves: local, folders };
+}
+
+// Under the sign-in line, while signed in: the games held at a sign-in (frontend/save_sync.js), each asking whose saves
+// to keep, and the copies the Drive kept of replaced saves, each of which can be made its game's save again.
+async function showSaves() {
+  const box = document.getElementById('saves');
+  if (!SaveSync.token()) {
+    box.hidden = true;
+    return;
+  }
+  const [{ folders }, copies] = await Promise.all([localSaves(), SaveSync.copies()]);
+  const gameName = (id) => games.find((g) => sameOriginFolder(g.page) === folders.get(id))?.name ?? id;
+  const act = (text, run) => {
+    const b = el('button', { type: 'button', textContent: text });
+    b.addEventListener('click', async () => {
+      for (const other of box.querySelectorAll('button')) other.disabled = true;
+      try {
+        await run();
+      } catch (error) {
+        console.error('Save sync: ' + error.message);
+      }
+      showSaves();
+    });
+    return b;
+  };
+  const choose = (id, keepMine) => async () => SaveSync.settle((await localSaves()).saves, id, keepMine);
+  const held = [...SaveSync.held()].map((id) => el('p', {},
+    `${gameName(id)}: this browser has other saves than your Drive. `,
+    act("Keep this browser's", choose(id, true)), ' ', act("Use the Drive's", choose(id, false))));
+  const copy = (c) => el('p', {}, `${gameName(SaveSync.game(c.path))}, ${c.path.replace(/^.*\/saves\//, '')}, ` +
+    `from ${new Date(c.time).toLocaleString()} `, act('Use this one', () => SaveSync.restore(c)));
+  const kept = copies.length
+    ? [el('details', {}, el('summary', {}, `Earlier saves in your Drive (${copies.length})`), ...copies.map(copy))] : [];
+  box.replaceChildren(...held, ...kept);
+  box.hidden = !box.childElementCount;
 }
 
 function showSync() {
@@ -327,6 +363,7 @@ function showSync() {
       .catch(() => {});
     SaveSync.store(null);
     showSync();
+    showSaves();
   });
   line.replaceChildren(...(!signedIn ? [signInButton, ' to keep your saves in your Google Drive and play on with them anywhere.']
     : SaveSync.token() ? ['Your saves are kept in your Google Drive. ', signOut]
@@ -336,10 +373,15 @@ function showSync() {
 
 async function main() {
   showSync();
+  // After a sign-in this browser's saves go up, or its games are held where the Drive has others.
+  let saves = Promise.resolve();
   if (sessionStorage.getItem('save-sync-upload')) {
     sessionStorage.removeItem('save-sync-upload');
-    uploadSaves().catch((error) => console.error('Save sync: could not upload this browser\'s saves: ' + error.message));
+    saves = localSaves().then(({ saves }) => SaveSync.signedIn(saves))
+      .catch((error) => console.error('Save sync: could not upload this browser\'s saves: ' + error.message));
   }
+  const listSaves = () => GOOGLE_CLIENT_ID && saves.then(showSaves)
+    .catch((error) => console.error('Save sync: could not list the saves in the Drive: ' + error.message));
   const grid = document.getElementById('grid');
   try {
     const response = await fetch(README, { cache: 'no-cache' });
@@ -347,8 +389,10 @@ async function main() {
     games = parseGames(await response.text());
   } catch (error) {
     grid.replaceChildren(el('p', { className: 'note' }, 'The games table could not be read: ' + error.message));
+    listSaves();
     return;
   }
+  listSaves();
   const title = (g) => g.name.replace(/^The /, '');
   const sorted = [...games].sort((a, b) => title(a).localeCompare(title(b)));
   grid.replaceChildren(...sorted.map((g, i) => tile(g, i)));

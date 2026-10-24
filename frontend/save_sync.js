@@ -13,9 +13,14 @@
 // Each file is compared three ways: what this browser holds, what the Drive holds (a SHA-256 in the file's
 // appProperties), and what the two held when they last agreed (localStorage, this browser's own). Only one side
 // changed: it goes to the other. Both did (two devices played offline): the newer one wins at the next start, and the
-// other is kept in the Drive beside it, <path>.conflict-<time>, so nothing is lost. A browser that never synced the
-// file and holds another one (a second device signing in) loses to the Drive the same way, whatever the times: a game
-// may write a fresh save on its first start (GoldenEye does), which would otherwise be newer than the player's progress.
+// other is kept in the Drive beside it, <path>.conflict-<time>, a copy the hub lists and can make the save again, so
+// nothing is lost.
+//
+// A browser that never synced a game's saves and holds others than the Drive's (a second device signing in) can't be
+// settled by the times: a game may write a fresh save on its first start (GoldenEye does), newer than the player's
+// progress elsewhere. So a sign-in holds that game (held, in localStorage): nothing of its saves goes up or comes down,
+// on the hub or in its page, until the player keeps this browser's or the Drive's on the hub. One the hub didn't see
+// (written since, or in a database it couldn't read) loses to the Drive at its page's start, kept as a copy the same way.
 //
 // A page pulls before main() runs, after persistent_home.js has read HOME in: the runtime reads a save once, when the
 // game starts, so one written later would be overwritten by the game's next save. A pull that takes more than 8 s is
@@ -43,6 +48,9 @@ const SaveSync = (() => {
   // A path under HOME that is a save.
   const isSave = (path, size) => /^\.config\/[^/]+\/saves\/.+/.test(path) && !/\.(temp|bak)$/.test(path) &&
     !/\.conflict-/.test(path) && size < (1 << 20);
+  // A save's game: its program id.
+  const game = (path) => path.split('/')[1];
+  const copyName = (path, time) => path + '.conflict-' + new Date(time).toISOString();
   const hex = async (data) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', data))]
     .map((b) => b.toString(16).padStart(2, '0')).join('');
 
@@ -87,6 +95,18 @@ const SaveSync = (() => {
       token: auth, signal, method: id ? 'PATCH' : 'POST', body,
       headers: { 'Content-Type': 'multipart/related; boundary=' + boundary } });
   };
+  // What this browser and the Drive held when they last agreed on a file.
+  const agreed = (path, hash) => {
+    const record = stored();
+    if (record) store({ ...record, synced: { ...record.synced, [path]: hash } });
+  };
+  // The games held for the player's choice: program ids.
+  const held = () => new Set(stored()?.held);
+  const hold = (ids, on) => {
+    const record = stored(), set = new Set(record?.held);
+    for (const id of ids) on ? set.add(id) : set.delete(id);
+    if (record) store({ ...record, held: [...set] });
+  };
 
   // Syncs one browser's saves: local is path -> { data, time } (time in ms). With pull, the Drive's that win are
   // returned (path -> data) for the caller to write; without it (the push while a game runs, the hub's sign-in) they
@@ -94,12 +114,8 @@ const SaveSync = (() => {
   const sync = async (local, { pull, signal } = {}) => {
     const auth = token();
     if (!auth) return null;
-    const remote = await list(auth, signal);
+    const remote = await list(auth, signal), waiting = held();
     const synced = stored()?.synced || {}, pulled = new Map(), done = { up: 0, down: 0, conflicts: 0 };
-    const agreed = (path, hash) => {
-      const record = stored();
-      if (record) store({ ...record, synced: { ...record.synced, [path]: hash } });
-    };
     // A file pulled is recorded by what it holds, not the hash its properties say: one written to the Drive by another
     // client has none.
     const took = async (path, data) => {
@@ -107,7 +123,7 @@ const SaveSync = (() => {
       agreed(path, await hex(data));
     };
     for (const path of new Set([...local.keys(), ...remote.keys()])) {
-      if (!isSave(path, local.get(path)?.data.byteLength ?? 0)) continue;
+      if (!isSave(path, local.get(path)?.data.byteLength ?? 0) || waiting.has(game(path))) continue;
       const mine = local.get(path), theirs = remote.get(path), last = synced[path];
       const hash = mine && await hex(mine.data);
       if (hash && hash === theirs?.hash) {
@@ -128,13 +144,13 @@ const SaveSync = (() => {
       } else if (last !== undefined && mine.time >= theirs.time) {
         // Both changed, and this browser's is newer: the Drive's is kept beside it.
         const data = await download(auth, theirs.id, signal);
-        await put(auth, path + '.conflict-' + new Date(theirs.time).toISOString(), data, theirs.hash, null, signal);
+        await put(auth, copyName(path, theirs.time), data, theirs.hash, null, signal);
         await put(auth, path, mine.data, hash, theirs.id, signal);
         agreed(path, hash);
         done.up++, done.conflicts++;
       } else {
         // The Drive's is newer, or this browser never synced the file: this browser's is kept beside it.
-        await put(auth, path + '.conflict-' + new Date(mine.time).toISOString(), mine.data, hash, null, signal);
+        await put(auth, copyName(path, mine.time), mine.data, hash, null, signal);
         await took(path, await download(auth, theirs.id, signal));
         done.down++, done.conflicts++;
       }
@@ -143,7 +159,63 @@ const SaveSync = (() => {
     return pulled;
   };
 
-  return { key, stored, store, token, isSave, sync };
+  // After a sign-in on the hub: the games this browser never synced and holds other saves of than the Drive are held
+  // (above), and the rest sync as at any time.
+  const signedIn = async (local) => {
+    const auth = token();
+    if (!auth) return;
+    const remote = await list(auth), synced = stored()?.synced || {}, ask = new Set();
+    for (const [path, mine] of local) {
+      const theirs = remote.get(path);
+      if (theirs && synced[path] === undefined && isSave(path, mine.data.byteLength) &&
+          await hex(mine.data) !== theirs.hash) ask.add(game(path));
+    }
+    hold(ask, true);
+    await sync(local);
+  };
+  // The player's choice for a held game. This browser's: each of its saves the Drive holds otherwise replaces the
+  // Drive's, which is kept as a copy. The Drive's: the game is let go, and its page's next start takes the Drive's and
+  // keeps this browser's as a copy (sync, a browser that never synced the file).
+  const settle = async (local, id, keepMine) => {
+    const auth = token();
+    if (!auth) throw new Error('signed out');
+    if (keepMine) {
+      const remote = await list(auth);
+      for (const [path, mine] of local) {
+        if (game(path) !== id || !isSave(path, mine.data.byteLength)) continue;
+        const theirs = remote.get(path), hash = await hex(mine.data);
+        if (theirs?.hash !== hash) {
+          if (theirs) await put(auth, copyName(path, theirs.time), await download(auth, theirs.id), theirs.hash);
+          await put(auth, path, mine.data, hash, theirs?.id);
+        }
+        agreed(path, hash);
+      }
+    }
+    hold([id], false);
+  };
+  // The copies kept in the Drive when a save was replaced, newest first: { id, path (the save's), time (the copy's) }.
+  const copies = async () => {
+    const auth = token(), found = [];
+    if (!auth) return found;
+    for (const [name, f] of await list(auth)) {
+      const m = /^(.*)\.conflict-(.+)$/.exec(name);
+      if (m) found.push({ id: f.id, path: m[1], time: Date.parse(m[2]) });
+    }
+    return found.sort((a, b) => b.time - a.time);
+  };
+  // A copy made the save again. The save it replaces is kept as a copy in turn, and every browser takes the Drive's at
+  // its game's next start: one that agreed with the replaced save as one only the Drive changed, one changed since as two
+  // that both did, where the newer wins.
+  const restore = async (copy) => {
+    const auth = token();
+    if (!auth) throw new Error('signed out');
+    const theirs = (await list(auth)).get(copy.path), data = await download(auth, copy.id);
+    if (theirs) await put(auth, copyName(copy.path, theirs.time), await download(auth, theirs.id), theirs.hash);
+    await put(auth, copy.path, data, await hex(data), theirs?.id);
+    await request(drive + '/' + copy.id, { token: auth, method: 'DELETE' });
+  };
+
+  return { key, stored, store, token, isSave, game, held, sync, signedIn, settle, copies, restore };
 })();
 
 // A game's page: HOME is the program's file system (persistent_home.js), read in before main() runs.
