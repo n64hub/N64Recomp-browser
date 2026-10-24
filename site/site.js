@@ -144,12 +144,12 @@ const refused = (e) => {
   turn.textContent = 'Turn your phone sideways to play.';
 };
 function landscape() {
-  if (!phone.matches) return;
+  if (!phone.matches) return Promise.resolve();
   if (!document.documentElement.requestFullscreen || !screen.orientation?.lock) {
     refused({ name: 'NotSupportedError', message: 'no fullscreen or orientation lock' });
-    return;
+    return Promise.resolve();
   }
-  (document.fullscreenElement ? Promise.resolve() : document.documentElement.requestFullscreen())
+  return (document.fullscreenElement ? Promise.resolve() : document.documentElement.requestFullscreen())
     .then(() => screen.orientation.lock('landscape')).catch(refused);
 }
 turn.addEventListener('click', landscape);
@@ -207,10 +207,19 @@ window.addEventListener('popstate', () => {
 });
 document.getElementById('player-close').addEventListener('click', closeGame);
 // The game's own page fullscreens, as on its own: a fullscreen element around the frame only resized it from outside,
-// and Banjo froze there (the picture, not the sound). The click's activation reaches a same-origin frame.
-document.getElementById('player-full').addEventListener('click', () => frame.contentDocument.documentElement.requestFullscreen()
-  .then(() => phone.matches && screen.orientation?.lock?.('landscape')).catch(refused));
+// and Banjo froze there (the picture, not the sound). The click's activation reaches a same-origin frame. A phone's
+// fullscreen is this page's (landscape()), so that ✕ stays over the game: the frame's own hid it, and only the phone's
+// Back left the game.
+document.getElementById('player-full').addEventListener('click', () => {
+  if (phone.matches) landscape();
+  else frame.contentDocument.documentElement.requestFullscreen().catch(refused);
+});
 frame.addEventListener('load', () => frame.focus());
+// A game's page asks for fullscreen at a phone's tap (frontend/shell.html), and inside this page its own fullscreen
+// would hide ✕ as the button's did: on a phone the request is this page's instead.
+frame.addEventListener('load', () => {
+  if (phone.matches && frame.contentDocument) frame.contentDocument.documentElement.requestFullscreen = landscape;
+});
 
 // A phone's on-screen controller (touch_pad.js, at this page's top) goes into the game's frame from here, so every game
 // played here has it whatever its page was built from, and a change to it needs no page built: the frame is the same
