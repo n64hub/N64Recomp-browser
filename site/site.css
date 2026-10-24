@@ -28,6 +28,12 @@ header .warning {
   padding: 8px 12px;
 }
 header .warning::before { content: "⚠ "; }
+/* Firefox on a phone, where no game plays (site.js): red, and flashed when a tile is tapped. Its tiles are greyed. */
+header .warning.stop { color: #ffc2bb; background: rgb(229 72 60 / 0.15); border-color: rgb(229 72 60 / 0.6); font-size: 16px; }
+header .warning.stop::before { content: "⛔ "; }
+header .warning.flash { animation: flash 0.5s 2; }
+@keyframes flash { 50% { background: rgb(229 72 60 / 0.45); } }
+body.no-games .art { filter: grayscale(0.85) brightness(0.55); cursor: not-allowed; }
 header .tagline { color: var(--text); font-size: 18px; }
 
 main { max-width: 1200px; margin: 0 auto; padding: 12px 24px 32px; }
