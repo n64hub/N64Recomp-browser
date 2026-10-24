@@ -262,7 +262,9 @@ collapse) shows on a desktop as `shader missed:` lines.
 
 `site/` is a page of every game in the Games table: a tile each with its recomp's art or a title card, which a
 click plays (the game's page in a frame, or the tab goes to the page where the page isn't cross-origin isolated or
-the game's page is on another origin; never a new tab; on a phone, fullscreen in landscape from that tap), and under it its credit, a link to the game's repo ("Web port") and the
+the game's page is on another origin; never a new tab; on a phone, fullscreen in landscape from that tap, and never
+upright: when the phone leaves landscape, at the ROM picker or Back, the game is covered until a tap locks it again),
+and under it its credit, a link to the game's repo ("Web port") and the
 recomp it is based on (the Recomp cell); the art names the game, so no line does. The header says what the page is
 and whose the recomps are, and a line under the games that it is written with AI, with the link to this repo. It
 shows no frame rates: every game plays smoothly but in Firefox on a laptop's built-in graphics, so only there does
