@@ -25,6 +25,7 @@ a doc points at the other.
   - `docs/forks.md`: every fork commit by its label. `docs/game-forks.md`: each game fork's port, its game's own frame
     rate, how the games compare. Read a game fork's part there and its own docs before changing it.
   - `docs/findings.md`: what has been measured, the numbers behind this file's rules included.
+  - `docs/phones.md`: playing and measuring a page on an Android phone from a computer, and what phones do differently.
 
 This repo, the forks and the game forks are public. Write for a stranger, in the present tense: nothing about a
 contributor's machine, servers, host names, paths or accounts, no person's name, no history of renames or "until
