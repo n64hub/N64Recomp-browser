@@ -96,7 +96,14 @@ while game frames fall. Telling them apart:
 - What costs on a phone that a desktop hides: a clock read (`emscripten_get_now`, `clock_gettime`) leaves wasm for
   JavaScript, and one per texture uploaded took 9.6% of the display list thread; the web build's `memcmp` (musl's)
   compares a byte at a time, and one over 6 MB a frame took 5 ms; a byte-at-a-time copy (RT64's TMEM loads) is slow
-  where a word at a time vectorizes.
+  where a word at a time vectorizes; and a wait for the page's thread (plume's device thread) waits behind everything
+  queued there, which on a phone is milliseconds.
+- Presents short of the display with neither the game's frames nor the GPU behind are RT64's interpolated frames:
+  with present-stats, frames drawn a second under twice the game frames of a game interpolated at 30 is RT64
+  skipping a game frame's later frames, which it does when its workload thread runs past each frame's share of the
+  game frame's time. The page's thread and RT64's present thread were each under half busy then.
+- A GPU's load says little on a phone: its clock follows the load, so a lighter frame (resolution Original) ran the
+  Mali-G78 at 130 MHz, still 60-80% busy, and presented no more.
 
 ## What a phone does differently
 
@@ -108,7 +115,8 @@ while game frames fall. Telling them apart:
 
 ## Rush 2049 on a Galaxy S21
 
-An Exynos 2100 (Mali-G78), 8 cores, a 60 Hz screen, Chrome 124 then 156, the page from Pages, a single race on its first track with the gas held, cool unless said.
+An Exynos 2100 (Mali-G78), 8 cores, a 60 Hz screen, Chrome 124 then 156, the page from Pages unless said, a single
+race on its first track with the gas held, cool unless said.
 
 - A race drew 40-49 presents a second (frames 60), with gaps up to 40-110 ms, whether or not Chrome kept its caches:
   with its GPU shader disk cache off (`--disable-gpu-shader-disk-cache`) the 76 prebuilt pipelines were built 6.4 s
@@ -127,6 +135,19 @@ An Exynos 2100 (Mali-G78), 8 cores, a 60 Hz screen, Chrome 124 then 156, the pag
 - The hi-res font scan copying a load into its TMEM only when a rectangle reads it (rush-2049-recomp's
   `src/hires_font.cpp`): 26.5-27.2 game frames a second against 22.8-24.1 (3 pairs, interleaved, skin 39-40.5 °C,
   big cores at 1.04 GHz, GPU at 403 MHz); presents 40-43 either way.
+- With the font scan's change, Rewind comparing 32 bytes at a time (`src/rewind.cpp`) and RT64's TMEM loads copying a
+  word at a time (rt64-web): 28.8 and 29.0 game frames a second against 23.3 between them (skin 39 °C, same caps);
+  presents 40-45 either way. Resolution Original drew 39 presents a second and draw distance and detail Original 40.7,
+  against 41-45: the GPU's clock fell to 130 MHz at Original, so pixels weren't what held presents.
+- What held them: RT64 drew 1.3-1.77 frames for each game frame where the game's 30 on a 60 Hz display gives 2. Its
+  workload thread took 6-8 ms to set up each game frame and 13.5-15 ms to draw each frame, 5.5-6.7 ms of that waiting
+  for the page's thread after each command list, so the second frame missed its share of the game frame's 33 ms and
+  was skipped, in 35-45% of game frames. With plume's device thread waiting one execution behind (plume-web, Device
+  thread: upload buffers mapped on the calling side): 0.2-0.6 ms of waiting, 8.7-10 ms a frame, skipped in 1-5%,
+  1.93-1.99 frames a game frame, 46-50 drawn and 44.8 presents a second against 35-44 and 39.7 (same caps, 1.04 GHz).
+- The phone's caps moved with the room: later in the night, cooler (skin 33-35 °C), its big cores were held at 1.35 GHz
+  and its GPU not at all, and the race's game frames came at 33-38 a second, Rush 2049 running above 30 where it
+  could (frames of 1 VI). Pairs are compared only at the same caps (`clocks before` in each run's log).
 - Presents in flight (plume's `?presents-in-flight=<n>`, default 2, rising to 3 after 30-90 s of play): 3 from the
   start drew 43.7 a second, 4 drew 40.7 and never waited for one, against 42.4. The game's frame rate set to
   Original (30) drew 43.3 against 42 at the default 60.
