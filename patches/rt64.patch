@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 30df1f5ea73870ea592f257a0dedc0271387d385
+rt64: https://github.com/n64hub/rt64-web b15112b0a11e193c97206155ecbbae27ec31f091
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3314,7 +3314,7 @@ index 5a331aa..3aca75c 100644
                  }
  
 diff --git a/src/hle/rt64_workload_queue.h b/src/hle/rt64_workload_queue.h
-index bde2f03..a21f239 100644
+index bde2f03..3eb3b9e 100644
 --- a/src/hle/rt64_workload_queue.h
 +++ b/src/hle/rt64_workload_queue.h
 @@ -23,11 +23,26 @@
@@ -3345,28 +3345,22 @@ index bde2f03..a21f239 100644
      struct WorkloadQueue {
          struct External {
              RenderDevice *device = nullptr;
-@@ -91,12 +106,21 @@ namespace RT64 {
+@@ -91,6 +106,15 @@ namespace RT64 {
          std::unique_ptr<RSPProcessor> rspProcessor;
          std::unique_ptr<VertexProcessor> vertexProcessor;
          std::unique_ptr<RenderTarget> dummyDepthTarget;
 +#   if RT64_WGSL
 +        DummyDepthTargets dummyDepthTargets;
 +#   endif
-         std::unique_ptr<RenderQueryPool> queryPool;
-         FramebufferChangePool scratchFbChangePool;
-         ProfilingTimer rendererCPUProfiler = ProfilingTimer(120);
-         ProfilingTimer rendererGPUProfiler = ProfilingTimer(120);
-         ProfilingTimer matchingProfiler = ProfilingTimer(120);
-         ProfilingTimer workloadProfiler = ProfilingTimer(120);
 +#   if defined(__EMSCRIPTEN__)
 +        // present-stats: the game frames since statsStart, and the frames drawn for them (renderThreadLoop()).
 +        uint32_t statsGameFrames = 0;
 +        uint32_t statsFramesDrawn = 0;
 +        Timestamp statsStart;
 +#   endif
-         std::array<GameFrame, 2> gameFrames;
-         uint32_t prevFrameIndex = uint32_t(gameFrames.size()) - 1;
-         uint32_t curFrameIndex = 0;
+         std::unique_ptr<RenderQueryPool> queryPool;
+         FramebufferChangePool scratchFbChangePool;
+         ProfilingTimer rendererCPUProfiler = ProfilingTimer(120);
 diff --git a/src/render/rt64_descriptor_sets.h b/src/render/rt64_descriptor_sets.h
 index 69a82ac..1dd31f7 100644
 --- a/src/render/rt64_descriptor_sets.h

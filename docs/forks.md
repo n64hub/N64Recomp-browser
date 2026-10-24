@@ -414,8 +414,8 @@ rt64 8b9dce2           the inspector draws ImGui through plume on a page, whatev
                        DKR-R-web's, opens on a page
 rt64 24562c7           on the web a load block or tile copies a word-aligned 8-byte word into TMEM as two 32-bit reads,
                        not a byte at a time: 4.7% of the display list thread in Rush 2049's race on a phone
-rt64 0db3a67           present-stats prints the game's frames a second and the frames RT64 drew for them, so frames
-                       drawn under the game's rate times the interpolation are RT64 skipping them (docs/phones.md)
+rt64 0db3a67,          present-stats prints the game's frames a second and the frames RT64 drew for them, so frames
+b15112b                drawn under the game's rate times the interpolation are RT64 skipping them (docs/phones.md)
 plume 5aa2cbe,         the device thread's waitForCommandFence() waits for the execution before the last, not the
 rt64 30df1f5           one just queued, and an upload buffer is mapped at memory of its own on the calling side, its
                        writes copied for the backend's at unmap(): RT64 waits after each list, each wait a trip to
