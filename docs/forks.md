@@ -409,4 +409,7 @@ rt64 4e6c52e           on the web a tile copy is a texture copy (copyTextureToTe
 rt64 343d64d           without descriptor indexing the TMEM pool uploads each run of entries that changed (16 apart at
                        most), not all from the first to the last: in that cutscene it rewrote 14-16 MB pools almost whole
                        every fifth present; with both, it presents 147-191 a second uncapped in Firefox against 74-112
+rt64 8b9dce2           the inspector draws ImGui through plume on a page, whatever graphicsAPI says, with its font atlas
+                       as its only texture (a draw of any other ImTextureID is skipped): a recomp's ImGui overlay, as
+                       DKR-R-web's, opens on a page
 ```

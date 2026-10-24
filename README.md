@@ -121,6 +121,9 @@ What changes in the game's own code (behind `__EMSCRIPTEN__`) and files:
 - No native file dialog (nfd: RecompFrontend asks the page; a recomp with menus of its own calls
   `n64recomp_browser::pick_files`, `frontend/file_picker.h`, and gets the picked files' paths) and no `SDL_INIT_HAPTIC`
   (Emscripten's SDL2 has no haptics, and `SDL_Init` fails as a whole when asked for them, gamepads with it).
+- Nothing for a menu drawn with ImGui through RT64's inspector (DKR-R's overlay): on a page the inspector draws through
+  plume (rt64-web 8b9dce2), with ImGui's font atlas as its only texture, so a menu that shows images of its own leaves
+  them out there.
 - Input read whatever SDL's window focus says. On a page SDL's keyboard focus follows the canvas's window focus events,
   which a page opened behind another window, or driven by a script, never gets, though its tab gets the keys: DKR-R
   read the controller only while its window had focus, and its page took no input (DKR-R-web's `runtime_platform.cpp`).

@@ -273,9 +273,11 @@ the runtime read the ROM 1 KB at a time, until v0.82.0. N64ModernRuntime's `mesg
 the web's held messages (66539ab): DKR-R's own `runtime-deferred-events.patch` does the same, a blocked external
 message kept in a list of its own until a receive frees its queue, and is staged over that file at configure time.
 rt64-web 0a9fcb6 keeps the web's lines off those DKR-R's and Jet Force Gemini's patches change, as 03b9dcc and d5121c9
-do for Conker's. It always plays DKR-R's Modern profile, the only one that interpolates (Accurate, the desktop's
-default, holds RT64 at Original and 30, and the page has no overlay to pick a profile), widescreen as Modern is by
-default (a first run's settings would give it the runtime's starting 4:3, which nothing on a page changes), with its
+do for Conker's. A first run plays DKR-R's Modern profile, the only one that interpolates (Accurate, the desktop's
+default, holds RT64 at Original and 30), widescreen as Modern is by default (a first run's settings would give it the
+runtime's starting 4:3), and a profile the player saves from DKR-R's overlay is kept: the overlay opens on a page
+(Escape, F1, a controller's Back) through rt64-web's inspector on plume (8b9dce2), without online play, its restart
+and exit, or its CRT filters, which need images the inspector on a page doesn't draw. Modern goes with its
 Match display passed on as RT64's Display, since SDL's Emscripten port reports no refresh rate. DKR-R's updater is left
 out: a page is updated by its site. `record_shaders.mjs --from` goes on with a recording of its list stopped partway.
 The list was recorded in Accurate; in Modern, recorded with `?record-shaders` over the title, the menus, Timber's
