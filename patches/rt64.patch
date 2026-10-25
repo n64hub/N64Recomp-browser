@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 7844c0765967c5ec9732bea818ebb31e39b590fa
+rt64: https://github.com/n64hub/rt64-web 330f84abaab3ad09e1986f21774ce7c4d4e444f4
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2482,7 +2482,7 @@ index 8858dac..933b80e 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..ee7920d 100644
+index 2970e71..8aa3e69 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -2508,16 +2508,23 @@ index 2970e71..ee7920d 100644
          workloadCounter = 0;
          lastScreenHash = 0;
          lastScreenFactorCounter = 0;
-@@ -617,6 +626,8 @@ namespace RT64 {
+@@ -617,6 +626,15 @@ namespace RT64 {
      }
      
      void State::checkRDRAM() {
-+        landRAMCopies(false);
++        // The list before's frames copied to RAM a list late (renderToRAMLate) land here only once the GPU has them, so the
++        // list doesn't wait for the GPU to finish the frame before. One the GPU hasn't finished lands at the next VI that
++        // finds it ready, or at the latest where this list's fullSync() begins, before anything reuses its readback
++        // buffers: on a phone's GPU, kept at its lowest clock while it keeps up, a frame takes longer than the time
++        // between the game's lists, and the wait here was a quarter of each list's time. Until it lands, RDRAM holds what
++        // it held when that list ended, which is what the framebuffer's hash was taken of then (hashTracking()), so the
++        // check below doesn't take it for a change by the CPU.
++        landRAMCopies(true);
 +
          if (!rdramCheckPending) {
              return;
          }
-@@ -636,6 +647,9 @@ namespace RT64 {
+@@ -636,6 +654,9 @@ namespace RT64 {
              }
  
              framebufferManager.performDiscards(drawFbDiscards);
@@ -2527,7 +2534,7 @@ index 2970e71..ee7920d 100644
          }
  
          rdramCheckPending = false;
-@@ -781,6 +795,120 @@ namespace RT64 {
+@@ -781,6 +802,120 @@ namespace RT64 {
          }
      }
      
@@ -2648,15 +2655,16 @@ index 2970e71..ee7920d 100644
      void State::listProcessBegin() {
          dlCpuProfiler.start();
      }
-@@ -790,6 +918,7 @@ namespace RT64 {
+@@ -790,6 +925,8 @@ namespace RT64 {
      }
  
      void State::fullSync() {
++        // Whatever the list before copied to RAM late and the GPU hadn't finished when this list started (checkRDRAM()).
 +        landRAMCopies(false);
          flush();
          submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
  
-@@ -809,6 +938,7 @@ namespace RT64 {
+@@ -809,6 +946,7 @@ namespace RT64 {
          // Copy the current state's extended parameters into the workload.
          workload.extended.ditherNoiseStrength = extended.ditherNoiseStrength;
          workload.extended.texcoordWrapPoint = extended.texcoordWrapPoint;
@@ -2664,7 +2672,7 @@ index 2970e71..ee7920d 100644
  
          auto emitTileWarning = [&](CommandWarning warning, size_t tileIndex) {
              warning.indexType = CommandWarning::IndexType::TileIndex;
-@@ -1103,7 +1233,8 @@ namespace RT64 {
+@@ -1103,7 +1241,8 @@ namespace RT64 {
  
                      // Submit the shader to the cache so compilation can start right away.
                      // Ignore any calls that use fill type, as they're emulated without using a shader.
@@ -2674,7 +2682,7 @@ index 2970e71..ee7920d 100644
                          ext.rasterShaderCache->submit(shaderDesc);
                      }
  
-@@ -1254,6 +1385,10 @@ namespace RT64 {
+@@ -1254,6 +1393,10 @@ namespace RT64 {
                              resizedTargets.emplace(colorDepthPair.second);
                          }
                      }
@@ -2685,7 +2693,7 @@ index 2970e71..ee7920d 100644
                  }
  
                  for (RenderTarget *renderTarget : resizedTargets) {
-@@ -1264,6 +1399,9 @@ namespace RT64 {
+@@ -1264,6 +1407,9 @@ namespace RT64 {
              };
  
              auto renderAndSynchronize = [&](uint32_t maxFramebufferPair) {
@@ -2695,7 +2703,7 @@ index 2970e71..ee7920d 100644
                  // Preprocess all the framebuffer operations.
                  uint32_t pairCursor = framebufferPairCursor;
                  while (pairCursor < maxFramebufferPair) {
-@@ -1280,7 +1418,12 @@ namespace RT64 {
+@@ -1280,7 +1426,12 @@ namespace RT64 {
                  while (pairCursor < maxFramebufferPair) {
                      const FramebufferPair &fbPair = workload.fbPairs[pairCursor];
                      if (getTargetsFromPair(pairCursor)) {
@@ -2709,7 +2717,7 @@ index 2970e71..ee7920d 100644
                          FramebufferRenderer::DrawParams drawParams;
                          drawParams.worker = ext.framebufferGraphicsWorker;
                          drawParams.fbStorage = &fbStorage;
-@@ -1346,7 +1489,7 @@ namespace RT64 {
+@@ -1346,7 +1497,7 @@ namespace RT64 {
                  }
  
                  // Record all setup previous to drawing any of the recorded framebuffers.
@@ -2718,7 +2726,7 @@ index 2970e71..ee7920d 100644
                  framebufferRenderer->recordSetup(ext.framebufferGraphicsWorker, bufferUploaders, queuedProcessor, nullptr, &workload.outputBuffers, false);
  
                  // Record the command list for the framebuffer pairs.
-@@ -1471,15 +1614,26 @@ namespace RT64 {
+@@ -1471,15 +1622,26 @@ namespace RT64 {
                  ext.framebufferGraphicsWorker->commandList->end();
                  framebufferRenderer->waitForUploaders();
                  ext.framebufferGraphicsWorker->execute();
@@ -2748,7 +2756,7 @@ index 2970e71..ee7920d 100644
                          }
                      }
  
-@@ -1508,8 +1662,10 @@ namespace RT64 {
+@@ -1508,8 +1670,10 @@ namespace RT64 {
                          colorFb->readHeight = 0;
                      }
  
@@ -2760,7 +2768,7 @@ index 2970e71..ee7920d 100644
                          if (dummyDepthTarget == nullptr) {
                              dummyDepthTarget = std::make_unique<RenderTarget>(0, Framebuffer::Type::Depth, renderTargetManager.multisampling, renderTargetManager.usesHDR);
                              dummyDepthTarget->setupDepth(ext.framebufferGraphicsWorker, rtWidth, rtHeight);
-@@ -1520,6 +1676,7 @@ namespace RT64 {
+@@ -1520,6 +1684,7 @@ namespace RT64 {
                          }
  
                          colorDepthPairs.emplace_back(colorTarget, dummyDepthTarget.get());
@@ -2768,7 +2776,7 @@ index 2970e71..ee7920d 100644
                      }
                      // Resize the depth target if necessary.
                      else if (depthTarget != nullptr) {
-@@ -1562,6 +1719,10 @@ namespace RT64 {
+@@ -1562,6 +1727,10 @@ namespace RT64 {
  
              // Render any remaining batches of framebuffers.
              renderAndSynchronize(workload.fbPairCount);
@@ -2779,7 +2787,7 @@ index 2970e71..ee7920d 100644
          }
          else {
              // Process all tiles.
-@@ -1591,6 +1752,11 @@ namespace RT64 {
+@@ -1591,6 +1760,11 @@ namespace RT64 {
              textureManager.removeHashes(evictedTextureHashes);
          }
  
@@ -2791,18 +2799,18 @@ index 2970e71..ee7920d 100644
          if (renderToRDRAM) {
              // Indicate to the texture cache it's safe to delete the textures if no locks are active.
              ext.textureCache->decrementLock();
-@@ -1836,6 +2002,10 @@ namespace RT64 {
+@@ -1836,6 +2010,10 @@ namespace RT64 {
      }
      
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
-+        // A frame copied to RAM a list late (renderToRAMLate) lands at the first VI after the GPU has finished it, or when
-+        // the next list starts if that comes first.
++        // A frame copied to RAM a list late (renderToRAMLate) lands at the first VI or list start after the GPU has
++        // finished it, or where the next list's fullSync() begins if that comes first (checkRDRAM()).
 +        landRAMCopies(true);
 +
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1909,6 +2079,7 @@ namespace RT64 {
+@@ -1909,6 +2087,7 @@ namespace RT64 {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
@@ -2810,7 +2818,7 @@ index 2970e71..ee7920d 100644
                          {
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
-@@ -1971,6 +2142,9 @@ namespace RT64 {
+@@ -1971,6 +2150,9 @@ namespace RT64 {
          renderTargetManager.destroyAll();
          renderTargetManager.setMultisampling(multisampling);
          dummyDepthTarget.reset();
@@ -2820,7 +2828,7 @@ index 2970e71..ee7920d 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,6 +2834,27 @@ namespace RT64 {
+@@ -2660,6 +2842,27 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -2848,7 +2856,7 @@ index 2970e71..ee7920d 100644
      }
  
      void State::advancePresent(Present &present, bool paused) {
-@@ -2724,6 +2919,25 @@ namespace RT64 {
+@@ -2724,6 +2927,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  
