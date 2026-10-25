@@ -4,7 +4,7 @@
 // ('timestamp-query', where the adapter offers it: Chrome, quantized to 100 us, which averages out over many passes;
 // Firefox 158 on a laptop's Intel UHD; counts only elsewhere).
 //
-// A pass's kind is its attachments' size and formats (a compute pass: "compute"), and a present is a getCurrentTexture
+// A pass's kind is its attachments' size and formats (a compute pass: "compute" and its shader's WGSL size), and a present is a getCurrentTexture
 // call on a WebGPU canvas, so a kind's numbers are per present whatever the game's own frame rate. Copies are counted
 // beside the passes, untimed: WebGPU times only passes. The passes are reported an interval late, once their
 // timestamps are back. The timestamps cost a query resolve and a readback per command buffer. Beside them, the draws a
@@ -73,6 +73,16 @@
   });
   wrap(GPUDevice.prototype, 'createRenderPipelineAsync', (original) => function (descriptor) {
     return original.apply(this, arguments).then((pipeline) => { pipelineShader.set(pipeline, shaderOf(descriptor)); return pipeline; });
+  });
+  // A compute pipeline by its shader's WGSL size, to a tenth of a KB, which tells RT64's compute shaders apart.
+  const computeOf = (descriptor) => `compute ${((moduleSize.get(descriptor?.compute?.module) ?? 0) / 1024).toFixed(1)} KB`;
+  wrap(GPUDevice.prototype, 'createComputePipeline', (original) => function (descriptor) {
+    const pipeline = original.apply(this, arguments);
+    pipelineShader.set(pipeline, computeOf(descriptor));
+    return pipeline;
+  });
+  wrap(GPUDevice.prototype, 'createComputePipelineAsync', (original) => function (descriptor) {
+    return original.apply(this, arguments).then((pipeline) => { pipelineShader.set(pipeline, computeOf(descriptor)); return pipeline; });
   });
   wrap(GPUDevice.prototype, 'createCommandEncoder', (original) => function () {
     const encoder = original.apply(this, arguments);
@@ -147,6 +157,11 @@
       return original.apply(this, arguments);
     });
   }
+  wrap(GPUComputePassEncoder.prototype, 'setPipeline', (original) => function (pipeline) {
+    const record = passRecord.get(this);
+    if (record) record.kind = pipelineShader.get(pipeline) ?? 'compute';
+    return original.apply(this, arguments);
+  });
   wrap(GPUComputePassEncoder.prototype, 'dispatchWorkgroups', (original) => function (x, y = 1, z = 1) {
     const record = passRecord.get(this);
     if (record) record.work += x * y * z;
@@ -244,7 +259,7 @@
     const lines = [...kinds].map(([kind, k]) => {
       const ms = k.timed ? (k.ns / k.timed) * k.n / p / 1e6 : null;
       if (ms !== null) totalMs += ms;
-      return { kind, ms, text: `${(k.n / p).toFixed(2)}/present ${k.copy ? '' : `${(k.work / k.n).toFixed(1)} ${kind === 'compute' ? 'workgroups' : 'draws'} each `}` +
+      return { kind, ms, text: `${(k.n / p).toFixed(2)}/present ${k.copy ? '' : `${(k.work / k.n).toFixed(1)} ${kind.startsWith('compute') ? 'workgroups' : 'draws'} each `}` +
         (ms !== null ? `${ms.toFixed(3)} ms/present ` : '') + kind };
     }).sort((a, b) => (b.ms ?? -1) - (a.ms ?? -1));
     console.log(`passes: ${p} presents, ${(report.records.filter((r) => !r.copy).length / p).toFixed(1)} passes/present` +

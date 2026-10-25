@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web 5aa2cbed80860cc8fd619f155d0a7dd038c330ff
+plume: https://github.com/n64hub/plume-web be9714888cb8d61c1d243b05266feb73e6935a5c
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2971,10 +2971,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..dcdb431
+index 0000000..58e5766
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3526 @@
+@@ -0,0 +1,3532 @@
 +//
 +// plume
 +//
@@ -5223,8 +5223,14 @@ index 0000000..dcdb431
 +
 +    void WebGPUCommandList::barriers(RenderBarrierStages stages, const RenderBufferBarrier *bufferBarriers, uint32_t bufferBarriersCount, const RenderTextureBarrier *textureBarriers, uint32_t textureBarriersCount) {
 +        // WebGPU tracks usage itself. A barrier usually means a pass's output is about to be read, which can't
-+        // happen inside the pass, so it ends the render pass.
-+        endRenderPass();
++        // happen inside the pass, so it ends the render pass. With none open, a clear still pending stays the load op
++        // of the next pass: whatever could read its target (a copy, a dispatch, another framebuffer, the list's end)
++        // ends the pass first, which runs the clear. So a clear, a barrier for the texture a draw samples and the
++        // draw (RT64's present) are one pass, not a pass that only clears and one that loads it back, which on a
++        // tiled GPU (a phone's) writes the whole target out and reads it in again.
++        if (renderPass != nullptr) {
++            endRenderPass();
++        }
 +    }
 +
 +    void WebGPUCommandList::dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) {
