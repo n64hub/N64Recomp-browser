@@ -11,16 +11,21 @@ the GPU's: one turn on the phone at a time, whatever the GPU is doing, so a turn
 Two at once would open pages on it together and change its Chrome flags and CPU caps under each other, and both get
 numbers that mean nothing.
 
-- Everything a play does to the phone runs as one script inside one turn: the `adb forward` to Chrome's DevTools,
-  the `adb reverse` for the page, Chrome's command line, the CPU's caps, keeping the screen on, the play itself
-  (play_phone.mjs) and its screencaps. A step run outside the turn can land in another agent's play.
-- The script puts back what it changed before it exits, on failure too (a `trap ... EXIT` in a shell script): the
-  next turn starts from the phone as this one left it. That is Chrome's command line (the file deleted, the flag
-  reset, Chrome restarted), each `scaling_max_freq` at the value read before it was written, the forwards and
-  reverses it made (`adb forward --remove tcp:<port>`, `adb reverse --remove tcp:<port>`), and the tabs it opened
-  (`/json/close/<id>`). play_phone.mjs makes its forward and opens its tab but leaves both when it ends, so the script
-  removes them. Not the screen's timeout or `svc power stayon`: a shared phone left to sleep locks, and only a person
-  unlocks it, so every turn leaves them long and on.
+- A turn is `tools/phone_turn.mjs` (its header has the options): the game's hub folder, a build dir or Pages, the
+  game's desktop plan (where its launcher's Load ROM and Start Game are), the ROM, the card's own steps after Start
+  Game and how long the game plays. It serves the hub with the build in it, forwards Chrome's DevTools, reverses the
+  page's port, keeps the screen on, opens a blank tab, plays (play_phone.mjs), and puts back what it changed on any
+  exit it sees. A card writes only its steps, never a turn script of its own: each copy had bugs of its own (a Git Bash
+  path the proxy couldn't read, a launcher tap at the wrong spot, a tab helper that found no tab once another turn
+  had changed the phone's tabs), and each showed only when the turn came, after an hour or more in line.
+- It checks the play can start before the turn joins the line, touching nothing on the phone, in seconds: the build's
+  files and the proxy serving them, the plan and its files, the tile, every step. Give it the queue's command after
+  `--` and it queues itself only once the check passes; `--check` checks alone.
+- Anything else a turn changes on the phone (Chrome's command line, the CPU's caps) runs inside the same turn and is
+  put back before it ends, on failure too: Chrome's command line file deleted, the flag reset and Chrome restarted,
+  each `scaling_max_freq` at the value read before it was written. A step run outside the turn can land in another
+  agent's play. The screen's timeout and `svc power stayon` are left on: a phone that locks on a PIN waits for a
+  person.
 - One play a turn, as on the GPU, so other agents' turns come between a series; the phone rests between plays anyway
   (Measuring, heat). A turn's limit fits its play and the restarts around it.
 
@@ -62,8 +67,10 @@ numbers that mean nothing.
   `MSYS_NO_PATHCONV=1`, or `/sdcard/...` becomes a Windows path.
 - A ROM gets onto the phone with `adb push <rom> /sdcard/Download/`. The page's Load ROM opens Android's chooser
   (Camera, Camcorder, Photos & videos), since the input asks for no type; Photos & videos opens the system's file
-  picker, whose search finds the file.
-- A fresh origin, with nothing stored and nothing cached: serve the site at `http://localhost:<port>` on the computer
+  picker, whose search finds the file. A turn of phone_turn.mjs needs none of it: its preload answers the page's
+  picker with the ROM from the computer.
+- A fresh origin, with nothing stored and nothing cached (phone_turn.mjs's proxy, emptied with
+  `Storage.clearDataForOrigin` before and after a play): serve the site at `http://localhost:<port>` on the computer
   (a proxy of the published hub that also serves its README.md, which the hub reads from its own origin on
   localhost), and `adb reverse tcp:<port> tcp:<port>` makes it the phone's localhost too, a secure context, so WebGPU
   and the service worker work there. The phone's other origins keep their saves and ROMs.

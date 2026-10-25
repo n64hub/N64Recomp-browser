@@ -4,7 +4,11 @@
 // (docs/phones.md says how to connect a phone and what was measured this way).
 //
 //   node tools/play_phone.mjs <url> [--steps <steps.json>] [--seconds <n>] [--json <file>] [--adb <path>]
-//     [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>] [--no-cache]
+//     [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>] [--no-cache] [--check]
+//
+// A whole turn on a shared phone (the proxy, the forwards, a blank tab, putting it all back) is tools/phone_turn.mjs,
+// which runs this for the play itself. --check only reads the steps and the preload and says what is wrong with them,
+// touching nothing on the phone: every step is checked that way before a play starts anyway.
 //
 // adb forwards --port (9333) to the phone's Chrome, which must be running with USB or wireless debugging on (adb
 // devices lists the phone). A new tab is opened and brought to the front, since Chrome on Android gives a tab in the
@@ -24,8 +28,14 @@
 // touches its middle (a touch from the
 // protocol is a user gesture, so fullscreen and the orientation lock work as from a finger); ["tap", x, y] touches
 // the top document at CSS pixels; ["key", code, key, keyCode, ms] holds a key down for ms (150 if left out), which goes
-// to the frame that has the focus, the game's once it was touched; ["eval", "<js>"] runs <js> in the top document
-// and prints what it returns (the hub's game is frames[0], its files frames[0].FS); ["shot", file] saves the phone's screen (adb
+// to the frame that has the focus, the game's once it was touched; ["planTap", x, y] touches where a play plan's x, y
+// (CSS pixels in page_driver.mjs's 1256x645 viewport) are in the top document now, as page_driver moves a click: recompui
+// lays its launcher and menus out by the viewport's height, about the centre, so a game's launcher spots come from its
+// desktop plan; ["eval", "<js>"] runs <js> in the top document
+// and prints what it returns (the hub's game is frames[0], its files frames[0].FS); ["untilEval", "<js>", ms] waits
+// for <js> in the top document to be truthy (60 s if left out) and prints it; ["mark"] notes the time and ["at",
+// seconds] waits until that long after the last mark (or the play's start), so a play lasts as long whatever its steps
+// took; ["shot", file] saves the phone's screen (adb
 // screencap); ["profile", seconds, prefix] samples V8's profiler every 0.5 ms in the tab's page and each of its workers
 // (the game's threads) for that long, writes each thread's profile to <prefix>.<n>.cpuprofile (DevTools' Performance
 // panel opens one), and prints each thread's share of the time outside its waits and its top functions by self time,
@@ -39,6 +49,7 @@
 // none.
 import { execFile, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -51,19 +62,59 @@ const option = (name, fallback) => {
 const adb = option('--adb', 'adb');
 const serial = option('--serial', undefined);
 const port = Number(option('--port', '9333'));
-const stepsFile = option('--steps', undefined);
+// A Git Bash path (/c/Users/...) is C:/Users/... to Node on Windows.
+const local = (p) => p && (process.platform === 'win32' ? p.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:') : p);
+const stepsFile = local(option('--steps', undefined));
 const seconds = Number(option('--seconds', '240'));
-const jsonFile = option('--json', undefined);
-const preload = option('--preload', undefined);
-const noCache = args.includes('--no-cache');
-if (noCache) args.splice(args.indexOf('--no-cache'), 1);
+const jsonFile = local(option('--json', undefined));
+const preload = local(option('--preload', undefined));
+const flag = (name) => { const i = args.indexOf(name); if (i >= 0) args.splice(i, 1); return i >= 0; };
+const noCache = flag('--no-cache');
+const checkOnly = flag('--check');
 let tab = option('--tab', undefined);
 const url = args[0];
 if (!url || args.length > 1) {
-  console.error('usage: node tools/play_phone.mjs <url> [--steps <steps.json>] [--seconds <n>] [--json <file>] [--adb <path>] [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>] [--no-cache]');
+  console.error('usage: node tools/play_phone.mjs <url> [--steps <steps.json>] [--seconds <n>] [--json <file>] [--adb <path>] [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>] [--no-cache] [--check]');
   process.exit(1);
 }
-const steps = stepsFile ? JSON.parse(fs.readFileSync(stepsFile, 'utf8')) : [];
+
+// Each step's arguments, by kind: a number (ms, x, y, keyCode, seconds), a regex that compiles, a file whose folder
+// is there, or a string; a ? after one leaves it out.
+const stepArgs = { wait: ['ms'], until: ['regex', 'ms?'], untilEval: ['js', 'ms?'], tap: ['x', 'y'], planTap: ['x', 'y'],
+  tapText: ['text', 'selector?', 'inner?'], key: ['code', 'key', 'keyCode', 'ms?'], eval: ['js'], shot: ['file'],
+  profile: ['seconds', 'prefix'], mark: [], at: ['seconds'] };
+const stepProblem = (step) => {
+  if (!Array.isArray(step) || !Object.hasOwn(stepArgs, step[0])) return 'is no step: its first item names none of ' + Object.keys(stepArgs).join(', ');
+  const [kind, ...a] = step;
+  const want = stepArgs[kind];
+  if (a.length > want.length) return `has ${a.length} arguments, ${kind} takes ${want.length}`;
+  for (const [i, w] of want.entries()) {
+    const name = w.replace('?', ''), v = a[i];
+    if (v === undefined || v === null) { if (w.endsWith('?')) continue; return `has no ${name}`; }
+    if (['ms', 'x', 'y', 'keyCode', 'seconds'].includes(name)) { if (!Number.isFinite(v)) return `has a ${name} that is not a number`; }
+    else if (typeof v !== 'string') return `has a ${name} that is not a string`;
+    else if (name === 'regex') { try { new RegExp(v); } catch (e) { return `has a regex that does not compile: ${e.message}`; } }
+    else if ((name === 'file' || name === 'prefix') && !fs.existsSync(path.dirname(path.resolve(v)))) return `writes to ${path.dirname(path.resolve(v))}, which is not there`;
+  }
+  return null;
+};
+let steps = [];
+try {
+  steps = stepsFile ? JSON.parse(fs.readFileSync(stepsFile, 'utf8')) : [];
+  if (!Array.isArray(steps)) throw new Error('is not a JSON array of steps');
+  steps = steps.map((s) => s?.[0] === 'shot' && typeof s[1] === 'string' ? ['shot', local(s[1])]
+    : s?.[0] === 'profile' && typeof s[2] === 'string' ? ['profile', s[1], local(s[2])] : s);
+  const problems = steps.map((step, i) => [i, stepProblem(step)]).filter(([, p]) => p).map(([i, p]) => `step ${i + 1} ${JSON.stringify(steps[i]).slice(0, 80)} ${p}`);
+  if (preload && !fs.existsSync(preload)) problems.push(`the preload ${preload} is not there`);
+  if (problems.length) throw new Error(problems.join('\n'));
+} catch (error) {
+  console.error(`${stepsFile ?? 'the steps'}: ${error.message}`);
+  process.exit(1);
+}
+if (checkOnly) {
+  console.log(`${steps.length} steps, all of them good${preload ? ', and the preload is there' : ''}`);
+  process.exit(0);
+}
 
 const shell = (...command) => execFileSync(adb, [...(serial ? ['-s', serial] : []), ...command], { encoding: 'buffer', maxBuffer: 1 << 26 });
 // The GPU's load and clock, where the phone shows them to adb (a Mali in an Exynos does, at /sys/kernel/gpu).
@@ -263,12 +314,28 @@ const finish = (exitCode) => {
   process.exit(exitCode);
 };
 
+let mark = t0;
 try {
   for (const step of steps) {
     const [kind, ...a] = step;
     if (kind === 'wait') await new Promise((ok) => setTimeout(ok, a[0]));
     else if (kind === 'until') await waitFor(new RegExp(a[0]), a[1] ?? 60000);
+    else if (kind === 'untilEval') {
+      const end = Date.now() + (a[1] ?? 60000);
+      let value;
+      while (!(value = await evaluate(a[0]).catch(() => null))) {
+        if (Date.now() > end) throw new Error(`${a[0].slice(0, 80)} was still not true after ${(a[1] ?? 60000) / 1000} s`);
+        await new Promise((ok) => setTimeout(ok, 500));
+      }
+      console.log(`${at().toFixed(1).padStart(6)}  ${JSON.stringify(value)}`);
+    } else if (kind === 'mark') mark = Date.now();
+    else if (kind === 'at') await new Promise((ok) => setTimeout(ok, Math.max(0, mark + a[0] * 1000 - Date.now())));
     else if (kind === 'tap') await touch(a[0], a[1]);
+    else if (kind === 'planTap') {
+      const [w, h] = await evaluate('[innerWidth, innerHeight]');
+      const scale = h / 645;
+      await touch(Math.round(w / 2 + (a[0] - 628) * scale), Math.round(h / 2 + (a[1] - 322.5) * scale));
+    }
     else if (kind === 'tapText') {
       const spot = await evaluate(`(async () => {
         const el = [...document.querySelectorAll(${JSON.stringify(a[1] ?? '*')})].reverse().find((e) => e.textContent.includes(${JSON.stringify(a[0])}) && e.getBoundingClientRect().width > 0);
