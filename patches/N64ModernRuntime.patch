@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web a25ea81dafddc7d1b65a17cfe3ffbe95ee56f3df
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 51dd2205a7ab5d1164309a06b637a1facf447bc8
 on upstream 589bbf018a3e6d3646ddf7de1e7919f1b7e99bb1 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -819,7 +819,7 @@ index 0000000..fd0af15
 +
 +#endif
 diff --git a/ultramodern/include/ultramodern/renderer_context.hpp b/ultramodern/include/ultramodern/renderer_context.hpp
-index d60c4ec..c543624 100644
+index d60c4ec..7f9c814 100644
 --- a/ultramodern/include/ultramodern/renderer_context.hpp
 +++ b/ultramodern/include/ultramodern/renderer_context.hpp
 @@ -54,7 +54,7 @@ namespace ultramodern {
@@ -831,6 +831,21 @@ index d60c4ec..c543624 100644
          using WindowHandle = SDL_Window*;
  #elif defined(__APPLE__)
          struct WindowHandle {
+@@ -114,6 +114,14 @@ namespace ultramodern {
+ 
+         void set_callbacks(const callbacks_t& callbacks);
+ 
++        // Tells the game the RDP has finished the graphics task the renderer is being sent (RendererContext::send_dl)
++        // before send_dl returns, once the renderer reads nothing more of RDRAM for it, so the game goes on while the
++        // renderer finishes its own work for the task. Only from inside send_dl, on the graphics thread: the DP's message
++        // is then not sent again when send_dl returns.
++        void rdp_done();
++        // Whether rdp_done sent the DP's message of the task send_dl was given, which it then forgets.
++        bool take_rdp_done();
++
+         std::unique_ptr<RendererContext> create_render_context(uint8_t* rdram, WindowHandle window_handle, bool developer_mode);
+ 
+         std::string get_graphics_api_name(GraphicsApi api);
 diff --git a/ultramodern/include/ultramodern/rsp.hpp b/ultramodern/include/ultramodern/rsp.hpp
 index dda1b08..79ae6d5 100644
 --- a/ultramodern/include/ultramodern/rsp.hpp
@@ -1014,7 +1029,7 @@ index 0000000..be6c588
 +
 +#endif
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 2f1cfb5..343d069 100644
+index 2f1cfb5..c3d2af7 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -175,6 +175,143 @@ uint64_t total_vis = 0;
@@ -1187,6 +1202,18 @@ index 2f1cfb5..343d069 100644
          if (new_total_vis > total_vis + 1) {
              //printf("Skipped % " PRId64 " frames in VI interupt thread!\n", new_total_vis - total_vis - 1);
          }
+@@ -262,6 +414,11 @@ void sp_complete() {
+ }
+ 
+ void dp_complete() {
++    // Sent already if the renderer sent it before send_dl returned (ultramodern::renderer::rdp_done).
++    if (ultramodern::renderer::take_rdp_done()) {
++        return;
++    }
++
+     uint8_t* rdram = events_context.rdram;
+     std::lock_guard lock{ events_context.message_mutex };
+     ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
 index 9944a02..b7a1a2a 100644
 --- a/ultramodern/src/mesgqueue.cpp
@@ -1281,6 +1308,33 @@ index 9944a02..b7a1a2a 100644
  
  extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg, s32 count) {
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
+diff --git a/ultramodern/src/renderer_context.cpp b/ultramodern/src/renderer_context.cpp
+index a6af900..2921365 100644
+--- a/ultramodern/src/renderer_context.cpp
++++ b/ultramodern/src/renderer_context.cpp
+@@ -10,6 +10,22 @@ void ultramodern::renderer::set_callbacks(const callbacks_t& callbacks) {
+     render_callbacks = callbacks;
+ }
+ 
++void dp_complete();
++
++// Whether rdp_done sent the DP's message of the graphics task send_dl was given. Only the graphics thread touches it.
++static bool rdp_done_sent = false;
++
++void ultramodern::renderer::rdp_done() {
++    dp_complete();
++    rdp_done_sent = true;
++}
++
++bool ultramodern::renderer::take_rdp_done() {
++    const bool sent = rdp_done_sent;
++    rdp_done_sent = false;
++    return sent;
++}
++
+ 
+ std::unique_ptr<ultramodern::renderer::RendererContext> ultramodern::renderer::create_render_context(uint8_t* rdram, WindowHandle window_handle, bool developer_mode) {
+     if (render_callbacks.create_render_context == nullptr) {
 diff --git a/ultramodern/src/rsp.cpp b/ultramodern/src/rsp.cpp
 index 1594304..c575717 100644
 --- a/ultramodern/src/rsp.cpp
