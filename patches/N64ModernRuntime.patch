@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 5ea5ee4557d86703573dd4d8c96ad5b787d96b02
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 5216e5b0b0ae016ae7b0b606027604718c395b7f
 on upstream 589bbf018a3e6d3646ddf7de1e7919f1b7e99bb1 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -819,7 +819,7 @@ index 0000000..fd0af15
 +
 +#endif
 diff --git a/ultramodern/include/ultramodern/renderer_context.hpp b/ultramodern/include/ultramodern/renderer_context.hpp
-index d60c4ec..e8bb484 100644
+index d60c4ec..7f9c814 100644
 --- a/ultramodern/include/ultramodern/renderer_context.hpp
 +++ b/ultramodern/include/ultramodern/renderer_context.hpp
 @@ -54,7 +54,7 @@ namespace ultramodern {
@@ -831,16 +831,17 @@ index d60c4ec..e8bb484 100644
          using WindowHandle = SDL_Window*;
  #elif defined(__APPLE__)
          struct WindowHandle {
-@@ -114,6 +114,13 @@ namespace ultramodern {
+@@ -114,6 +114,14 @@ namespace ultramodern {
  
          void set_callbacks(const callbacks_t& callbacks);
  
-+        // Tells the game the RDP has finished the graphics task being sent (RendererContext::send_dl) before send_dl
-+        // returns, once the renderer has read all it needs of RDRAM for it, so the game can go on while the renderer
-+        // finishes its own work for the task. Called on the graphics thread, from send_dl; the task's first call sends
-+        // the DP's message and later ones do nothing, as does a call outside send_dl. Without one, the message is sent
-+        // when send_dl returns.
++        // Tells the game the RDP has finished the graphics task the renderer is being sent (RendererContext::send_dl)
++        // before send_dl returns, once the renderer reads nothing more of RDRAM for it, so the game goes on while the
++        // renderer finishes its own work for the task. Only from inside send_dl, on the graphics thread: the DP's message
++        // is then not sent again when send_dl returns.
 +        void rdp_done();
++        // Whether rdp_done sent the DP's message of the task send_dl was given, which it then forgets.
++        bool take_rdp_done();
 +
          std::unique_ptr<RendererContext> create_render_context(uint8_t* rdram, WindowHandle window_handle, bool developer_mode);
  
@@ -1028,7 +1029,7 @@ index 0000000..be6c588
 +
 +#endif
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 2f1cfb5..39b48ec 100644
+index 2f1cfb5..c3d2af7 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -175,6 +175,143 @@ uint64_t total_vis = 0;
@@ -1201,41 +1202,18 @@ index 2f1cfb5..39b48ec 100644
          if (new_total_vis > total_vis + 1) {
              //printf("Skipped % " PRId64 " frames in VI interupt thread!\n", new_total_vis - total_vis - 1);
          }
-@@ -261,12 +413,26 @@ void sp_complete() {
-     ultramodern::enqueue_external_message_src(events_context.sp.mq, events_context.sp.msg, false, ultramodern::EventMessageSource::Sp);
+@@ -262,6 +414,11 @@ void sp_complete() {
  }
  
-+// Whether the graphics task being sent has had its DP message, which the renderer may send before send_dl returns
-+// (ultramodern::renderer::rdp_done). True outside a task, so a call outside send_dl does nothing. Only the graphics
-+// thread touches it.
-+static bool task_dp_completed = true;
-+
  void dp_complete() {
-+    if (task_dp_completed) {
++    // Sent already if the renderer sent it before send_dl returned (ultramodern::renderer::rdp_done).
++    if (ultramodern::renderer::take_rdp_done()) {
 +        return;
 +    }
 +
-+    task_dp_completed = true;
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
- }
- 
-+void ultramodern::renderer::rdp_done() {
-+    dp_complete();
-+}
-+
- void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_ready) {
-     ultramodern::set_native_thread_name("SP Task Thread");
-     ultramodern::set_native_thread_priority(ultramodern::ThreadPriority::Normal);
-@@ -370,6 +536,7 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
-                 ultramodern::extensions::on_displaylist_submitted(displaylist);
- 
-                 [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
-+                task_dp_completed = false;
-                 renderer_context->send_dl(&task_action->task);
-                 [[maybe_unused]] auto renderer_end = std::chrono::high_resolution_clock::now();
- 
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
 index 9944a02..b7a1a2a 100644
 --- a/ultramodern/src/mesgqueue.cpp
@@ -1330,6 +1308,33 @@ index 9944a02..b7a1a2a 100644
  
  extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg, s32 count) {
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
+diff --git a/ultramodern/src/renderer_context.cpp b/ultramodern/src/renderer_context.cpp
+index a6af900..2921365 100644
+--- a/ultramodern/src/renderer_context.cpp
++++ b/ultramodern/src/renderer_context.cpp
+@@ -10,6 +10,22 @@ void ultramodern::renderer::set_callbacks(const callbacks_t& callbacks) {
+     render_callbacks = callbacks;
+ }
+ 
++void dp_complete();
++
++// Whether rdp_done sent the DP's message of the graphics task send_dl was given. Only the graphics thread touches it.
++static bool rdp_done_sent = false;
++
++void ultramodern::renderer::rdp_done() {
++    dp_complete();
++    rdp_done_sent = true;
++}
++
++bool ultramodern::renderer::take_rdp_done() {
++    const bool sent = rdp_done_sent;
++    rdp_done_sent = false;
++    return sent;
++}
++
+ 
+ std::unique_ptr<ultramodern::renderer::RendererContext> ultramodern::renderer::create_render_context(uint8_t* rdram, WindowHandle window_handle, bool developer_mode) {
+     if (render_callbacks.create_render_context == nullptr) {
 diff --git a/ultramodern/src/rsp.cpp b/ultramodern/src/rsp.cpp
 index 1594304..c575717 100644
 --- a/ultramodern/src/rsp.cpp
