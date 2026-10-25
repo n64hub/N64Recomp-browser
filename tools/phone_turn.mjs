@@ -14,13 +14,14 @@
 // <page>.html as the folder's page and its <page>.js, .wasm and .data; "pages" serves Pages' own. --plan is the game's
 // desktop plan (its play_plan.json, a path or a URL): its page names the build's files, its load steps wait for the
 // launcher (a wait for the shaders' build given 180 s at least, a phone's), and its first rom step and the click after
-// it are Load ROM and Start Game, tapped where the plan clicks them as page_driver.mjs moves a click to another viewport
-// (play_phone.mjs's planTap), so no turn guesses the phone's launcher spots; a plan that takes them with a key (a rom
-// step with a key, a key or pressUntil step after it) gets that key, a pressUntil's three times its everyMs apart (its
-// test reads the desktop driver's helpers). The page's file picker is answered with --rom, served by the proxy. --steps are the card's own, play_phone.mjs's steps, run once Start Game is tapped; the
-// game plays --seconds (90) from there, however long the steps take, then the play ends. --shots <prefix> saves the
-// screen at the launcher and at the end (<prefix>-launcher.png, <prefix>-end.png; a screencap shows the phone's
-// notifications too). --preload adds the card's script after this one's, --json is play_phone.mjs's.
+// it are Load ROM and Start Game, tapped where the plan clicks them as page_driver.mjs moves a click to another
+// viewport (play_phone.mjs's planTap), so no turn guesses the phone's launcher spots, with the plan's until and wait
+// steps between them (the launcher taking the ROM); a plan that takes them with a key (a rom step with a key, a key or
+// pressUntil step after it) gets that key, a pressUntil's three times its everyMs apart (its test reads the desktop
+// driver's helpers). The page's file picker is answered with --rom, served by the proxy. --steps are the card's own,
+// play_phone.mjs's steps, run once Start Game is tapped; the game plays --seconds (90) from there, however long the
+// steps take, then the play ends. --shots <prefix> saves the screen at the launcher and at the end
+// (<prefix>-launcher.png, <prefix>-end.png; a screencap shows the phone's notifications too). --preload adds the card's script after this one's, --json is play_phone.mjs's.
 //
 // The check reads nothing from the phone, so it runs in seconds outside the turn: adb runs; the plan parses, names a page,
 // has a Load ROM and a Start Game and every file its evalFile steps name; the ROM is there; the folder has a row in the
@@ -173,12 +174,14 @@ const check = async (base) => {
 
   if (planError) fail(`the plan ${planFile} doesn't parse: ${planError}`);
   if (plan && !page) fail(`the plan names no page (its "page" is ${JSON.stringify(plan.page)})`);
-  let romStep = null, startStep = null, load = [];
+  let romStep = null, startStep = null, load = [], between = [];
   if (plan) {
     const before = [...(plan.setup ?? []), ...(plan.start ?? [])];
     const i = before.findIndex((s) => s[0] === 'rom');
     romStep = before[i];
-    startStep = i >= 0 ? before.slice(i + 1).find((s) => ['click', 'key', 'pressUntil'].includes(s[0])) : null;
+    const j = i >= 0 ? before.findIndex((s, k) => k > i && ['click', 'key', 'pressUntil'].includes(s[0])) : -1;
+    startStep = j >= 0 ? before[j] : null;
+    between = j >= 0 ? before.slice(i + 1, j).filter((s) => s[0] === 'until' || s[0] === 'wait') : [];
     const spot = (s) => s.length >= 3 && Number.isFinite(s[1]) && Number.isFinite(s[2]) && s[1] >= 0 && s[1] <= 1256 && s[2] >= 0 && s[2] <= 645;
     if (!romStep) fail('the plan has no rom step (Load ROM) in its setup or start');
     else if (typeof romStep[1] !== 'string' && !spot(romStep)) fail(`the plan's rom step ${JSON.stringify(romStep)} is no spot in 1256x645`);
@@ -230,7 +233,7 @@ const check = async (base) => {
     if (stepsFile) try { mine = JSON.parse(fs.readFileSync(stepsFile, 'utf8')); } catch { /* play_phone.mjs --check says why, below */ }
     turn.steps = [['wait', 3000], ['tapText', tile, 'article.tile', '.art'], ...load,
       ...(shots ? [['shot', `${shots}-launcher.png`]] : []), tap(romStep), ['untilEval', 'frames[0]?.__phoneTurnRom', 60000],
-      ['untilEval', romStored((romSize + 3) & ~3), 60000], ...start, ['mark'], ...(Array.isArray(mine) ? mine : [mine]),
+      ['untilEval', romStored((romSize + 3) & ~3), 60000], ...between, ...start, ['mark'], ...(Array.isArray(mine) ? mine : [mine]),
       ['at', seconds], ...(shots ? [['shot', `${shots}-end.png`]] : [])];
   }
   turn.stepsFile = path.join(turn.tmp, 'steps.json');
