@@ -467,8 +467,24 @@ rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_O
                        presented 47-68 a second from v0.109.0 on, against 287-305 before and 291.8 with it
 RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
                        times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
-                       heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's
-rt64 27e2e15           with render to RAM's late copy and a frontend's Application::Core::rdpDone, a list that ends at
+                       heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's,
+                       whose heap's break fell to 748.3 MB from 841.0
+rt64 9086c93,          frame matching pairs a hash's calls by what each adds (its range of matrices, its tiles, its
+rt64 3c6a1cc           look at), not every call with every one of the previous frame's: a group of alike calls cost
+                       its square, and in Banjo-Tooie's levels (up to 398 calls of one hash, 167,000 pairs of calls a
+                       frame) the matching took 18-23 ms of the workload thread's game frame on a phone; the sets it
+                       fills are the same, in 14,715 scenes compared. 3c6a1cc takes out the include 9086c93 added
+                       where Pokémon Snap's, Diddy Kong Racing's and Jet Force Gemini's own RT64 patches add theirs
+rt64 737169e           a load taller than TMEM skips the rows the later ones overwrite from the row it ends on,
+                       assigned rather than added to where it starts (a load starting past TMEM's first byte wrote
+                       up to 4 KB past TMEM), and only where the rows have no gap between them or the stride divides
+                       TMEM: the same bytes as each row written in turn in 600,000 random loads, the old skip wrong
+                       in 541,644 of the 541,823 it took; on every build. Majora's Mask's and Banjo-Kazooie's tall
+                       loads take it, from TMEM's first byte without gaps, which the old skip got right too
+rt64 15e8e91           the flat, multisampled dual-source RasterPS gets VERTEX_FLAT_COLOR: 85a6ad5's line for it was
+                       garbled, and CMake passed dxc the pieces, so it was the smooth one; nothing includes it (a page
+                       draws without MSAA), so no binary changes
+rt64 49ac263           with render to RAM's late copy and a frontend's Application::Core::rdpDone, a list that ends at
                        its full sync tells the game its RDP is done once its draws are interpreted and its tiles
                        loaded, before RT64 records and submits its last batch, that batch's framebuffers kept whole
                        for it to read; a pending copy still lands before the next list's RDP is done, at its start,
