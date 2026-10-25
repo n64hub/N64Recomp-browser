@@ -133,16 +133,50 @@ function showFrame(url) {
 // page and then locks it to landscape, before the frame loads, so the game starts at that size. Chrome on Android locks
 // only in fullscreen and grants that only from a tap, and here, at the top, neither depends on what a frame may do. A
 // phone is where the pointer is a finger: never a computer, a laptop's touch screen included, whose pointer is its
-// mouse. Where either is refused (an iPhone has neither) the game's page asks for the phone to be turned
-// (frontend/shell.html, whose own tap does the same on a page opened on its own). Closing the game leaves fullscreen.
+// mouse. Closing the game leaves fullscreen.
+// Android leaves fullscreen, and so the lock, by itself: for the ROM picker, which hides the page, and at Back. So a
+// game is never shown upright: #player-turn covers it while a finger's screen is in portrait (site.css), and its tap
+// is the one that fullscreens and locks again. Where either is refused (an iPhone has neither) it asks for the phone
+// to be turned instead, as the game's own page does (frontend/shell.html, whose own tap fullscreens a page opened on
+// its own).
 const phone = matchMedia('(pointer: coarse)');
-const refused = (e) => console.log(`fullscreen or landscape refused: ${e.name}: ${e.message}`);
+const turn = document.getElementById('player-turn');
+const refused = (e) => {
+  console.log(`fullscreen or landscape refused: ${e.name}: ${e.message}`);
+  turn.textContent = 'Turn your phone sideways to play.';
+};
 function landscape() {
-  if (!phone.matches || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
-  document.documentElement.requestFullscreen().then(() => screen.orientation?.lock?.('landscape')).catch(refused);
+  if (!phone.matches) return Promise.resolve();
+  if (!document.documentElement.requestFullscreen || !screen.orientation?.lock) {
+    refused({ name: 'NotSupportedError', message: 'no fullscreen or orientation lock' });
+    return Promise.resolve();
+  }
+  return (document.fullscreenElement ? Promise.resolve() : document.documentElement.requestFullscreen())
+    .then(() => screen.orientation.lock('landscape')).catch(refused);
+}
+turn.addEventListener('click', landscape);
+
+// Firefox on a phone or tablet plays no game: its WebGPU fails as the game's page starts, behind that page's notice to
+// turn the phone. So the header says so before a game is picked, more strongly than the built-in graphics warning
+// (below), and a tile only points at it. That is Firefox for Android, or it asking for a desktop site, whose UA then
+// names no Android but whose pointer is still a finger; Firefox on an iPhone is Safari's engine (its UA says FxiOS).
+const firefox = /\bFirefox\//.test(navigator.userAgent);
+const noGames = firefox && (phone.matches || /Android/.test(navigator.userAgent));
+const noGamesNote = document.getElementById('phone-firefox-note');
+noGamesNote.hidden = !noGames;
+document.body.classList.toggle('no-games', noGames);
+function pointAtNoGames() {
+  noGamesNote.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  noGamesNote.classList.remove('flash');
+  void noGamesNote.offsetWidth;  // so the animation starts again
+  noGamesNote.classList.add('flash');
 }
 
 async function openGame(game, push = true) {
+  if (noGames) {
+    pointAtNoGames();
+    return;
+  }
   const folder = sameOriginFolder(game.page);
   if (!folder || !window.crossOriginIsolated) {
     location.assign(game.page);
@@ -201,10 +235,33 @@ window.addEventListener('popstate', () => {
 });
 document.getElementById('player-close').addEventListener('click', closeGame);
 // The game's own page fullscreens, as on its own: a fullscreen element around the frame only resized it from outside,
-// and Banjo froze there (the picture, not the sound). The click's activation reaches a same-origin frame.
-document.getElementById('player-full').addEventListener('click', () => frame.contentDocument.documentElement.requestFullscreen()
-  .then(() => phone.matches && screen.orientation?.lock?.('landscape')).catch(refused));
+// and Banjo froze there (the picture, not the sound). The click's activation reaches a same-origin frame. A phone's
+// fullscreen is this page's (landscape()), so that ✕ stays over the game: the frame's own hid it, and only the phone's
+// Back left the game.
+document.getElementById('player-full').addEventListener('click', () => {
+  if (phone.matches) landscape();
+  else frame.contentDocument.documentElement.requestFullscreen().catch(refused);
+});
 frame.addEventListener('load', () => frame.focus());
+// A game's page asks for fullscreen at a phone's tap (frontend/shell.html), and inside this page its own fullscreen
+// would hide ✕ as the button's did: on a phone the request is this page's instead.
+frame.addEventListener('load', () => {
+  if (phone.matches && frame.contentDocument) frame.contentDocument.documentElement.requestFullscreen = landscape;
+});
+
+// A phone's on-screen controller (touch_pad.js, at this page's top) goes into the game's frame from here, so every game
+// played here has it whatever its page was built from, and a change to it needs no page built: the frame is the same
+// origin, so the script runs in the game's own window, whose game reads it as a gamepad. A page that loads it itself
+// (frontend/shell.html, since v0.104.0) shows it once its game starts, past the launcher, and is left alone, as is one
+// that has a controller of its own (v0.103.0's shell, #pad). A page built before the runtime said when its game starts
+// (Module.gameStarted) gets it shown from the start, over its launcher too, where Hide controls takes it away: each
+// page's next build from a newer release does away with that, and no change to the controller needs one.
+frame.addEventListener('load', () => {
+  const page = frame.contentWindow, doc = frame.contentDocument;
+  if (!phone.matches || !page.Module || doc.querySelector('#pad, script[src="/touch_pad.js"]')) return;
+  if (!page.Module.gameStarted) page.Module.gameRunning = true;
+  doc.head.append(Object.assign(doc.createElement('script'), { src: '/touch_pad.js' }));
+});
 
 // Firefox on built-in graphics holds every game to 30-45 (its compositor), so those players get the header's warning:
 // an Intel chip's graphics but its Arc cards (A770, B580; a Core Ultra's own "Arc Graphics" is built in), or AMD's
@@ -219,8 +276,7 @@ function webglRenderer() {
   const info = gl?.getExtension('WEBGL_debug_renderer_info');
   return (info && gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) || '';
 }
-document.getElementById('firefox-note').hidden = !/\bFirefox\//.test(navigator.userAgent)
-  || !builtInGraphics(webglRenderer());
+document.getElementById('firefox-note').hidden = !firefox || noGames || !builtInGraphics(webglRenderer());
 
 // Signing in keeps the player's saves in their own Google Drive (frontend/save_sync.js, loaded before this). The hub's
 // OAuth client, a Google Cloud project's client of the Web application type, with this page's address (https://n64hub.com/,

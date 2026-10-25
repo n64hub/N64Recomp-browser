@@ -273,9 +273,11 @@ the runtime read the ROM 1 KB at a time, until v0.82.0. N64ModernRuntime's `mesg
 the web's held messages (66539ab): DKR-R's own `runtime-deferred-events.patch` does the same, a blocked external
 message kept in a list of its own until a receive frees its queue, and is staged over that file at configure time.
 rt64-web 0a9fcb6 keeps the web's lines off those DKR-R's and Jet Force Gemini's patches change, as 03b9dcc and d5121c9
-do for Conker's. It always plays DKR-R's Modern profile, the only one that interpolates (Accurate, the desktop's
-default, holds RT64 at Original and 30, and the page has no overlay to pick a profile), widescreen as Modern is by
-default (a first run's settings would give it the runtime's starting 4:3, which nothing on a page changes), with its
+do for Conker's. A first run plays DKR-R's Modern profile, the only one that interpolates (Accurate, the desktop's
+default, holds RT64 at Original and 30), widescreen as Modern is by default (a first run's settings would give it the
+runtime's starting 4:3), and a profile the player saves from DKR-R's overlay is kept: the overlay opens on a page
+(Escape, F1, a controller's Back) through rt64-web's inspector on plume (8b9dce2), without online play, its restart
+and exit, or its CRT filters, which need images the inspector on a page doesn't draw. Modern goes with its
 Match display passed on as RT64's Display, since SDL's Emscripten port reports no refresh rate. DKR-R's updater is left
 out: a page is updated by its site. `record_shaders.mjs --from` goes on with a recording of its list stopped partway.
 The list was recorded in Accurate; in Modern, recorded with `?record-shaders` over the title, the menus, Timber's
@@ -288,15 +290,15 @@ render to RAM off, the fixed heap, the shader list and how it is recorded by the
 N64ModernRuntime (their `snap64` branches), the one game fork whose rt64 isn't upstream's: ~8,000 lines of the port's
 in RT64 (each object's identity for interpolation, its frame pacing and presentation, Photo Detail's framebuffer
 readback, the Snap Station's overlay, primitive-depth sprites). `apply.cmake` patches them, but for the files where
-both change the same lines (`patches/web/files.txt`, 17 of rt64's and 6 of the runtime's), whose web change is its
+both change the same lines (`patches/web/files.txt`, 23 of rt64's and 6 of the runtime's), whose web change is its
 `patches/web/<project>.patch`, merged by hand. Its `tools/build_web.sh` then takes what N64Recomp-browser has changed in
 those files since that merge (`apply.cmake --since`, README), and stops only where that meets the port's own lines:
 that is merged into its patch by hand. CI's `snap-patches` job runs its `tools/build_web.sh --patches` (that step, no
 ROM) with the PR's checkout, against its main, so a web change that meets the port's lines, in a file left out or one
 that isn't yet, is red in the PR that makes it and is merged into `patches/web` there (a new file added to `files.txt`). On v0.70.0 rt64-web had changed 9 of the then 13 files since its patch was written, which
 the build had left out with nothing said. Two of that merge's choices: in `rt64_vi.cpp` frames of uneven VIs
-interpolate at the fastest (rt64 179adb8) and the port's last measured rate is what's left, in place of 0; in
-`RasterPS.hlsl` a decal pipeline with `DECAL_DEPTH_BOUNDS` writes the web's bound as its depth (rt64 0560318), and
+interpolate as the web has them (rt64 179adb8, 7844c07) and the port's last measured rate is what's left, in place of
+0; in `RasterPS.hlsl` a decal pipeline with `DECAL_DEPTH_BOUNDS` writes the web's bound as its depth (rt64 0560318), and
 every other the port's depth. HAL's object manager runs each object on a thread that stops itself, which the libultra
 thread stop ignored a start of (N64ModernRuntime-web 6515ea8). Render to RAM keeps the exact copy: the game scores a
 photo from the frame it has just drawn and finds the viewfinder's focus dot in it, and a play shows no kept writes. It

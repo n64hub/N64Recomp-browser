@@ -10,7 +10,7 @@
 // display frames held and the frames cut, in display frames at 60 a second (at a display of 240, four times as many).
 // The guesses are only made where RT64 interpolates at all (the last three frames' slowest at most twice the fastest):
 //
-//   main   the fastest of the last three (RT64's)
+//   main   the fastest of the last three (RT64's, where the slowest took fewer than 3 of the last 8: rt64 7844c07)
 //   last   the last frame's
 //   mode3  the most common of the last three (a tie: the faster)
 //   mode5  the most common of the last five

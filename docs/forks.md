@@ -394,6 +394,9 @@ a0d35b6                that won't open at Start Game goes back to the launcher: 
 N64ModernRuntime       a0d35b6's way back to the launcher only when no ROM is loaded (recomp::is_rom_loaded): Ocarina
 e4c932f                of Time keeps no stored ROM, hands the runtime the player's file with set_rom_contents before
                        Start Game and finds no stored one every time, and with a0d35b6 its page never started the game
+N64ModernRuntime       Module.gameStarted called on the page's thread as the game's entrypoint starts, past the
+4746426                launcher: the shell's on-screen controller for phones shows from there, plugged in as a
+                       gamepad after SDL has started (SDL opens only a pad that connects later)
 rt64 dd2fd23,          a triangle covers its scissor only where it crosses the camera plane, on every build: one wholly
 baa3753                behind it draws nothing, and one wholly in front has its box from its vertices held to 8192
                        pixels. a8bfc93 made a pass of triangles behind the camera or off one side a write of its whole
@@ -406,4 +409,30 @@ rt64 4e6c52e           on the web a tile copy is a texture copy (copyTextureToTe
 rt64 343d64d           without descriptor indexing the TMEM pool uploads each run of entries that changed (16 apart at
                        most), not all from the first to the last: in that cutscene it rewrote 14-16 MB pools almost whole
                        every fifth present; with both, it presents 147-191 a second uncapped in Firefox against 74-112
+rt64 8b9dce2           the inspector draws ImGui through plume on a page, whatever graphicsAPI says, with its font atlas
+                       as its only texture (a draw of any other ImTextureID is skipped): a recomp's ImGui overlay, as
+                       DKR-R-web's, opens on a page
+rt64 24562c7           on the web a load block or tile copies a word-aligned 8-byte word into TMEM as two 32-bit reads,
+                       not a byte at a time: 4.7% of the display list thread in Rush 2049's race on a phone
+rt64 0db3a67,          present-stats prints the game's frames a second and the frames RT64 drew for them, so frames
+b15112b                drawn under the game's rate times the interpolation are RT64 skipping them (docs/phones.md)
+plume 5aa2cbe,         the device thread's waitForCommandFence() waits for the execution before the last, not the
+rt64 30df1f5           one just queued, and an upload buffer is mapped at memory of its own on the calling side, its
+                       writes copied for the backend's at unmap(): RT64 waits after each list, each wait a trip to
+                       the page's thread behind everything queued there, 5.5-6.7 ms of each interpolated frame on a
+                       phone, so RT64 skipped the second frame of 35-45% of Rush 2049's game frames; 1-5% with this,
+                       and 44.8 presents a second against 39.7 (docs/phones.md)
+rt64 63703df           a TMEM hash takes a CI4 texture's palette indices from 16 pieces of its byte set, not a loop
+                       over 256 values, and each run of used palette indices in one update, not 8 bytes an index:
+                       the same bytes and hashes (2,000,000 random tiles compared), on every build; Rush 2049's race
+                       hashes about 65,000 textures a second, 97% CI, and on a phone a CI4 hash took 0.9-1.1 us
+                       against 1.5-2.6
+rt64 32aa316           with ImGui 1.92 or later (IMGUI_HAS_TEXTURES) the page's inspector makes, updates and destroys
+                       each texture ImGui asks for (ImGuiBackendFlags_RendererHasTextures), each draw binding its own,
+                       in place of 8b9dce2's one font atlas, which compared an ImTextureRef with an ImTextureID: Jet
+                       Force Gemini's rt64, on ImGui 1.93, didn't build for a page
+rt64 7844c07           RT64_UNEVEN_FRAME_RATES times a frame at the slowest of the last three's VIs, not the fastest,
+                       while it took 3 or more of the last 8 frames: Rush 2049's race on a phone, its own hold off,
+                       53 presents a second against 38-42, as a game at 60 that the phone holds to 30-50 mixes frames
+                       of 1 and 2 VIs and at the fastest got one drawn frame each
 ```

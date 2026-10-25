@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- The page of a recomp built with n64recomp_browser_frontend (CMakeLists.txt): a canvas filling the window, which SDL's window
-     is and RT64 draws on (SDL follows its CSS size), and a line saying what is loading or what went wrong. The program
+     is and RT64 draws on (SDL follows its CSS size, at each change of its box: below), and a line saying what is loading or what went wrong. The program
      sets the title through SDL. coi_serviceworker.js makes the page cross-origin isolated where the server doesn't,
      and the program starts only once it is (below).
      The #gpu notice (below) is for Firefox on Intel graphics. #shaders, in a corner, is the progress of the
@@ -12,8 +12,9 @@
      in plume or RT64 asks for a new device, which would mean making again everything RT64 made on the old one, and a
      reload is the one recovery. The page itself never destroys its device.
      Pointer lock asks for the mouse's raw counts (below). On a phone or tablet the page goes fullscreen in landscape at
-     the first tap, and #turn asks for the phone to be turned where it stays in portrait (below). A player whose saves
-     sync with their Google Drive (save_sync.js) has a token renewed by the hub before the program starts (below). -->
+     the first tap, and #turn asks for the phone to be turned where it stays in portrait (below), and it draws a
+     controller for a phone's thumbs, which the game reads as a gamepad: touch_pad.js, from the site's top (below).
+     A player whose saves sync with their Google Drive (save_sync.js) has a token renewed by the hub before the program starts (below). -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -167,6 +168,12 @@
       };
     }
   }
+  // SDL sizes the canvas's buffer to the canvas's box at each of the window's resize events. On a phone turned from
+  // upright to landscape in the hub's frame (Chrome 124 on Android) no event came after the box was landscape: the
+  // buffer kept its upright size, stretched to the wide box, and the game was a short strip with black above and below
+  // it. A ResizeObserver reports the box once it is laid out, so each change of it is a resize to SDL as well, which
+  // reads the box again. Chrome's phone emulation turns the page in one step and shows none of this.
+  new ResizeObserver(() => dispatchEvent(new Event('resize'))).observe(document.getElementById('canvas'));
   // A game is laid out for a wide window, and on a phone held upright the launcher's buttons fall off its narrow one.
   // So where the pointer is a finger (a phone or tablet, not a laptop's touch screen, whose pointer is its mouse), each
   // tap while the page isn't fullscreen asks for fullscreen and then for landscape: a browser locks the orientation
@@ -180,6 +187,14 @@
     document.documentElement.requestFullscreen().then(() => screen.orientation?.lock?.('landscape'))
       .catch((e) => console.log(`fullscreen or landscape refused: ${e.name}: ${e.message}`));
   }, { capture: true });
+  // Where the pointer is a finger (as above), the page loads its on-screen controller, site/touch_pad.js, from the top
+  // of the site, where the hub publishes it with its own files: a change to it reaches every game's page without
+  // building one again. It shows once the game has started, which the runtime says with Module.gameStarted (N64ModernRuntime-web's
+  // recomp.cpp), noted here for a start that comes before the script, which then takes the call over.
+  if (matchMedia('(pointer: coarse)').matches) {
+    Module.gameStarted = () => { Module.gameRunning = true; };
+    document.head.append(Object.assign(document.createElement('script'), { src: '/touch_pad.js' }));
+  }
   // The program (its script, in #program) starts only on a page that is cross-origin isolated, which it needs anyway.
   // A first visit to a host that can't send the headers isn't, and coi_serviceworker.js reloads it: started there, the
   // program fetched its .wasm and .data only for the reload to cut them off, and in Firefox (158, from GitHub Pages)

@@ -6,7 +6,7 @@
 # - threads as pthreads, with main() on one of them (-sPROXY_TO_PTHREAD), so the page's own thread is free for the
 #   WebGPU device (plume_device_thread.h), the file picker and the browser's events,
 # - the page, shell.html: a canvas filling the window, which SDL's window is and RT64 draws on, and a status line,
-#   fullscreen in landscape on a phone,
+#   fullscreen in landscape on a phone, and an on-screen controller there (the hub's site/touch_pad.js),
 # - persistent_home.js: HOME (/home/web_user, where RecompFrontend keeps settings, saves and the ROM it was given)
 #   kept in the browser's IndexedDB, a database for each page on a site, a file of 1 MB or more (a ROM) stored
 #   there by a worker, off the page's thread,

@@ -25,6 +25,7 @@ a doc points at the other.
   - `docs/forks.md`: every fork commit by its label. `docs/game-forks.md`: each game fork's port, its game's own frame
     rate, how the games compare. Read a game fork's part there and its own docs before changing it.
   - `docs/findings.md`: what has been measured, the numbers behind this file's rules included.
+  - `docs/phones.md`: playing and measuring a page on an Android phone from a computer, and what phones do differently.
 
 This repo, the forks and the game forks are public. Write for a stranger, in the present tense: nothing about a
 contributor's machine, servers, host names, paths or accounts, no person's name, no history of renames or "until
@@ -101,8 +102,8 @@ branches only: upstream's others are deleted when it is made.
 - CI (`.github/workflows/ci.yml`) builds every library of a page with Emscripten from the forks, checks every WGSL
   shader, the plume device thread and hlslpp's wasm SIMD backend, and checks that `patches/` match the forks and apply
   to every recomp commit in `patches/pins.txt` and over DKR-R-web's, CBFD-Recompiled-web's,
-  JetForceGemini-Recomp-web's, Snap64Recomp-web's, rush2recompiled-web's and super-mario-64-recomp's own patches. It
-  builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands. A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play,
+  JetForceGemini-Recomp-web's, Snap64Recomp-web's, rush2recompiled-web's and super-mario-64-recomp's own patches, and
+  compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui. It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands. A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play,
   serve, read and publish pages runs only the `changes` job.
 
 ## The forks
@@ -239,7 +240,8 @@ The measurements behind each are in docs/findings.md (Ruled out, measured).
 - A cheaper GPU frame for Rush 2049's, Majora's Mask's and Conker's pages in the web's own parts (pass breaks, render to
   RAM's passes, the copies, rt64 008f380's loops). What costs is what the desktop build draws too: RT64's pixel shaders
   and Auto's resolution rounded up to a whole multiple of the game's lines, and changing either would draw differently
-  from the desktop's RT64.
+  from the desktop's RT64. On a phone's Mali too: folding the canvas's clear into the pass that draws into it saved
+  0.14 ms of Conker's 13, and Conker there is held by its game's frames, not its GPU (docs/phones.md).
 - A DirectComposition overlay for a WebGPU canvas in Chrome on Windows: Chromium makes one only of video and
   low-latency canvases, so no flag or page setting gives one.
 - Building Firefox's shader misses where the game sends no frames or with a later section's wait, not at once: a

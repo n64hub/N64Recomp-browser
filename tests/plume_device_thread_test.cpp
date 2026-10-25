@@ -1,11 +1,13 @@
 // plume's device thread layer (plume-web, plume_device_thread.cpp), run by CI against a mock backend that logs every
 // call: every call reaches the backend on the device thread, in the order it was made; command lists recorded on
 // several threads at once replay their commands with the backend's objects and with copies of what their arguments
-// pointed at; push constants of size 0 take the size of their range; a swap chain's present() copies the texture drawn
-// into the backend's swap chain texture, its needsResize() and getRefreshRate() don't wait for the device thread, and
-// its wait() asks the backend on the calling thread with the presents not yet run on the device thread;
-// map() of a buffer whose data isn't there yet waits for it on the calling side (WebGPU readback), and asking whether
-// it's there doesn't wait for the device thread; and every backend object is destroyed on the device thread.
+// pointed at; an upload buffer's unmap() keeps what the caller wrote; waitForCommandFence() waits for the executions up
+// to the wait before it, not the one just queued; push constants of size 0 take the size of their range; a swap chain's
+// present() copies the texture drawn into the backend's swap chain texture, its needsResize() and getRefreshRate()
+// don't wait for the device thread, and its wait() asks the backend on the calling thread with the presents not yet run
+// on the device thread; map() of a buffer whose data isn't there yet waits for it on the calling side (WebGPU
+// readback), and asking whether it's there doesn't wait for the device thread; and every backend object is destroyed on
+// the device thread.
 
 #include <atomic>
 #include <condition_variable>
@@ -584,7 +586,8 @@ int main() {
         swapChain->present(index, &signalSemaphore, 1);
     }
 
-    queue->waitForCommandFence(presentFence.get());
+    // The presents run on the device thread after the lists: wait for it before reading the log.
+    deviceThread->runSync([]() {});
     std::vector<std::string> presentEvents;
     for (const std::string &event : events) {
         if ((event.find("copyTexture ") != std::string::npos) || (event.compare(0, 7, "present") == 0) || (event == "acquire") || (event.compare(0, 14, "createTexture ") == 0 && event.find("640x480") != std::string::npos)) {
@@ -618,6 +621,31 @@ int main() {
 
     check(sameTexture, "the texture a frame is drawn into is the one present() copies");
     check(eventsStartingWith("execute").size() >= 3 && contains("execute signal semaphore" + std::to_string(counter - 3) + " waits 0 fence null"), "acquireTexture() signals the caller's semaphore");
+
+    // waitForCommandFence() waits for the device thread to replay the executions that signal the fence up to the wait
+    // before it, not the one just queued, and never for the backend's own wait: so the caller records its next list
+    // while the device thread replays its last. The first wait has none before it to wait for.
+    std::unique_ptr<RenderCommandFence> behindFence = device->createCommandFence();
+    std::unique_ptr<RenderCommandList> behindList = queue->createCommandList();
+    behindList->begin();
+    behindList->end();
+    deviceThread->runSync([]() {});
+    const size_t backendWaitsBefore = eventsStartingWith("waitForCommandFence").size();
+    std::promise<void> fenceGate;
+    std::shared_future<void> fenceGateOpen = fenceGate.get_future().share();
+    deviceThread->runAsync([fenceGateOpen]() { fenceGateOpen.wait(); });
+    queue->executeCommandLists(behindList.get(), behindFence.get());
+    std::future<void> firstWait = std::async(std::launch::async, [&]() { queue->waitForCommandFence(behindFence.get()); });
+    const bool firstWaitEnded = (firstWait.wait_for(std::chrono::seconds(5)) == std::future_status::ready);
+    queue->executeCommandLists(behindList.get(), behindFence.get());
+    std::future<void> secondWait = std::async(std::launch::async, [&]() { queue->waitForCommandFence(behindFence.get()); });
+    const bool secondWaitHeld = (secondWait.wait_for(std::chrono::milliseconds(200)) == std::future_status::timeout);
+    fenceGate.set_value();
+    const bool secondWaitEnded = (secondWait.wait_for(std::chrono::seconds(5)) == std::future_status::ready);
+    deviceThread->runSync([]() {});
+    const bool noBackendWait = (eventsStartingWith("waitForCommandFence").size() == backendWaitsBefore);
+    check(firstWaitEnded && secondWaitHeld && secondWaitEnded && noBackendWait,
+        "waitForCommandFence() waits for the executions up to the wait before it on the device thread, not for the one just queued");
 
     // needsResize() and getRefreshRate() don't wait for the device thread: they answer what the backend said last, and
     // a refresh they queue brings the answer up to date.
@@ -743,7 +771,7 @@ int main() {
     readback.reset();
 
     // Everything is destroyed on the device thread, the interface last.
-    presentFence.reset(); drawn.reset(); acquired.reset(); presentList.reset(); swapChain.reset();
+    behindList.reset(); behindFence.reset(); presentFence.reset(); drawn.reset(); acquired.reset(); presentList.reset(); swapChain.reset();
     framebuffer.reset(); target.reset(); pipeline.reset(); pixelShader.reset(); vertexShader.reset();
     layout.reset(); set.reset(); sampler.reset(); queue.reset(); device.reset(); renderInterface.reset();
     deviceThread->runSync([]() {});

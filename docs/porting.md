@@ -113,7 +113,8 @@ What a recomp's code needed for wasm, besides N64ModernRuntime-0003 and N64Recom
   (`tools/page_driver.mjs`) shows. A new port clears the flag with Emscripten.
 - Gamepads (no `SDL_INIT_HAPTIC` on Emscripten: README) were checked with a stand-in `navigator.getGamepads()` (a
   standard-mapping pad set from CDP, `vibrationActuator.playEffect` logged): launcher, menus, a race, rumble. No real
-  pad has been tried. Exit is hidden on a page (RecompFrontend-0005): it left a black canvas, and the next input
+  pad has been tried. A phone's on-screen controller (site/touch_pad.js) is a standard-mapping pad of the same
+  kind, plugged in by a gamepadconnected event once the game starts. Exit is hidden on a page (RecompFrontend-0005): it left a black canvas, and the next input
   aborted the program (`emscripten_proxy_async failed`).
 - A script in the page (a preload, a survey) waits on a timer (`setTimeout`, 4 ms at the shortest), never on a loop of
   messages to itself (`MessageChannel`, a promise that resolves at once): in Chrome ~10,000 tasks a second starve the

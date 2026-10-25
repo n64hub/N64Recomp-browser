@@ -1336,6 +1336,22 @@ the last three frames' rate instead, as RT64 guesses from the VIs, the same tree
 Firefox, the game at 58 in both (whole GPU turns, an idle host, interleaved; plays.jsonl, set `pd-fps`). Chrome's 120
 there is the slot sleeps' (headless Chrome's pages pace to 114-120 on that screen).
 
+A game that mixes frames of 1 and 2 VIs (a game at 60 that a phone's CPU holds to 30-50) is the other case, and the
+fastest of three is at its worst there: at the fastest, the display's own 60, RT64 has nothing to interpolate, so each
+game frame got one drawn frame and a 2-VI frame held its last, and presents fell to about the game's rate
+(docs/phones.md, What a phone does differently). So rt64 7844c07 times a frame at the slowest of the last three while
+that took 3 or more of the last 8 frames. A frame timed longer than it lasts isn't cut short in RT64: the workload
+thread draws all of its frames unless they run past their share of the time, and the present thread presents each
+of them in turn, so the next game frame is shown a VI late, and a present that has the next queued behind it when
+the thread comes to it is dropped whole. Played in a model of the two threads, frames of 1 and 2 VIs in random order,
+30-70% of them 2: with the phone's 7 ms of setup and 9 ms a drawn frame the slowest-while-3-of-8 presented 55-59 a
+second against the fastest's 45-48 with half the judder (the displayed time's step against one VI), and both fell
+apart at 8 and 10 ms; on a desktop's mixes (2s now and then among 1s, 2 and 3 VIs at random, Jet Force Gemini's runs
+of 20) at 60 and 240 Hz it was within a few percent of the fastest or better. The slowest of three alone was smoother
+still on the phone's mixes and twice as rough as the fastest where 2s come now and then, so the share decides. On the
+phone, Rush 2049's race without its own hold presented 53 a second against 38-42 (docs/phones.md, Rush 2049 on a
+Galaxy S21), and on a desktop GPU uncapped 164.7 against Pages' 165.3.
+
 ## Faults
 
 `play_page.mjs --fault resize,hidden,audio,device,reload` (its header), played from Pages on an RTX 5080 (headless

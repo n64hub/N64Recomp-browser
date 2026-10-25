@@ -74,8 +74,10 @@ A change is played by what it can break, before it merges (CLAUDE.md, Changing i
 (docs/publishing.md, The retest). A change that could be two kinds is played as the one that risks more.
 
 - Can't change a page's bytes (`*.md`, `plays.jsonl`, `site/`, the tools that play, serve, read and publish pages):
-  nothing is played. A new or changed plan is the exception: it is played as a smoke play is, once in each browser, to
-  show that it reaches its levels.
+  nothing is played. `site/touch_pad.js` is the exception: every game's page runs it on a phone, so a change to it
+  is checked in Chrome's phone emulation (touch, a phone's size) on one game's page served with the branch's `site/`
+  (`tools/serve_site.mjs`), the controller driving the game. A new or changed plan is another: it is played as a
+  smoke play is, once in each browser, to show that it reaches its levels.
 - Changes a page but can't move its speed or timing (the launcher's or a notice's text, a patch merge that builds the
   same code, an entry in a shader list): the smoke play. Its own game's build plays its plan once in Chrome and once in
   Firefox, read for a page that boots and plays, WebGPU errors and exceptions (`failed`, `webgpuErrors` and
@@ -260,16 +262,21 @@ collapse) shows on a desktop as `shader missed:` lines.
 
 `site/` is a page of every game in the Games table: a tile each with its recomp's art or a title card, which a
 click plays (the game's page in a frame, or the tab goes to the page where the page isn't cross-origin isolated or
-the game's page is on another origin; never a new tab; on a phone, fullscreen in landscape from that tap), and under it its credit, a link to the game's repo ("Web port") and the
+the game's page is on another origin; never a new tab; on a phone, fullscreen in landscape from that tap, and never
+upright: when the phone leaves landscape, at the ROM picker or Back, the game is covered until a tap locks it again),
+and under it its credit, a link to the game's repo ("Web port") and the
 recomp it is based on (the Recomp cell); the art names the game, so no line does. The header says what the page is
 and whose the recomps are, and a line under the games that it is written with AI, with the link to this repo. It
 shows no frame rates: every game plays smoothly but in Firefox on a laptop's built-in graphics, so only there does
-the header warn (`site.js`); a retest that finds otherwise changes that warning. With its OAuth client (`GOOGLE_CLIENT_ID` in
-`site.js`, which says how the client is set up) the header offers sign-in with Google, which keeps the player's saves in
-their own Google Drive (`frontend/save_sync.js` says how); signed in, it asks which saves to keep of a game this
-browser and the Drive hold differently, and lists the earlier saves the Drive kept, to restore. It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
+the header warn (`site.js`); a retest that finds otherwise changes that warning. Firefox on a phone plays no game, so
+there the header says so in red instead and a tile starts nothing. With its OAuth client (`GOOGLE_CLIENT_ID` in `site.js`, which says how the client is set up) the
+header offers sign-in with Google, which keeps the player's saves in their own Google Drive (`frontend/save_sync.js` says
+how). Where this browser and the Drive hold a game's saves differently, a sign-in ends in a popup that asks which to
+keep, and the header lists the earlier saves the Drive kept, to restore. It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
 are every game's page, so they are one origin; `tools/publish_site.sh` publishes it (its header says how) after
-a change to `site/` merges, and a change to the Games table needs no publish. Served locally by `tools/serve_site.mjs`. Keep
+a change to `site/` merges, and a change to the Games table needs no publish. Its top also serves every game's page
+its on-screen controller on a phone, `site/touch_pad.js` (the header says why there), which it puts into the frame a
+game plays in, so that publish is what takes the controller and a change to it to every game. Served locally by `tools/serve_site.mjs`. Keep
 it current in the same work as what changes it:
 
 - It reads the table from main's README.md each visit (served locally, the checkout's), finding the columns by header

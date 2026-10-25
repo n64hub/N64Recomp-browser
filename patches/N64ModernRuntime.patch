@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web e4c932f2bf6e1ce420d49c25c971c87459cdbb2b
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 474642612939c79358e9e4d0757f646715edc327
 on upstream 589bbf018a3e6d3646ddf7de1e7919f1b7e99bb1 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -576,10 +576,10 @@ index 43509ba..71ee4d9 100644
              recomp::do_rom_read(rdram, rdram_address, physical_addr, size);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index ea1c49b..922c081 100644
+index ea1c49b..948d486 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
-@@ -32,6 +32,12 @@
+@@ -32,6 +32,13 @@
  #    include <sys/mman.h>
  #endif
  
@@ -587,12 +587,13 @@ index ea1c49b..922c081 100644
 +#    include <fcntl.h>
 +#    include <sys/stat.h>
 +#    include <unistd.h>
++#    include <emscripten.h>
 +#endif
 +
  #if defined(_WIN32)
  #define PATHFMT "%ls"
  #else
-@@ -90,7 +96,9 @@ bool recomp::register_game(const recomp::GameEntry& entry) {
+@@ -90,7 +97,9 @@ bool recomp::register_game(const recomp::GameEntry& entry) {
  }
  
  void recomp::mods::initialize_mods() {
@@ -602,7 +603,7 @@ index ea1c49b..922c081 100644
      std::filesystem::create_directories(config_path / mods_directory);
      std::filesystem::create_directories(config_path / mod_config_directory);
      mod_context->set_mods_config_path(config_path / "mods.json");
-@@ -102,6 +110,11 @@ void recomp::mods::register_embedded_mod(const std::string &mod_id, std::span<co
+@@ -102,6 +111,11 @@ void recomp::mods::register_embedded_mod(const std::string &mod_id, std::span<co
      mod_context->register_embedded_mod(mod_id, mod_bytes);
  }
  
@@ -614,7 +615,7 @@ index ea1c49b..922c081 100644
  void recomp::mods::register_deprecated_mod(const std::string& mod_id, recomp::mods::DeprecationStatus deprecation_status, const Version& maximum_version) {
      std::lock_guard<std::mutex> lock(mod_context_mutex);
      mod_context->register_deprecated_mod(mod_id, deprecation_status, maximum_version);
-@@ -169,6 +182,29 @@ bool check_hash(const std::vector<uint8_t>& rom_data, uint64_t expected_hash) {
+@@ -169,6 +183,29 @@ bool check_hash(const std::vector<uint8_t>& rom_data, uint64_t expected_hash) {
  static std::vector<uint8_t> read_file(const std::filesystem::path& path) {
      std::vector<uint8_t> ret;
  
@@ -644,7 +645,7 @@ index ea1c49b..922c081 100644
      std::ifstream file{ path, std::ios::binary};
  
      if (file.good()) {
-@@ -180,9 +216,31 @@ static std::vector<uint8_t> read_file(const std::filesystem::path& path) {
+@@ -180,9 +217,31 @@ static std::vector<uint8_t> read_file(const std::filesystem::path& path) {
      }
  
      return ret;
@@ -676,7 +677,7 @@ index ea1c49b..922c081 100644
      std::ofstream out_file{ path, std::ios::binary };
  
      if (!out_file.good()) {
-@@ -192,6 +250,7 @@ bool write_file(const std::filesystem::path& path, const std::vector<uint8_t>& d
+@@ -192,6 +251,7 @@ bool write_file(const std::filesystem::path& path, const std::vector<uint8_t>& d
      out_file.write(reinterpret_cast<const char*>(data.data()), data.size());
  
      return true;
@@ -684,7 +685,7 @@ index ea1c49b..922c081 100644
  }
  
  bool check_stored_rom(const recomp::GameEntry& game_entry) {
-@@ -442,13 +501,9 @@ extern "C" void cop0_status_write(recomp_context* ctx, gpr value) {
+@@ -442,13 +502,9 @@ extern "C" void cop0_status_write(recomp_context* ctx, gpr value) {
          changed &= ~(uint32_t)StatusReg::FR;
      }
  
@@ -701,7 +702,7 @@ index ea1c49b..922c081 100644
      // Update the status register in the context
      ctx->status_reg = new_sr;
  }
-@@ -707,6 +762,16 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
+@@ -707,6 +763,16 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
              {
                  if (!recomp::load_stored_rom(current_game.value())) {
                      ultramodern::error_handling::message_box("Error opening stored ROM! Please restart this program.");
@@ -718,6 +719,18 @@ index ea1c49b..922c081 100644
                  }
  
                  auto find_it = game_roms.find(current_game.value());
+@@ -753,6 +819,11 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
+                 save_type = game_entry.save_type;
+                 ultramodern::init_saving(rdram);
+ 
++#ifdef __EMSCRIPTEN__
++                // Tells the page its game is running, past the launcher: the shell's on-screen controller shows from here.
++                MAIN_THREAD_ASYNC_EM_ASM({ if (Module.gameStarted) Module.gameStarted(); });
++#endif
++
+                 try {
+                     game_entry.entrypoint(rdram, context);
+                 } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
 index ae0f44f..97d8e7e 100644
 --- a/librecomp/src/sp.cpp

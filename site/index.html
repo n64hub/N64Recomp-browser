@@ -24,6 +24,9 @@
   <!-- Shown in Firefox on built-in graphics only (site.js): there its compositor holds every game to 30-45. -->
   <p id="firefox-note" class="warning" hidden>Firefox plays these games slower on built-in graphics like yours. If a
     game stutters, play it in Chrome.</p>
+  <!-- Shown in Firefox on a phone or tablet instead (site.js): no game plays there, so its tiles start nothing. -->
+  <p id="phone-firefox-note" class="warning stop" hidden><strong>Firefox on a phone can't play these games.</strong>
+    Its WebGPU doesn't run them, so they won't start here. Open this page in Chrome to play.</p>
   <!-- Sign-in for saves kept in the player's Google Drive, shown once the hub has an OAuth client (site.js). -->
   <p id="sync" hidden></p>
   <!-- Under it, while signed in: a game whose saves wait for the player's choice, and earlier saves to restore. -->
@@ -42,6 +45,7 @@
     <button id="player-close" type="button" title="Back to the games" aria-label="Close">✕</button>
   </div>
   <iframe id="player-frame" title="Game" allow="fullscreen; gamepad; autoplay; cross-origin-isolated"></iframe>
+  <button id="player-turn" type="button">Tap to play in landscape.</button>
 </div>
 <script src="save_sync.js"></script>
 <script src="site.js"></script>
