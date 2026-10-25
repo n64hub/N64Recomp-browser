@@ -126,7 +126,8 @@ while game frames fall. Telling them apart:
   where a word at a time vectorizes; a wait for the page's thread (plume's device thread) waits behind everything
   queued there, which on a phone is milliseconds; and a wait for the GPU that a desktop's has long finished, such as
   render to RAM's late copy landing at the next list's start, which was a quarter of Conker's display list thread
-  (Conker's Bad Fur Day on a Galaxy S21).
+  (Conker's Bad Fur Day on a Galaxy S21); and work that grows as the square of a game's calls, such as RT64's frame
+  matching before rt64 9086c93, 18-23 ms of Banjo-Tooie's game frames (Banjo-Tooie on a Galaxy S21).
 - Presents short of the display with neither the game's frames nor the GPU behind are RT64's interpolated frames:
   with present-stats, frames drawn a second under twice the game frames of a game interpolated at 30 is RT64
   skipping a game frame's later frames, which it does when its workload thread runs past each frame's share of the
@@ -296,7 +297,8 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
 - Banjo-Tooie, both ways: from about 90 s after Start Game, its game at 28-30 of the 30 it reports and RT64 drawing
   one frame for each, so presents about 30. RT64's workload thread took 37-78 ms to set up each game frame, more than
   the game frame's 33, so it had no time for the frame between and skipped it: the CPU, in RT64's own work for this
-  game's frames, not the GPU (plume never waited for fewer presents in flight there).
+  game's frames, not the GPU (plume never waited for fewer presents in flight there): its frame matching (Banjo-Tooie
+  on a Galaxy S21).
 - Rush 2's attract, both ways: the game at 5-7 frames a second (it reports 5-7, 30 on a console), RT64 drawing 50 for
   them, the interpolated frames 80-105 ms of the workload thread's time a game frame, each present done on the GPU
   35 ms after it and plume waiting 41-44 ms a second for fewer than 4 in flight. Its game frames hold it, the GPU
@@ -393,3 +395,19 @@ place. The attract changes level about 125 s and 250 s into the page.
   restarts of a pending timer by 190 s. play_phone.mjs shows only the console lines it looks for, so a probe's print
   that names none of RT64, plume, WebGPU, shader, error or warn doesn't reach its log.
 - The page's heap (the break of its 1536 MB) held at 575-717 MB through each play with rt64 b173eb3.
+- What RT64's workload thread did for each game frame in the level at 30 (from about 90 s after Start Game), a profile
+  (a build linked with `--profiling-funcs`): the thread 74% busy, 54% of that in `GameFrame::match`. Its `matchScene`
+  paired every call of a hash (combiner, other mode, geometry mode, triangles, matrix ids) with every one of the
+  previous frame's calls of that hash, to find the transforms, tiles and look ats to interpolate. The level draws
+  about 1,000 calls a frame, up to 398 of one hash: 167,000 pairs of calls a frame, which came to 200-1,800 pairs of
+  transforms once their repeats were dropped, and the matching took 18-23 ms of each game frame, 12-14 ms of it
+  making the pairs.
+- rt64 9086c93 pairs each side's distinct ranges of matrices, and only the calls that can add a tile or a look at, and
+  fills the same sets: a build that filled them both ways found them the same in all 14,715 scenes of a play, the
+  pairing at 1.9 ms a game frame against 7.7 (12-13 ms against 2.6-2.8 in the level at 30, 17.1 against 3.8 at most).
+  v0.115.0 against the same with it, interleaved (v0.115.0, it, it, v0.115.0, it), the level at 30 (about 85-167 s),
+  charging, big cores held at 1.04 GHz and the GPU at 403 MHz, skin 38.7-42.5 °C: 53.1, 52.6 and 54.1 presents a
+  second against 46.6 and 48.0, RT64 drawing 53.3-54.5 frames for the game's 27.9-28.7 against 48.1-49.5 for its
+  27.8-28.1. plume waited 67-82 ms a second for fewer presents in flight with it, against 38-63 without, the GPU up
+  to 95% busy at its 403 MHz: what is left there is partly the GPU's. On v0.115.0 the level presented 46-48 a second,
+  not the 29-31 of builds on v0.109.0 and v0.113.0 (the profile's), whatever else changed between.
