@@ -395,7 +395,9 @@ take the web support without moving its submodules to the forks (Using it in a r
   and `pins.txt`, the upstream commits recomps pin, which CI patches.
 - `frontend/`: what makes a recomp built on RecompFrontend a page, as link options and `n64recomp_browser_frontend_page()`
   (`recomp_web_frontend_page()` works too)
-  (its header says what each part does): threads, the page, HOME kept in IndexedDB (a database a page, a ROM stored from a worker), a thread's prints without
+  (its header says what each part does): threads, the page, HOME kept in IndexedDB (a database a page, a ROM stored from
+  a worker, the browser asked to keep it), the saves synced with the player's own Google Drive once they sign in on the
+  hub (`save_sync.js`), a thread's prints without
   waiting for the page's thread, SDL2 audio from a thread, sound
   played on the browser's audio thread (`audio_output.h`), the browser's file picker for a recomp with menus of its own
   (`file_picker.h`), the WebGPU device, a notice in Firefox on Windows' Intel graphics naming its fixes, fullscreen in landscape at

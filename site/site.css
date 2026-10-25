@@ -13,10 +13,44 @@ body { margin: 0; background: var(--bg); color: var(--text); }
 body.playing { overflow: hidden; }
 a { color: #9cc0ff; }
 
-header { max-width: 1200px; margin: 0 auto; padding: 32px 24px 8px; }
-h1 { display: flex; align-items: center; gap: 12px; margin: 0 0 4px; font-size: 40px; letter-spacing: -0.03em; }
+/* The top bar: the name at the left, the account at the right. */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1200px; margin: 0 auto;
+  padding: 14px 24px;
+}
+h1 { margin: 0; font-size: 26px; letter-spacing: -0.03em; }
+h1 a { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+#account { position: relative; display: flex; align-items: center; gap: 10px; }
+#account .note { color: var(--dim); font-size: 14px; }
+/* Signed out: why to sign in, the sign-in itself a link. */
+#account .invite { color: var(--dim); }
+#account .link {
+  padding: 0; font-weight: 600; color: #9cc0ff; background: none; border: 0; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#account .link:hover { color: #c3d8ff; background: none; }
+#account .who { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; }
+#account .avatar {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-weight: 700;
+  background: #2f5fd0;
+}
+@media (max-width: 520px) { #account .name { display: none; } #account .who { padding: 4px; } }
+#account .menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 5; display: flex; flex-direction: column; gap: 4px;
+  min-width: 240px; padding: 8px; background: var(--panel); border: 1px solid #3a4152; border-radius: 10px;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.5);
+}
+#account .menu[hidden] { display: none; }
+#account .menu p { margin: 4px 8px 8px; color: var(--dim); font-size: 13px; overflow-wrap: anywhere; }
+#account .menu strong { color: var(--text); font-size: 15px; }
+#account .menu button { text-align: left; background: none; border-color: transparent; }
+#account .menu button:hover { background: #2a3040; }
+.primary { font-weight: 600; background: #2f5fd0; border-color: #5b8def; }
+.primary:hover { background: #3a6be0; }
+
+header { max-width: 1200px; margin: 0 auto; padding: 8px 24px 8px; }
 /* The console's four colours, as a mark beside the name. */
-.mark { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 30px; height: 30px; transform: rotate(45deg); }
+.mark { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 22px; height: 22px; transform: rotate(45deg); }
 .mark i { border-radius: 3px; }
 .mark i:nth-child(1) { background: #e4312b; }
 .mark i:nth-child(2) { background: #f6c400; }
@@ -35,8 +69,49 @@ header .warning.flash { animation: flash 0.5s 2; }
 @keyframes flash { 50% { background: rgb(229 72 60 / 0.45); } }
 body.no-games .art { filter: grayscale(0.85) brightness(0.55); cursor: not-allowed; }
 header .tagline { color: var(--text); font-size: 18px; }
+/* The popups: whose saves to keep, at a sign-in, and Manage saves. The games scroll between the heading and the buttons. */
+.sheet {
+  width: min(660px, calc(100vw - 24px)); max-height: min(90vh, 820px); padding: 22px 24px; color: var(--text);
+  background: var(--panel); border: 1px solid #3a4152; border-radius: 14px; box-shadow: 0 20px 60px rgb(0 0 0 / 0.6);
+}
+.sheet[open] { display: flex; flex-direction: column; }
+.sheet::backdrop { background: rgb(5 6 10 / 0.72); backdrop-filter: blur(2px); }
+.sheet h2 { margin: 0 0 6px; font-size: 22px; }
+.sheet .lead { margin: 0 0 6px; color: var(--dim); }
+.sheet .choices { overflow-y: auto; min-height: 0; padding-right: 4px; }
+#save-choice .uploaded {
+  margin: 8px 0; padding: 8px 12px; font-size: 14px; color: var(--dim); background: #11141c; border: 1px solid var(--line);
+  border-radius: 8px;
+}
+#save-choice .uploaded::before { content: "✓ "; color: #7fd19b; }
+.sheet h3 { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; font-size: 15px; }
+.sheet h3 img { width: 64px; height: 36px; border-radius: 5px; object-fit: cover; }
+#save-choice .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+#save-choice .option {
+  display: grid; grid-template-columns: 20px 1fr; gap: 2px 8px; padding: 10px 12px; cursor: pointer;
+  background: #12151d; border: 1px solid #3a4152; border-radius: 10px;
+}
+#save-choice .option:has(input:checked) { background: #16203a; border-color: #5b8def; }
+#save-choice .option input { margin: 4px 0 0; accent-color: #5b8def; }
+#save-choice .side { font-weight: 600; }
+#save-choice .recommended {
+  margin-left: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #7fd19b;
+}
+#save-choice .about { grid-column: 2; color: var(--dim); font-size: 13px; }
+.sheet .foot {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+}
+.sheet .foot small { flex: 1 1 260px; color: var(--dim); font-size: 13px; }
+#manage-saves .save { margin: 4px 0; color: var(--dim); font-size: 14px; }
+#manage-saves .save button { margin-left: 6px; padding: 2px 10px; font-size: 13px; }
+#manage-saves .earlier { margin: 10px 0 2px; font-size: 13px; font-weight: 600; color: var(--text); }
+#manage-saves .note { color: var(--dim); }
 
 main { max-width: 1200px; margin: 0 auto; padding: 12px 24px 32px; }
+/* A page of text (privacy.html). */
+main.text > * { max-width: 680px; }
+main.text h2 { margin: 8px 0 4px; }
 /* How it is made, under the games. The source link stays whole, on the next line when it doesn't fit. */
 footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; color: var(--dim); font-size: 13px; }
 footer p { margin: 0; padding-top: 14px; border-top: 1px solid var(--line); }

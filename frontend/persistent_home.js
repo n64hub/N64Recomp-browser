@@ -23,6 +23,11 @@
 // first, and a save finishing while IndexedDB answered (the runtime writes <save>.temp, copies it over the save and
 // deletes it) left a file listed that was gone when it was read: that write back reported ENOENT, while storing all the
 // rest.
+//
+// A browser may delete an origin's IndexedDB to make room, and Safari deletes it after 7 days without a visit, so once
+// HOME holds something (read in, or a ROM stored) the page asks for it to be kept (navigator.storage.persist(), which
+// covers every page on the origin): Chrome and Safari decide by themselves, Firefox asks the player once.
+// Module.homeRead resolves once HOME is read in, true, or false where it couldn't be (save_sync.js waits for it).
 if (typeof document !== 'undefined') {
   Module['preRun'] = [].concat(Module['preRun'] || []);
   Module['preRun'].push(() => {
@@ -104,12 +109,20 @@ if (typeof document !== 'undefined') {
     // The worker that stores the large files, and the stores it hasn't answered yet (resolved when it does).
     let writer = null, nextWrite = 0;
     const answers = new Map(), writing = [];
+    let kept = false;
+    const keep = () => {
+      if (kept || !navigator.storage?.persist) return;
+      kept = true;
+      navigator.storage.persisted().then((persisted) => persisted || navigator.storage.persist())
+        .catch((error) => console.log('persistent storage refused: ' + describe(error)));
+    };
     const storeRemoteEntry = IDBFS.storeRemoteEntry;
     IDBFS.storeRemoteEntry = (store, path, entry, callback) => {
       const contents = entry['contents'];
       if (!contents || contents.byteLength < (1 << 20)) {
         return storeRemoteEntry(store, path, entry, callback);
       }
+      keep();
       if (!writer) {
         const code = `const connections = {};
           onmessage = ({ data: { id, db, store, path, entry } }) => {
@@ -143,14 +156,18 @@ if (typeof document !== 'undefined') {
       callback();
     };
     addRunDependency('persistent-home');
+    let homeRead;
+    Module.homeRead = new Promise((resolve) => homeRead = resolve);
     const read = (error) => {
       if (error) {
         // Never written back then, so what is stored is not replaced with an empty folder.
         console.error('Could not read the saved files from IndexedDB, so nothing is saved this time: ' + describe(error));
       } else {
         syncing = false;
+        if (FS.readdir(home).length > 2) keep();
       }
       source = database;
+      homeRead(!error);
       removeRunDependency('persistent-home');
     };
     FS.syncfs(true, (error) => {

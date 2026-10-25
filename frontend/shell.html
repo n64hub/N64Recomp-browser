@@ -13,7 +13,8 @@
      reload is the one recovery. The page itself never destroys its device.
      Pointer lock asks for the mouse's raw counts (below). On a phone or tablet the page goes fullscreen in landscape at
      the first tap, and #turn asks for the phone to be turned where it stays in portrait (below), and it draws a
-     controller for a phone's thumbs, which the game reads as a gamepad: touch_pad.js, from the site's top (below). -->
+     controller for a phone's thumbs, which the game reads as a gamepad: touch_pad.js, from the site's top (below).
+     A player whose saves sync with their Google Drive (save_sync.js) has a token renewed by the hub before the program starts (below). -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -199,7 +200,21 @@
   // program fetched its .wasm and .data only for the reload to cut them off, and in Firefox (158, from GitHub Pages)
   // the reloaded page's fetches of the same files then failed in 4 of 58 cold visits, which never started; with
   // nothing fetched before the reload, none of 30 failed.
-  if (window.crossOriginIsolated) document.body.append(document.importNode(document.getElementById('program').content, true));
+  // A player who signed in on the hub for their saves to sync (save_sync.js) has a token for an hour. A page opened on
+  // its own whose token has run out, or will within a quarter of an hour, goes to the hub for a new one first, which
+  // comes back here at once (at most once a minute); in the hub's frame, the hub renews it.
+  const renewing = window.crossOriginIsolated && (() => {
+    try {
+      const sync = JSON.parse(localStorage.getItem('save-sync'));
+      if (window !== top || !sync?.hub || !sync.token || sync.expires > Date.now() + 15 * 60000 ||
+          Date.now() - (sync.tried || 0) < 60000) return false;
+      location.replace(sync.hub + '#sync-refresh=' + encodeURIComponent(location.href));
+      return true;
+    } catch { return false; }
+  })();
+  if (window.crossOriginIsolated && !renewing) {
+    document.body.append(document.importNode(document.getElementById('program').content, true));
+  }
 </script>
 </body>
 </html>
