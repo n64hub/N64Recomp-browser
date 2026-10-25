@@ -435,4 +435,8 @@ rt64 7844c07           RT64_UNEVEN_FRAME_RATES times a frame at the slowest of t
                        while it took 3 or more of the last 8 frames: Rush 2049's race on a phone, its own hold off,
                        53 presents a second against 38-42, as a game at 60 that the phone holds to 30-50 mixes frames
                        of 1 and 2 VIs and at the fastest got one drawn frame each
+rt64 330f84a           render to RAM's late copy lands at a list's start only once the GPU has it, else at the next
+                       VI that finds it ready or where the next list's draws are synced: on a phone the wait for the
+                       GPU at each list's start was a quarter of the display list thread's time, and Conker's game
+                       frames 15-21% more
 ```

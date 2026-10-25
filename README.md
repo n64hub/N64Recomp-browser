@@ -164,20 +164,22 @@ What changes in the game's own code (behind `__EMSCRIPTEN__`) and files:
   still goes to the page's thread.
 - If the game needs render to RAM but can take a frame one display list old, call
   `recompui::renderer::set_render_to_ram_late(true)` too (rt64-web's `renderToRAMLate`): a list's copy into RDRAM then
-  lands when the next list starts, or at a VI once the GPU has it, and the list doesn't wait for it. Only the last copy
-  of a list is late: one that a later part of the same list reads is still made in place. In headless Chrome, render
-  to RAM on: Conker's Bad Fur Day in Windy 10.7-11.8 ms a list against 14.8-16.4 ms with the exact copy, GoldenEye in
-  Dam 3.8-5.2 ms against 8.0-9.7. It is
-  wrong for a game whose CPU reads a frame it has only just drawn: Majora's Mask flushes its task queue and then reads
-  its pictograph and its pause menu's background at once, and would get the frame before, so it keeps the exact copy.
+  lands at the first VI or list start after the GPU has it, or where the next list's draws are synced if that comes
+  first, and no list waits for it. Only the last copy of a list is late: one that a later part of the same list reads
+  is still made in place. In headless Chrome, render to RAM on: Conker's Bad Fur Day in Windy 10.7-11.8 ms a list
+  against 14.8-16.4 ms with the exact copy, GoldenEye in Dam 3.8-5.2 ms against 8.0-9.7. On a phone, whose GPU takes
+  longer over a frame than the game takes between lists, Conker's page draws 15-21% more game frames than when each
+  list's start waited for the copy (docs/phones.md). It is wrong for a game whose CPU reads a frame it has only just
+  drawn: Majora's Mask flushes its task queue and then reads its pictograph and its pause menu's background at once,
+  and would get the frame before, so it keeps the exact copy.
   The game runs while a late copy is pending, so the copy keeps every word the CPU wrote to the framebuffer before or
   while it lands (rt64-web cb75c5c) and the console reports each such write: run the page through the game's levels
   with it and read those lines. Conker's CPU writes to framebuffers with a pending copy in every chapter, 89 times
   over its shader plan, and the page plays the same; GoldenEye's never does. A word the CPU writes with the value it
   already held looks untouched, though, and gets the frame, so it is also wrong for a game that puts code or data in
-  a framebuffer's memory once the RDP is done: Donkey Kong 64 inflates its main code and data over the framebuffers
-  of its boot logos, the late copy crashed its boot now and then, and it keeps the exact copy too. Jet Force Gemini's CPU
-  reworks its shadows' render targets once the RDP has drawn them, and keeps it as well.
+  a framebuffer's memory once the RDP is done: Jet Force Gemini's CPU reworks its shadows' render targets once the RDP
+  has drawn them, and keeps the exact copy too. Conker's, GoldenEye's, Donkey Kong 64's and Perfect Dark's pages take
+  the copy late (docs/game-forks.md).
 - Give RT64 a list of the game's shaders, so the page builds them before the game draws with them.
   This is part of every port, not an optional extra: without it the page is unplayable on most machines. Until a
   shader is built RT64 draws with its ubershader, which costs several times as much a pixel: on a laptop's Intel
