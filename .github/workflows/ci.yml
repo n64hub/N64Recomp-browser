@@ -278,7 +278,8 @@ jobs:
   # puts patches/apply.cmake's on upstream's commits, then its patches/web/*.patch, the base project's rt64 and runtime
   # changes made again for them, on top, so a change here to the lines those touch stops its page building. Its
   # --patches does the whole patch step without a ROM, with this checkout as its lib/N64Recomp-browser. Red on a PR that
-  # keeps main's patches means JetForceGemini-Recomp-web's main stopped applying over them, which is fixed there.
+  # keeps main's patches means JetForceGemini-Recomp-web's main stopped applying over them, which is fixed there. Then
+  # rt64's files that include ImGui are compiled against the port's own ImGui (below).
   jfg-patches:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -296,6 +297,32 @@ jobs:
           rmdir "$jfg/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$jfg/lib/N64Recomp-browser"
           bash "$jfg/tools/build_web.sh" --patches
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: emsdk-cache
+      # The port's rt64 pins a newer ImGui than upstream's (1.93 against 1.90), and the web support's code in rt64 is
+      # otherwise compiled only against upstream's: each of its files that includes ImGui is compiled here, as a page
+      # compiles it (syntax only: no shaders are built), against the port's patched rt64 and its ImGui.
+      - name: rt64's ImGui code against the port's ImGui
+        run: |
+          rt64="$RUNNER_TEMP/jfg/web-build/lib/rt64"
+          flags=(-std=c++17 -pthread -fwasm-exceptions -msimd128 -sUSE_SDL=2 --use-port=emdawnwebgpu -fsyntax-only
+            -DFFX_GCC -DHLSL_CPU -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DRT64_FREE_DISCARDED_TARGETS=1
+            -DRT64_OFFSCREEN_WORKLOADS=1 -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PREBUILT_SHADERS -DRT64_UNEVEN_FRAME_RATES=1
+            -DRT64_WGSL=1 "-DXXH_HAS_INCLUDE(x)=0")
+          for dir in src src/contrib src/contrib/plume src/contrib/imgui src/contrib/hlslpp/include \
+            src/contrib/mupen64plus-core/src/api src/contrib/nativefiledialog-extended/src/include \
+            src/contrib/re-spirv/external/SPIRV-Headers/include src/contrib/zstd/lib src/contrib/plume/contrib/volk \
+            src/contrib/plume/contrib/Vulkan-Headers/include src/contrib/plume/contrib/VulkanMemoryAllocator/include; do
+            flags+=("-I$rt64/$dir")
+          done
+          grep -E '#define IMGUI_VERSION ' "$rt64/src/contrib/imgui/imgui.h"
+          cd "$rt64"
+          grep -rl --include='*.cpp' imgui src | grep -v '^src/contrib/' | sort | while read -r file; do
+            echo "$file"
+            em++ "${flags[@]}" "$file"
+          done
 
   # The patches under Pokémon Snap's web fork's own (Snap64Recomp-web, its main), on its port's own rt64 and
   # N64ModernRuntime (their snap64 branches): its tools/build_web.sh leaves out the files where the port's lines and the
