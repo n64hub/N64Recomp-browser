@@ -155,8 +155,22 @@ race on its first track with the gas held, cool unless said.
   against the same page without, interleaved, big cores capped at 1.35 GHz, GPU not capped: 34.6 and 34.7 game frames
   a second against 29.1, 40.7-41.5 drawn against 48.6, presents 40-41.9 against 43.6 (skin 33-35 °C). The page without
   them reached 37.4 game frames only with its big cores at 2.08 GHz. With the game above 30, more of its frames are 1
-  VI long and RT64_UNEVEN_FRAME_RATES gives them fewer frames between, so presents stay about 42: what holds them there
-  is the GPU, 90-96% busy at its clock.
+  VI long and RT64_UNEVEN_FRAME_RATES gives them fewer frames between, so presents stay about 42 (the next bullets).
+- The display list thread is the one the game waits on: 64% busy in a race at 1.04 GHz, about 25 ms of each game
+  frame, the game's own threads mostly waiting. 18.6% of it was `RT64::TMEMHasher::hash`: counted, the race hashed
+  about 65,000 textures a second (2,600 a game frame), 97% of them CI, with 25 updates of the hash each on average,
+  most of them a palette's 8 bytes. With a CI4 texture's indices taken from 16 pieces and each run of used palette
+  indices hashed in one update (rt64-web, TMEM hash): a CI4 hash took 0.9-1.1 us against 1.5-2.6 on the phone (a
+  benchmark of tiles shaped like the race's, the same hashes), and the race's game frames came at 36.5 a second
+  against 35.1-35.5 (2 pairs, big cores at 1.35 GHz), presents 40.7 against 39.6-39.7. XXH3's NEON code built for
+  wasm SIMD hashed 5-7% faster than its scalar code on the phone and a third slower on a desktop, so it stays scalar.
+- Rush 2049's Game Frame Rate at Original (30) against its default 60, the same page: 55.2-55.9 presents a second
+  against 40.8-44.3 (2 pairs, big cores at 1.04-1.35 GHz), the game at 27.8-29.7 frames a second against 30.1-31, so
+  RT64 drew 1.9 frames a game frame against 1.4. At 60 the game the phone can't keep at 60 mixes frames of 1 and 2
+  VIs, and RT64_UNEVEN_FRAME_RATES takes a frame's length from the shortest of the last three, so most frames get one
+  drawn; at 30 every frame is 2 VIs and gets two. The page now holds the game to 30 while it can't keep 60 up
+  (rush-2049-recomp's `src/frame_rate.cpp`): at the default 60 it presented 51.6 a second against 44.9 without it and
+  53.4 at Original, big cores at 1.04 GHz each time, and 57.4 at 1.35 GHz.
 
 ## Other games on a Galaxy S21
 
