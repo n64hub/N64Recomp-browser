@@ -431,4 +431,8 @@ rt64 32aa316           with ImGui 1.92 or later (IMGUI_HAS_TEXTURES) the page's 
                        each texture ImGui asks for (ImGuiBackendFlags_RendererHasTextures), each draw binding its own,
                        in place of 8b9dce2's one font atlas, which compared an ImTextureRef with an ImTextureID: Jet
                        Force Gemini's rt64, on ImGui 1.93, didn't build for a page
+rt64 7844c07           RT64_UNEVEN_FRAME_RATES times a frame at the slowest of the last three's VIs, not the fastest,
+                       while it took 3 or more of the last 8 frames: Rush 2049's race on a phone, its own hold off,
+                       53 presents a second against 38-42, as a game at 60 that the phone holds to 30-50 mixes frames
+                       of 1 and 2 VIs and at the fastest got one drawn frame each
 ```
