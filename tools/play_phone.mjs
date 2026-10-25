@@ -1,7 +1,7 @@
 // Plays a page in an Android phone's Chrome, driven from a computer over adb and the DevTools protocol, and measures it:
-// presents a second, the longest gap between presents, the page's own frames, and RT64's and the page's console lines
-// (the prebuilt shaders' build, shader waits and misses, pacing), on the phone's GPU at the phone's size
-// (docs/phones.md says how to connect a phone and what was measured this way).
+// presents a second, the longest gap between presents, the page's own frames, and RT64's, the frontend's and the page's
+// console lines (the prebuilt shaders' build, shader waits and misses, pacing, the ROM the launcher took), on the
+// phone's GPU at the phone's size (docs/phones.md says how to connect a phone and what was measured this way).
 //
 //   node tools/play_phone.mjs <url> [--steps <steps.json>] [--seconds <n>] [--json <file>] [--adb <path>]
 //     [--serial <device>] [--port <n>] [--tab <id>] [--preload <script.js>] [--no-cache] [--check]
@@ -196,7 +196,7 @@ listeners.push((m) => {
   if (m.method === 'Runtime.consoleAPICalled') {
     text = m.params.args.map((a) => a.value ?? a.description ?? '').join(' ');
     time = m.params.timestamp;
-    if (!/RT64|plume|WebGPU|shader|error|warn|^passes:/i.test(text) && m.params.type !== 'error') return;
+    if (!/RT64|plume|WebGPU|shader|error|warn|^passes:|^\[frontend\]/i.test(text) && m.params.type !== 'error') return;
   } else if (m.method === 'Runtime.exceptionThrown') {
     const details = m.params.exceptionDetails;
     text = `exception: ${details.exception?.description ?? details.text}`;

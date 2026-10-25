@@ -361,6 +361,34 @@ main's build (v0.107.0) served in its place, with present-stats.
 - What is left of a list is RT64's own work, as on a desktop: in that profile, without the wait, `State::fullSync`
   25% of the thread (the tiles' TMEM loads and hashes 11.5%, recording the workload 8.5%) and the microcode's vertices
   and triangles 20%.
+- So the game hears its RDP is done before RT64 records and submits a list's last batch (rt64 1c9e639, N64ModernRuntime
+  51dd220, RecompFrontend 8c7de5e): with the late copy every tile is loaded once the list's draws are interpreted, and
+  the batch's framebuffers are kept whole for what is left. Every list of the attract took it. Against v0.113.0's build,
+  the same attract, one play a turn, interleaved, big cores held at 1.04 GHz and the GPU at 403 MHz (skin 36.5-38.2 °C
+  in plays 1-3, the battery 33.0-37.9 °C in 4-6): game frames a second in the last 60 s of 200 s after Start Game (the
+  mean of its 5 s windows, their range) and presents a second. Plays 3 and 4 had wasm SIMD too (the next point).
+
+  | play | build | game frames | presents |
+  |---|---|---|---|
+  | 1 | the change | 25.7 (22.6-29.9) | 51.6 |
+  | 2 | v0.113.0 | 22.6 (21.0-24.3) | 58.1 |
+  | 3 | the change, SIMD | 25.8 (22.5-29.9) | 46.1 |
+  | 4 | the change, SIMD | 23.3 (22.0-25.1) | 58.0 |
+  | 5 | v0.113.0 | 24.1 (21.2-29.5) | 54.2 |
+  | 6 | the change | 24.9 (22.1-30.1) | 52.6 |
+
+  The change drew 3-14% more game frames than v0.113.0 in the plays beside it, a few percent and not the 30 the game
+  asks for: every play's windows swing between 21 and 30 with the attract's scenes. GoldenEye's attract, played the
+  same way (2 plays of the change, 1 of v0.113.0, 2 with SIMD; another of v0.113.0's was lost to the phone being used,
+  its game at 2.2 frames a second in a hidden tab), tells no build from another: its windows in the same 60 s ran
+  4.5-52 in every play, its scenes changing at a different time in each, and the plays read 21.1 and 24.4, 24.3, 21.0
+  and 37.3. A plan that plays one of its levels would.
+- wasm SIMD for the TMEM loads and hashes (two TMEM words in one i8x16 shuffle, a CI4 texture's palette indices taken by
+  two i8x16 swizzle lookups) made the loads up to 9 times as fast alone in V8 (a load block of 512 B 60 ns against 557,
+  of 2 KB 452 against 2366) and a CI4 hash 1.1-1.5 times (32x32 182 ns against 272), and no page faster: on the phone
+  25.8 and 23.3 against the change's 25.7 and 24.9 (above), on a desktop GPU Conker 136-177 presents a second against
+  169-189 and GoldenEye 155 against 152-155 (2 pairs and 1, interleaved, a busy host). It was dropped (docs/findings.md,
+  Ruled out, measured).
 
 ## Banjo-Tooie on a Galaxy S21
 
