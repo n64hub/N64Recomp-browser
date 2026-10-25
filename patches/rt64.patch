@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 43ef41c5e8029d115a00251878610d5e20112329
+rt64: https://github.com/n64hub/rt64-web 2f9290c6afd5a8c12b1412d383c0abae2418a156
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3124,7 +3124,7 @@ index 8ea27d5..f97f6c6 100644
  
          void reset();
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..b1a97dc 100644
+index 5a331aa..9059274 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -111,12 +111,19 @@ namespace RT64 {
@@ -3160,19 +3160,7 @@ index 5a331aa..b1a97dc 100644
  #   if RT_ENABLED
          workloadConfig.raytracingEnabled = rtEnabled;
  
-@@ -289,6 +302,11 @@ namespace RT64 {
-         }
-     }
-     
-+    bool WorkloadQueue::isWorkloadDone(uint64_t id) {
-+        const std::scoped_lock lock(workloadIdMutex);
-+        return (id <= workloadId);
-+    }
-+
-     void WorkloadQueue::threadRenderFrame(GameFrame &curFrame, const GameFrame &prevFrame, const WorkloadConfiguration &workloadConfig,
-         const DebuggerRenderer &debuggerRenderer, const DebuggerCamera &debuggerCamera, float curFrameWeight, float prevFrameWeight,
-         float deltaTimeMs, RenderTargetKey overrideTargetKey, int32_t overrideTargetFbPairIndex, RenderTarget *overrideTarget,
-@@ -425,6 +443,17 @@ namespace RT64 {
+@@ -425,6 +438,17 @@ namespace RT64 {
                      nativeColorWidth = colorImg.width;
                      nativeColorHeight = fbPair.drawColorRect.bottom(true);
  
@@ -3190,7 +3178,7 @@ index 5a331aa..b1a97dc 100644
                      // When the target is much bigger than the reference height, we reduce the resolution scaling (but clamped to 1.0).
                      const uint32_t heightThreshold = (workload.viFbSize[1] > 0) ? ((workload.viFbSize[1] * 3) / 2) : 360;
                      uint32_t downsampleMultiplier = workloadConfig.downsampleMultiplier;
-@@ -543,8 +572,10 @@ namespace RT64 {
+@@ -543,8 +567,10 @@ namespace RT64 {
                          colorFb->readHeight = 0;
                      }
  
@@ -3202,7 +3190,7 @@ index 5a331aa..b1a97dc 100644
                          if (dummyDepthTarget == nullptr) {
                              dummyDepthTarget = std::make_unique<RenderTarget>(0, Framebuffer::Type::Depth, targetManager.multisampling, targetManager.usesHDR);
                              dummyDepthTarget->setupDepth(ext.workloadGraphicsWorker, rtWidth, rtHeight);
-@@ -557,6 +588,7 @@ namespace RT64 {
+@@ -557,6 +583,7 @@ namespace RT64 {
                          if (colorTarget != nullptr) {
                              colorDepthPairs.emplace_back(colorTarget, dummyDepthTarget.get());
                          }
@@ -3210,7 +3198,7 @@ index 5a331aa..b1a97dc 100644
                      }
                      else if (depthTarget != nullptr) {
                          if (colorTarget != nullptr) {
-@@ -581,6 +613,10 @@ namespace RT64 {
+@@ -581,6 +608,10 @@ namespace RT64 {
                  }
              }
  
@@ -3221,7 +3209,7 @@ index 5a331aa..b1a97dc 100644
              for (RenderTarget *renderTarget : resizedTargets) {
                  renderFramebufferManager->destroyAllWithRenderTarget(renderTarget);
              }
-@@ -599,6 +635,9 @@ namespace RT64 {
+@@ -599,6 +630,9 @@ namespace RT64 {
              for (uint32_t f = 0; f < fbPairCount; f++) {
                  const FramebufferPair &fbPair = workload.fbPairs[f];
                  fbManager.performDiscards(fbPair.startFbDiscards);
@@ -3231,7 +3219,7 @@ index 5a331aa..b1a97dc 100644
              }
              
              // Add all framebuffer pairs to the framebuffer renderer and setup the operations.
-@@ -615,7 +654,12 @@ namespace RT64 {
+@@ -615,7 +649,12 @@ namespace RT64 {
              for (uint32_t f = 0; f < fbPairCount; f++) {
                  const FramebufferPair &fbPair = workload.fbPairs[f];
                  if (getTargetsFromPair(f)) {
@@ -3245,7 +3233,7 @@ index 5a331aa..b1a97dc 100644
                      FramebufferRenderer::DrawParams drawParams;
                      drawParams.worker = ext.workloadGraphicsWorker;
                      drawParams.fbStorage = &fbStorage;
-@@ -635,7 +679,8 @@ namespace RT64 {
+@@ -635,7 +674,8 @@ namespace RT64 {
                      drawParams.rtEnabled = workloadConfig.raytracingEnabled;
                      drawParams.submissionFrame = workload.submissionFrame;
                      drawParams.deltaTimeMs = deltaTimeMs;
@@ -3255,7 +3243,7 @@ index 5a331aa..b1a97dc 100644
                      drawParams.postBlendNoise = workloadConfig.postBlendNoise;
                      drawParams.postBlendNoiseNegative = workloadConfig.postBlendNoiseNegative;
                      drawParams.maxGameCall = std::min(gameCallCountMax - gameCallCursor, fbPair.gameCallCount);
-@@ -701,7 +746,7 @@ namespace RT64 {
+@@ -701,7 +741,7 @@ namespace RT64 {
              ext.workloadGraphicsWorker->commandList->begin();
              ext.workloadGraphicsWorker->commandList->resetQueryPool(queryPool.get(), 0, 2);
              ext.workloadGraphicsWorker->commandList->writeTimestamp(queryPool.get(), 0);
@@ -3264,7 +3252,7 @@ index 5a331aa..b1a97dc 100644
              framebufferRenderer->recordSetup(ext.workloadGraphicsWorker, bufferUploaders, processRSP ? rspProcessor.get() : nullptr, processWorldVertices ? vertexProcessor.get() : nullptr, &workload.outputBuffers, workloadConfig.raytracingEnabled);
              
              // Record all framebuffer pairs.
-@@ -842,15 +887,30 @@ namespace RT64 {
+@@ -842,15 +882,30 @@ namespace RT64 {
              framebufferRenderer->waitForUploaders();
              ext.workloadGraphicsWorker->execute();
              ext.workloadGraphicsWorker->wait();
@@ -3295,6 +3283,18 @@ index 5a331aa..b1a97dc 100644
          }
  
          if ((overrideTarget != nullptr) && !usingMSAA) {
+@@ -878,6 +933,11 @@ namespace RT64 {
+         workloadIdCondition.notify_all();
+     }
+ 
++    bool WorkloadQueue::isWorkloadDone(uint64_t id) {
++        const std::scoped_lock lock(workloadIdMutex);
++        return (id <= workloadId);
++    }
++
+     void WorkloadQueue::renderThreadLoop() {
+         Thread::setCurrentThreadName("RT64 Workload");
+ 
 @@ -888,6 +948,9 @@ namespace RT64 {
          uint32_t displayRateForTicks = 0;
          int processCursor = -1;

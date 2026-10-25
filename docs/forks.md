@@ -454,11 +454,12 @@ rt64 9c88af0           7844c07's slowest of the last three only where the fastes
                        set each; on a phone, with State's layout right (rt64 43ef41c) both ways, Diddy Kong Racing
                        presented 58.3 and 58.7 a second against 57.0 and 54.7 (docs/phones.md)
 rt64 b173eb3,          on the web a present is dropped for a newer one only once its own workload is done and the
-rt64 01d734b           newer one's is too, not as it is taken from the queue: where workloads end after the game's
-                       next present comes, every present found a newer one queued and was dropped, and Banjo-Tooie's
+rt64 01d734b,          newer one's is too, not as it is taken from the queue: where workloads end after the game's
+rt64 2f9290c           next present comes, every present found a newer one queued and was dropped, and Banjo-Tooie's
                        page on a phone showed nothing from its attract's second level change on, its game still
                        running (docs/phones.md); 01d734b moves the function it adds out of the lines Jet Force
-                       Gemini's own RT64 patch changes
+                       Gemini's own RT64 patch changes, and 2f9290c out of where Pokémon Snap's port adds one, where
+                       its web fork's three-way merge put it inside that function without a conflict
 rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_OFFSCREEN_WORKLOADS is: 7844c07 put
                        fields of VIHistory under it in rt64_vi.h, so a recomp's own code that includes rt64_state.h
                        (Diddy Kong Racing's F3DDKR and scenery code, Pokémon Snap's render context) saw every State
