@@ -156,8 +156,10 @@ patch), the microcode labels it ignores, render to RAM off and why, the shader l
 `n64hub/BanjoTooieRecompiled-web` is Banjo-Tooie: Recompiled. The game writes thprof creating its threads
 (N64ModernRuntime 2e6aa0a). Upstream ships the Suplexmentary Comic NC font in `assets/`, and the page loads it. Its list
 is 284 descriptions in 11 sections. The word at 0x800459C8 counts 30 a second in every world, not frames
-drawn. The desktop build draws every world but Terrydactyland and Hailfire Peaks at 30. Upstream prints diagnostics of
-its own (`[entry-probe]`, `[task1]`, ~100 lines a second), left as they are. It draws ~1,700 batches a frame in
+drawn. The desktop build draws every world but Terrydactyland and Hailfire Peaks at 30. Upstream prints temporary
+diagnostics of its own (`[tooie] step`, `[probe]`, `[sys-first]`, `[entry-probe]`, `[task1]` once a frame, 17,000
+lines in a 2-minute play), which the fork takes out with the hooks that print them: its page's console holds the
+page's own lines, the game's errors and the traces an environment variable turns on. It draws ~1,700 batches a frame in
 Jinjo Village, 3-7 times Rush 2049's, and RT64 makes each one WebGPU calls on the page's thread, so with Chrome's CPU
 throttled 6 times it is the slowest page there, its own draw count and not the web support (docs/findings.md, A page's
 thread in Chrome, throttled). Its BUILDING.md and the headers of
