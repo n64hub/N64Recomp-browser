@@ -4,6 +4,25 @@ How a page is played and measured on an Android phone from a computer, what a ph
 and what has been measured there. `tools/play_phone.mjs`'s header has its options; docs/playing.md has the rest of
 playing a page, and docs/findings.md what was measured on desktops and laptops.
 
+## Sharing a phone
+
+Where agents share a phone, it has a line of its own in the machine's queue (CLAUDE.md, Playing a page), apart from
+the GPU's: one turn on the phone at a time, whatever the GPU is doing, so a turn there is neither whole nor shared.
+Two at once would open pages on it together and change its Chrome flags and CPU caps under each other, and both get
+numbers that mean nothing.
+
+- Everything a play does to the phone runs as one script inside one turn: the `adb forward` to Chrome's DevTools,
+  the `adb reverse` for the page, Chrome's command line, the CPU's caps, keeping the screen on, the play itself
+  (play_phone.mjs) and its screencaps. A step run outside the turn can land in another agent's play.
+- The script puts back what it changed before it exits, on failure too (a `trap ... EXIT` in a shell script): the
+  next turn starts from the phone as this one left it. That is Chrome's command line (the file deleted, the flag
+  reset, Chrome restarted), each `scaling_max_freq` at the value read before it was written, `svc power stayon` and
+  `screen_off_timeout`, the forwards and reverses it made (`adb forward --remove tcp:<port>`,
+  `adb reverse --remove tcp:<port>`), and the tabs it opened (`/json/close/<id>`). play_phone.mjs makes its forward
+  and opens its tab but leaves both when it ends, so the script removes them.
+- One play a turn, as on the GPU, so other agents' turns come between a series; the phone rests between plays anyway
+  (Measuring, heat). A turn's limit fits its play and the restarts around it.
+
 ## Connecting
 
 - adb reaches the phone over USB or Wi-Fi. A cable that charges may still not carry data, and a phone that was plugged
