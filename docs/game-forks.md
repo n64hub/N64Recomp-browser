@@ -154,8 +154,10 @@ headers of `tools/web_patch.sh`, `tools/patch_rt64_water.py`, `recomp/wr64.toml`
 patch), the microcode labels it ignores, render to RAM off and why, the shader list and how it was recorded, plays.
 
 `n64hub/BanjoTooieRecompiled-web` is Banjo-Tooie: Recompiled. The game writes thprof creating its threads
-(N64ModernRuntime 2e6aa0a). Upstream ships the Suplexmentary Comic NC font in `assets/`, and the page loads it. Its list
-is 284 descriptions in 11 sections. The word at 0x800459C8 counts 30 a second in every world, not frames
+(N64ModernRuntime 2e6aa0a). Upstream ships the Suplexmentary Comic NC font in `assets/`, and the page loads it.
+Upstream commits its recompiled code, `RecompiledFuncs/` and `rsp/n_aspMain.cpp`; the fork commits neither, as it is
+derived from the ROM, and its desktop build makes both from the ROM as its page does (its README, What Is Not
+Committed). Its list is 284 descriptions in 11 sections. The word at 0x800459C8 counts 30 a second in every world, not frames
 drawn. The desktop build draws every world but Terrydactyland and Hailfire Peaks at 30. Upstream prints temporary
 diagnostics of its own (`[tooie] step`, `[probe]`, `[sys-first]`, `[entry-probe]`, `[task1]` once a frame, 17,000
 lines in a 2-minute play), which the fork takes out with the hooks that print them: its page's console holds the
