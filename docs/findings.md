@@ -1134,10 +1134,13 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   into RDRAM. In Chrome that readback makes the list wait 5-6 ms for the GPU process whatever its size (Rush 2049's
   `headless/main.cpp` header has the measurements), so a game that never reads its frames on the CPU turns it off
   (RecompFrontend-0004, `set_render_to_ram`), and one that does keeps it on. If it can take a frame one list old (a
-  patch of the screen, a row of depth), `set_render_to_ram_late` (rt64 73e9ca0) makes the copy land when the next list
-  starts instead, and the list stops waiting: Conker's, GoldenEye's and Donkey Kong 64's pages do. Majora's Mask can't:
-  it flushes its task queue and reads the pictograph and the pause background at once, so it keeps the exact copy. Nor
-  can a game that puts something in a framebuffer's memory once the RDP is done: the copy lands while the game runs,
+  patch of the screen, a row of depth), `set_render_to_ram_late` (rt64 73e9ca0) makes the copy land later instead,
+  and the list stops waiting: Conker's, GoldenEye's, Donkey Kong 64's and Perfect Dark's pages do. It landed when the
+  next list started, which waited there for the GPU where the GPU took longer over a frame than the game between lists
+  (a phone's, at its lowest clock); since rt64 330f84a it lands at the first VI or list start that finds the GPU done,
+  or at the latest where the next list's draws are synced, before that list's RDP is done (docs/phones.md, Conker's Bad
+  Fur Day). Majora's Mask can't: it flushes its task queue and reads the pictograph and the pause background at once,
+  so it keeps the exact copy. Nor can a game that puts something in a framebuffer's memory once the RDP is done: the copy lands while the game runs,
   and though it keeps every word the CPU changed (rt64 cb75c5c), a word written with the value it held looks untouched
   and gets the frame. Jet Force Gemini's CPU reworks its shadows' render targets once the RDP has drawn them, and with
   the copy late they came out blurred or as dots, so its page keeps the exact copy too. The console reports each write
@@ -1649,7 +1652,8 @@ What CLAUDE.md's Ruled out rests on.
   `joy_disable_cyclic_polling` and half in `joy_enable_cyclic_polling`, each waiting in `osRecvMesg` for the scheduler's
   next retrace: a tick that finds no controller sample newer than the last one restarts the polling and takes two VIs
   (Perfect Dark's docs/web.md says so of its menus). Its desktop build draws its levels at 30 too. The Gfx thread's 85%
-  in the late copy's wait came from a play without the prebuilt list.
+  in the late copy's wait came from a play without the prebuilt list. On a phone, where the wait was the GPU's own
+  time over a frame, a list that goes ahead of its copy draws more game frames (rt64 330f84a, docs/phones.md).
 - A missed shader built in line with the device in Firefox as what stops Perfect Dark's page answering at Defection
   (A page that stops answering): the page kept drawing through the stop, and Firefox's own process answered every
   BiDi command 11-37 s late, `browsingContext.getTree` and `session.status` too, which never reach the page.
