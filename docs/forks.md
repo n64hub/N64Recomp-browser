@@ -467,5 +467,9 @@ rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_O
                        presented 47-68 a second from v0.109.0 on, against 287-305 before and 291.8 with it
 RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
                        times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
-                       heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's
+                       heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's;
+                       now the copy buffer is at most 24 MB (GoldenEye's page boots 344 MB lower)
+rt64 15e8e91           the flat, multisampled dual-source RasterPS gets VERTEX_FLAT_COLOR: 85a6ad5's line for it was
+                       garbled, and CMake passed dxc the pieces, so it was the smooth one; nothing includes it (a page
+                       draws without MSAA), so no binary changes
 ```
