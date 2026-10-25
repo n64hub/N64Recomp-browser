@@ -447,11 +447,12 @@ rt64 9c88af0           7844c07's slowest of the last three only where the fastes
                        frames of 2 and 3 VIs or more is timed at the fastest again, as RT64 skipped the third frame it
                        set each; on a phone Pokémon Snap's attract presented 51-53 a second against 24-30, Diddy Kong
                        Racing drew 58.3 frames a second against 53.7
-rt64 b173eb3           on the web a present is dropped for a newer one only once its own workload is done and the
-                       newer one's is too, not as it is taken from the queue: where workloads end after the game's
+rt64 b173eb3,          on the web a present is dropped for a newer one only once its own workload is done and the
+rt64 01d734b           newer one's is too, not as it is taken from the queue: where workloads end after the game's
                        next present comes, every present found a newer one queued and was dropped, and Banjo-Tooie's
                        page on a phone showed nothing from its attract's second level change on, its game still
-                       running (docs/phones.md)
+                       running (docs/phones.md); 01d734b moves the function it adds out of the lines Jet Force
+                       Gemini's own RT64 patch changes
 RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
                        times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
                        heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's

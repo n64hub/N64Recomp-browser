@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web b173eb3e8dcc4e7990ce5905f02d0084a51665df
+rt64: https://github.com/n64hub/rt64-web 01d734b73c8dc9d559c425749cb7daa43e127098
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3125,22 +3125,10 @@ index 8ea27d5..f97f6c6 100644
  
          void reset();
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..3964ae1 100644
+index 5a331aa..b1a97dc 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
-@@ -95,6 +95,11 @@ namespace RT64 {
-         });
-     }
- 
-+    bool WorkloadQueue::isWorkloadDone(uint64_t id) {
-+        const std::scoped_lock lock(workloadIdMutex);
-+        return (id <= workloadId);
-+    }
-+
-     void WorkloadQueue::setup(const External &ext) {
-         this->ext = ext;
- 
-@@ -111,12 +116,19 @@ namespace RT64 {
+@@ -111,12 +111,19 @@ namespace RT64 {
  
          threadsRunning = true;
          renderThread = new std::thread(&WorkloadQueue::renderThreadLoop, this);
@@ -3160,7 +3148,7 @@ index 5a331aa..3964ae1 100644
          framebufferRenderer->updateMultisampling();
      }
  
-@@ -236,6 +248,12 @@ namespace RT64 {
+@@ -236,6 +243,12 @@ namespace RT64 {
          // Store the rate that was chosen for the configuration.
          ext.sharedResources->targetRate = workloadConfig.targetRate;
  
@@ -3173,6 +3161,18 @@ index 5a331aa..3964ae1 100644
  #   if RT_ENABLED
          workloadConfig.raytracingEnabled = rtEnabled;
  
+@@ -289,6 +302,11 @@ namespace RT64 {
+         }
+     }
+     
++    bool WorkloadQueue::isWorkloadDone(uint64_t id) {
++        const std::scoped_lock lock(workloadIdMutex);
++        return (id <= workloadId);
++    }
++
+     void WorkloadQueue::threadRenderFrame(GameFrame &curFrame, const GameFrame &prevFrame, const WorkloadConfiguration &workloadConfig,
+         const DebuggerRenderer &debuggerRenderer, const DebuggerCamera &debuggerCamera, float curFrameWeight, float prevFrameWeight,
+         float deltaTimeMs, RenderTargetKey overrideTargetKey, int32_t overrideTargetFbPairIndex, RenderTarget *overrideTarget,
 @@ -425,6 +443,17 @@ namespace RT64 {
                      nativeColorWidth = colorImg.width;
                      nativeColorHeight = fbPair.drawColorRect.bottom(true);
@@ -3534,7 +3534,7 @@ index 5a331aa..3964ae1 100644
                  }
  
 diff --git a/src/hle/rt64_workload_queue.h b/src/hle/rt64_workload_queue.h
-index bde2f03..0a35e4f 100644
+index bde2f03..2b7884f 100644
 --- a/src/hle/rt64_workload_queue.h
 +++ b/src/hle/rt64_workload_queue.h
 @@ -23,11 +23,26 @@
@@ -3581,14 +3581,14 @@ index bde2f03..0a35e4f 100644
          std::unique_ptr<RenderQueryPool> queryPool;
          FramebufferChangePool scratchFbChangePool;
          ProfilingTimer rendererCPUProfiler = ProfilingTimer(120);
-@@ -109,6 +133,7 @@ namespace RT64 {
-         uint32_t previousWriteCursor() const;
-         void waitForIdle();
-         void waitForWorkloadId(uint64_t waitId);
+@@ -122,5 +146,6 @@ namespace RT64 {
+         void threadAdvanceWorkloadId(uint64_t newWorkloadId);
+         void renderThreadLoop();
+         void idleThreadLoop();
 +        bool isWorkloadDone(uint64_t id);
-         void setup(const External &ext);
-         void updateMultisampling();
-         void threadConfigurationUpdate(hlslpp::uint2 viFbSize, WorkloadConfiguration &workloadConfig);
+     };
+ };
+\ No newline at end of file
 diff --git a/src/render/rt64_descriptor_sets.h b/src/render/rt64_descriptor_sets.h
 index 69a82ac..1dd31f7 100644
 --- a/src/render/rt64_descriptor_sets.h
