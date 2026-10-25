@@ -306,7 +306,7 @@ jobs:
       # compiles it (syntax only: no shaders are built), against the port's patched rt64 and its ImGui.
       - name: rt64's ImGui code against the port's ImGui
         run: |
-          rt64="$RUNNER_TEMP/jfg/lib/rt64"
+          rt64="$RUNNER_TEMP/jfg/web-build/lib/rt64"
           flags=(-std=c++17 -pthread -fwasm-exceptions -msimd128 -sUSE_SDL=2 --use-port=emdawnwebgpu -fsyntax-only
             -DFFX_GCC -DHLSL_CPU -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DRT64_FREE_DISCARDED_TARGETS=1
             -DRT64_OFFSCREEN_WORKLOADS=1 -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PREBUILT_SHADERS -DRT64_UNEVEN_FRAME_RATES=1
