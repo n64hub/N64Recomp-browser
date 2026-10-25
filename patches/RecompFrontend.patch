@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web 957e46c8866bfde3ee87bc1d08701e1e35963745
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web 8c7de5e8d1f5b0eb811f1e91fe9dcce2b65028c2
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
