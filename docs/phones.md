@@ -102,6 +102,11 @@ while game frames fall. Telling them apart:
   with present-stats, frames drawn a second under twice the game frames of a game interpolated at 30 is RT64
   skipping a game frame's later frames, which it does when its workload thread runs past each frame's share of the
   game frame's time. The page's thread and RT64's present thread were each under half busy then.
+- A game that runs at 60 where it can (Rush 2049 at its 60 fps, Perfect Dark) and that a phone's CPU holds to 30-50
+  mixes frames of one and two VIs, and RT64_UNEVEN_FRAME_RATES takes a frame's length from the shortest of the last
+  three, so RT64 draws about one frame for each game frame: presents fall to about the game's rate. The same game held
+  to 30 gets two for each, near 60 presents. So such a game's own code holds it to 30 on a page while it can't keep
+  60 up (Rush 2049 below).
 - A GPU's load says little on a phone: its clock follows the load, so a lighter frame (resolution Original) ran the
   Mali-G78 at 130 MHz, still 60-80% busy, and presented no more.
 
@@ -169,8 +174,11 @@ race on its first track with the gas held, cool unless said.
   RT64 drew 1.9 frames a game frame against 1.4. At 60 the game the phone can't keep at 60 mixes frames of 1 and 2
   VIs, and RT64_UNEVEN_FRAME_RATES takes a frame's length from the shortest of the last three, so most frames get one
   drawn; at 30 every frame is 2 VIs and gets two. The page now holds the game to 30 while it can't keep 60 up
-  (rush-2049-recomp's `src/frame_rate.cpp`): at the default 60 it presented 51.6 a second against 44.9 without it and
-  53.4 at Original, big cores at 1.04 GHz each time, and 57.4 at 1.35 GHz.
+  (rush-2049-recomp's `src/frame_rate.cpp`): at the default 60 it presented 51.6, 52.5 and 52 a second against 44.9,
+  41.1 and 42.7 without it, and 53.4 at Original, big cores at 1.04 GHz each time (the GPU's cap 403-858 MHz), and
+  57.4 at 1.35 GHz. Holding after one second of 20-50 frames held a page on a desktop GPU at 30 for 10 s after each
+  load, whose second falls short (42 and 50 frames in Rush 2049's regular plan); after two in a row it never held
+  there, 300 and 301 presents a second uncapped against 304-318 without it.
 
 ## Other games on a Galaxy S21
 
@@ -179,6 +187,10 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
 - Mario Kart 64, a race on Luigi Raceway with the gas held: 59.5 presents a second, the GPU 67-81% busy at 130 MHz.
 - Super Mario 64, Castle Grounds: 59.9.
 - Banjo-Kazooie, its attract demo in Spiral Mountain: 59.7 (55-60), the GPU up to 90% busy at a low clock.
+- Majora's Mask, Donkey Kong 64 and Ocarina of Time, 80 s of each one's attract after Start Game, big cores at
+  1.04 GHz: 59.9, 60 and 60.2, the GPU 21-30% busy at 130 MHz.
+- Conker's Bad Fur Day, the same: 46.8 (45.8-53.2), each present done on the GPU 19-21 ms after it, the GPU 65-84%
+  busy and its clock held at 130 MHz of a cap of 767-858, so its GPU holds it, at the clock the phone gives it.
 - Perfect Dark, its intro: 48 (48-51), the GPU 50-75% busy at 130 MHz, so the CPU holds it.
 - Perfect Dark's intro with plume's device thread waiting one execution behind and RT64's TMEM loads by words, against
   the page from Pages, interleaved (2 pairs, big cores at 1.35-1.56 GHz, skin 33-36 °C): presents 50-52 a second over
