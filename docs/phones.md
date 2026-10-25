@@ -314,3 +314,27 @@ main's build (v0.107.0) served in its place, with present-stats.
 - What is left of a list is RT64's own work, as on a desktop: in that profile, without the wait, `State::fullSync`
   25% of the thread (the tiles' TMEM loads and hashes 11.5%, recording the workload 8.5%) and the microcode's vertices
   and triangles 20%.
+
+## Banjo-Tooie on a Galaxy S21
+
+Its attract after Start Game, 240 s of it (about 300 s of the page's time), Chrome 156, charging, big cores held at
+1.04-1.35 GHz (skin 33-42 °C): the page from Pages (built on v0.106.0), or that page built with prints, served in its
+place. The attract changes level about 125 s and 250 s into the page.
+
+- Before rt64 b173eb3, every one of 7 plays that reached the second level change presented nothing from there on,
+  0 a second to the play's end, while the page's thread kept its 60 animation frames and the game its 15-20 frames:
+  RT64's present thread dropped every present for a newer one. It decided as it took a present from the queue, before
+  waiting for the present's workload, and there each workload ended 89-291 ms after its present was queued (p10-p90,
+  5,634 presents) where the game's next present came 33-111 ms after it, so a newer one was always queued. Every play
+  also went to 0-4 a second for a few seconds at the first level change, as cool (big cores at 1.35 GHz, skin
+  33-34 °C) as hot. play_phone.mjs prints a trace site's first lines only, so the drops' own lines stop early in a log.
+- With rt64 b173eb3 (a present dropped only once its workload is done and the newer one's too): 6 of 6 plays kept
+  presenting after the second change, 8-22 a second (big cores at 1.04 GHz, skin 36-42 °C), and none fell under 21 at
+  the first; before the changes 53-54 a second (each play's median), as before. After the change the GPU was 0-85%
+  busy at 130 MHz, so what holds those 8-22 is the CPU's work for each workload.
+- A rarer hang: in 3 of the 10 plays before the fix the game stopped in or just after a level change's drop (126, 151
+  and 247 s), its watchdog's frame no longer counting and presents at 0. One game thread called `osSendMesg` and `osRecvMesg` in a loop
+  and never blocked, 93% of its time in `QueuedMessage::send_blocked_messages` (from `dequeue_external_messages`), and
+  it ran above the priority of the game's main thread, which waited in `osSetThreadPri` to run again and never did.
+  The runtime's held messages stayed under 16 and no timer fired. None of the 6 plays with the fix hung.
+- The page's heap (the break of its 1536 MB) held at 575-717 MB through each play with the fix.
