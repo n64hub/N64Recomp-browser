@@ -178,7 +178,8 @@ race on its first track with the gas held, cool unless said.
   41.1 and 42.7 without it, and 53.4 at Original, big cores at 1.04 GHz each time (the GPU's cap 403-858 MHz), and
   57.4 at 1.35 GHz. Holding after one second of 20-50 frames held a page on a desktop GPU at 30 for 10 s after each
   load, whose second falls short (42 and 50 frames in Rush 2049's regular plan); after two in a row it never held
-  there, 300 and 301 presents a second uncapped against 304-318 without it.
+  there, 300 and 301 presents a second uncapped against 304-318 without it, and the phone presented 52.8 against
+  45.5.
 
 ## Other games on a Galaxy S21
 
