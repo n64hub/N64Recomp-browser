@@ -248,6 +248,12 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   a cooler phone (big cores at 1.56-2.08 GHz, skin 27-33 °C): 59.7 and 55.4 presents a second against 58.6 and 58.6. It
   held in both its runs (45 frames a second, each try at 60 reaching 27-40), but with that much more CPU the page's 60
   presented more than in the pair above, and the hold showed no clear gain.
+- The same hold once RT64_UNEVEN_FRAME_RATES took the slowest of the last three frames (rt64 7844c07), both builds on
+  that, interleaved (hold, without, without, hold) on a phone warming from big cores at 1.35 GHz to 1.04 (skin 35.5 to
+  39.3 °C, the GPU's cap 858 then 403 MHz), the last minute of each: 53.6 and 51.7 presents a second with the hold
+  against 53.2 and 53.1 without, the game at 25.5-28.1 either way. It held in both its runs (29-48 frames a second),
+  and gained nothing: the slower-rate rule gives a 60 the CPU can't keep the two frames each a hold did, so the hold
+  stays off Jet Force Gemini's main.
 
 ## Conker's Bad Fur Day on a Galaxy S21
 
