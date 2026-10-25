@@ -381,7 +381,7 @@ jobs:
   # Snap64Recomp-web's: its rt64, hlslpp, N64Recomp and RecompFrontend are newer than the patches' upstream commits and
   # carry the game's own patches, so its web/patches take over the files where the two meet. Red on a PR means the same
   # as snap-patches', merged into 1080-Snowboarding-recomp-web's web/patches by hand.
-  1080-patches:
+  snowboarding-patches:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
@@ -514,7 +514,7 @@ jobs:
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, snap-patches,
-      rush2-patches, 1080-patches, sm64-patches, emscripten]
+      rush2-patches, snowboarding-patches, sm64-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')

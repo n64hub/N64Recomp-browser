@@ -352,7 +352,7 @@ the HD boards' per-texture scale), patched by the N64Recomp-browser tag its `lib
 both change the same lines (`web/patches/files.txt`: 11 of rt64's, hlslpp's `wasm.h`, N64Recomp's `cgenerator.cpp`,
 RecompFrontend's `profiles.cpp`), whose web change is its `web/patches/<project>.patch`, merged by hand, and what
 N64Recomp-browser has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's
-`1080-patches` job runs its `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. Its rt64 is
+`snowboarding-patches` job runs its `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. Its rt64 is
 newer than the web's: its texture decoder is shared with the CPU (`src/shared`, which calls TMEM's sizes
 `TMEM_RDP_*`), and with `RT64_UNEVEN_FRAME_RATES` the web's rate for uneven frames is used in `rt64_vi.cpp`, the
 game's otherwise. The page leaves out RetroAchievements, which needs a server, and MSAA, and keeps every other
