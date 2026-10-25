@@ -439,4 +439,8 @@ rt64 330f84a           render to RAM's late copy lands at a list's start only on
                        VI that finds it ready or where the next list's draws are synced: on a phone the wait for the
                        GPU at each list's start was a quarter of the display list thread's time, and Conker's game
                        frames 15-21% more
+plume f3cb1a7,         an upload buffer of 16 MB or more maps the backend's memory on the device thread, as before
+rt64 e74c09d           5aa2cbe, without a copy of its own on the calling side: that copy doubled each buffer in the
+                       heap, and RecompFrontend's buffer for its launcher's images (an SVG drawn at 4K) took
+                       GoldenEye's page, which boots at 1458 MB of its 1536, past its heap 1.7 s after load
 ```
