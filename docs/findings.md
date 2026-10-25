@@ -1199,6 +1199,24 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   were. The A/B against Pages (`ab_pages.mjs`, Chrome uncapped at 3840x2000, a play from the file menu to Joanna's
   control) read 208 presents a second for Pages' page and 331 for the build, its p99 gap 29 ms against 10, and
   Banjo-Tooie's regular plan, which makes tile copies too, 357 against 358, both at the 360 cap.
+- Perfect Dark's night vision: with the goggles on (*Area 51 - Extraction*, the third mission, the player's
+  `devicesactive` bit 0x01 set from the console), `bview_draw_nv_lens` reads the front buffer back row by row for its
+  blur and then copies each of the back buffer's 240 rows: a LoadBlock of the 320-texel row into TMEM 0 and a one-row
+  texture rectangle drawn through a tile `bview_prepare_static_rgba16` sets to 513x9 texels of line 160. RT64 checks
+  the TMEM a tile could sample for a tile copy, and for that tile it is all of TMEM, at a line of 640 texels against
+  the row's 320, so no row found its tile copy: each was hashed and uploaded from RDRAM (~250 TMEM uploads a frame),
+  the framebuffer written back to RAM for them, two syncs a list. The game dropped from 60 to 30 the moment the goggles
+  came on, on an RTX 5080 too, and Chrome's GPU process grew 15-30 MB a second. With a row loaded whole at the tile's
+  own TMEM address sampling that row's tile copy (rt64 9b87e67, `FramebufferManager::checkRowTileCopy`), the game
+  keeps its 60 with the goggles on. Chrome uncapped at 3840x2000 (RTX 5080, an idle host, the page from Pages against
+  perfect-dark-recomp main 8fc4524 built with it, plays.jsonl): Pages' page went to 30 within 5 s of the goggles and
+  presented 271-306 a second there, its GPU process growing 2.75 -> 3.12 GB in 20 s; the build kept 60, presented
+  316-327 and its GPU process stayed at 2.38-2.48 GB; no WebGPU errors in either. Banjo-Tooie's regular plan read
+  354 a second for both, and the build played clean in Firefox with the goggles on. The goggles' rows are now drawn from
+  tile copies at the page's resolution, as RT64 draws any framebuffer it finds a tile copy for, where from RDRAM they
+  were the N64's 320x240 (and the HUD's text doubled). Two syncs a list are left: a 32x32 CI4 draw at TMEM 0-33
+  overlaps what is left of the last row's region once a later load has discarded part of it, and RT64 syncs for a
+  region it no longer knows.
 
 ## A page's thread in Chrome, throttled
 

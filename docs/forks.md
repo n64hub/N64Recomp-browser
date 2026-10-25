@@ -500,4 +500,9 @@ rt64 40b0ff6           it to the size resize() had read: on a phone, back in Chr
                        fullscreen and then landscape resizes twice in 0.3 s, and 2 of 6 tries on GoldenEye's page lost
                        the landscape size that way, the game drawn upright and stretched across the landscape screen;
                        with it 6 of 6 kept it
+rt64 9b87e67           with Emscripten, a tile that finds no tile copy samples the one of a 16 or 32-bit framebuffer
+                       row loaded whole at its TMEM address, as a one-row tile, whatever its own size and line say;
+                       texcoords that leave the row sample TMEM again: Perfect Dark's night vision copies each row
+                       through a 513x9 tile of line 160, and drew each from RDRAM, at 30 (docs/findings.md, Perfect
+                       Dark's night vision)
 ```
