@@ -495,4 +495,9 @@ N64ModernRuntime       Emscripten: ultramodern::renderer::rdp_done() sends a gra
                        desktop build
 RecompFrontend 8c7de5e Emscripten: RT64's Application::Core::rdpDone is ultramodern's rdp_done(), only while send_dl
                        runs a game's task (a pipeline warm-up or a dummy workload tells the game nothing)
+plume a501afa,         the swap chain puts the canvas's asked-for size back after configuring its surface, which set
+rt64 40b0ff6           it to the size resize() had read: on a phone, back in Chrome from another app, the tap that goes
+                       fullscreen and then landscape resizes twice in 0.3 s, and 2 of 6 tries on GoldenEye's page lost
+                       the landscape size that way, the game drawn upright and stretched across the landscape screen;
+                       with it 6 of 6 kept it
 ```
