@@ -1211,7 +1211,8 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   keeps its 60 with the goggles on. Chrome uncapped at 3840x2000 (RTX 5080, an idle host, the page from Pages against
   perfect-dark-recomp main 8fc4524 built with it, plays.jsonl): Pages' page went to 30 within 5 s of the goggles and
   presented 271-306 a second there, its GPU process growing 2.75 -> 3.12 GB in 20 s; the build kept 60, presented
-  316-327 and its GPU process stayed at 2.38-2.48 GB; no WebGPU errors in either. The goggles' rows are now drawn from
+  316-327 and its GPU process stayed at 2.38-2.48 GB; no WebGPU errors in either. Banjo-Tooie's regular plan read
+  354 a second for both, and the build played clean in Firefox with the goggles on. The goggles' rows are now drawn from
   tile copies at the page's resolution, as RT64 draws any framebuffer it finds a tile copy for, where from RDRAM they
   were the N64's 320x240 (and the HUD's text doubled). Two syncs a list are left: a 32x32 CI4 draw at TMEM 0-33
   overlaps what is left of the last row's region once a later load has discarded part of it, and RT64 syncs for a
