@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 7f2dd5f9b0b1dcb99427361d3cc26915360a0e33
+rt64: https://github.com/n64hub/rt64-web 27e2e15df07a9792fc83529eb1a756836fbb292a
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -670,20 +670,21 @@ index 8c6af2b..d80053d 100644
  
          static bool requiresRawTMEM(const LoadTile &loadTile, uint16_t width, uint16_t height, uint32_t tlutFormat) {
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..bc1be63 100644
+index 6255872..4e7ed2c 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
-@@ -7,6 +7,9 @@
+@@ -7,6 +7,10 @@
  #include "../include/rt64_extended_gbi.h"
  
  #include "rt64_f3d.h"
 +#include "rt64_gbi_f3d.h"
 +
++#include "hle/rt64_application.h"
 +#include "hle/rt64_interpreter.h"
  
  namespace RT64 {
      namespace GBI_RDP {
-@@ -254,8 +257,27 @@ namespace RT64 {
+@@ -254,8 +258,27 @@ namespace RT64 {
  
          void fullSync(State *state, DisplayList **dl) {
              RT64_LOG_PRINTF("GBI_RDP::fullSync()");
