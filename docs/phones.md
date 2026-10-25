@@ -202,3 +202,9 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   51.5 and 54.4 a second against 45.9 and 46.8, presents 49.5 and 48.8 over the last minute against 44.2 and 46.6,
   the game at 25-27. It tried 60 again 10 s into each hold and kept it at 52-54 frames for most of a minute, where
   the game mixes frames still.
+- Jet Force Gemini at the page's Game Frame Rate 60: 53.3 presents a second, RT64's draw 14-17 ms of CPU a frame,
+  the GPU 55-71% busy at 130 MHz, so the CPU holds it.
+- Jet Force Gemini at its own Game Frame Rate 30 against the page's 60, set in its options file before boot, 115 s
+  after its launcher's Start with no input, interleaved (2 pairs, big cores at 1.35-1.56 GHz, skin 33-35 °C):
+  presents 60.3 and 59.9 a second against 56.2 and 57.1, the GPU 21-86% busy, mostly at 130 MHz. As with Rush 2049
+  and Perfect Dark, 30 interpolated to 60 presents more than a 60 the CPU can't keep. Its port has no hold of its own.
