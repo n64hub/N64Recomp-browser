@@ -412,4 +412,19 @@ rt64 343d64d           without descriptor indexing the TMEM pool uploads each ru
 rt64 8b9dce2           the inspector draws ImGui through plume on a page, whatever graphicsAPI says, with its font atlas
                        as its only texture (a draw of any other ImTextureID is skipped): a recomp's ImGui overlay, as
                        DKR-R-web's, opens on a page
+rt64 24562c7           on the web a load block or tile copies a word-aligned 8-byte word into TMEM as two 32-bit reads,
+                       not a byte at a time: 4.7% of the display list thread in Rush 2049's race on a phone
+rt64 0db3a67,          present-stats prints the game's frames a second and the frames RT64 drew for them, so frames
+b15112b                drawn under the game's rate times the interpolation are RT64 skipping them (docs/phones.md)
+plume 5aa2cbe,         the device thread's waitForCommandFence() waits for the execution before the last, not the
+rt64 30df1f5           one just queued, and an upload buffer is mapped at memory of its own on the calling side, its
+                       writes copied for the backend's at unmap(): RT64 waits after each list, each wait a trip to
+                       the page's thread behind everything queued there, 5.5-6.7 ms of each interpolated frame on a
+                       phone, so RT64 skipped the second frame of 35-45% of Rush 2049's game frames; 1-5% with this,
+                       and 44.8 presents a second against 39.7 (docs/phones.md)
+rt64 63703df           a TMEM hash takes a CI4 texture's palette indices from 16 pieces of its byte set, not a loop
+                       over 256 values, and each run of used palette indices in one update, not 8 bytes an index:
+                       the same bytes and hashes (2,000,000 random tiles compared), on every build; Rush 2049's race
+                       hashes about 65,000 textures a second, 97% CI, and on a phone a CI4 hash took 0.9-1.1 us
+                       against 1.5-2.6
 ```

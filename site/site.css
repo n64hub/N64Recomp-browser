@@ -44,6 +44,21 @@ footer .source { white-space: nowrap; }
 .note { color: var(--dim); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+/* A phone held upright: two columns, not one tile a screen, with the tiles' text and the page's margins smaller. */
+@media (max-width: 559px) {
+  header { padding: 20px 12px 4px; }
+  h1 { font-size: 30px; }
+  main { padding: 8px 12px 24px; }
+  footer { padding: 0 12px 24px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .card-title { padding: 0 8px; font-size: 17px; }
+  .card-title small { font-size: 10px; }
+  .art.icon { gap: 8px; padding: 0 8px; }
+  .art.icon .card-title { font-size: 14px; }
+  .art.unnamed .card-title { padding: 12px 8px 6px; font-size: 14px; }
+  .body { padding: 6px 8px; }
+  .recomp { font-size: 11px; }
+}
 
 .tile {
   display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line);

@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 8b9dce27b3d372f6fd41751444f31806dd725b4c
+rt64: https://github.com/n64hub/rt64-web 63703df2f043388a114c07fa162697d80976bfba
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -455,7 +455,7 @@ index c4b080b..a7de6b4 100644
          // that are available without root privileges are lower priority. Instead you can set the thread's "nice" value, which ranges
          // from -20 to 19 (lower being higher priority). However, by strict POSIX spec "nice" is meant to be per-process instead of
 diff --git a/src/common/rt64_tmem_hasher.h b/src/common/rt64_tmem_hasher.h
-index 8c6af2b..35f38ad 100644
+index 8c6af2b..d80053d 100644
 --- a/src/common/rt64_tmem_hasher.h
 +++ b/src/common/rt64_tmem_hasher.h
 @@ -4,6 +4,8 @@
@@ -561,7 +561,7 @@ index 8c6af2b..35f38ad 100644
                      }
                  }
              };
-@@ -141,6 +181,31 @@ namespace RT64 {
+@@ -141,6 +181,34 @@ namespace RT64 {
                  }
              }
  
@@ -579,11 +579,14 @@ index 8c6af2b..35f38ad 100644
 +                }
 +
 +                if (loadTile.siz == G_IM_SIZ_4b) {
-+                    for (uint32_t v = 0; v < 256; v++) {
-+                        if ((byteBitset[v >> 6] >> (v & 0x3FU)) & 1) {
-+                            tlutBitset[0] |= (1ULL << (v & 0xFU)) | (1ULL << (v >> 4U));
-+                        }
++                    // Byte v uses indices v & 0xF and v >> 4: the low ones are the OR of the set's 16-bit pieces, and
++                    // high index h is used when piece h (bytes h * 16 to h * 16 + 15) isn't empty.
++                    uint64_t nibbles = 0;
++                    for (uint32_t h = 0; h < 16; h++) {
++                        const uint64_t piece = (byteBitset[h >> 2] >> ((h & 3) * 16)) & 0xFFFFU;
++                        nibbles |= piece | (uint64_t(piece != 0) << h);
 +                    }
++                    tlutBitset[0] |= nibbles;
 +                }
 +                else {
 +                    memcpy(tlutBitset, byteBitset, sizeof(tlutBitset));
@@ -593,7 +596,7 @@ index 8c6af2b..35f38ad 100644
              // If TLUT is active, we also hash the corresponding palette bytes.
              if (usesTLUT) {
                  const bool CI4 = (loadTile.siz == G_IM_SIZ_4b);
-@@ -151,7 +216,7 @@ namespace RT64 {
+@@ -151,7 +219,7 @@ namespace RT64 {
                  if (version >= 5) {
                      // Fast path for a full bitset for CI4.
                      if (CI4 && (tlutBitset[0] == UINT16_MAX)) {
@@ -602,7 +605,7 @@ index 8c6af2b..35f38ad 100644
                      }
                      else {
                          const uint32_t bitsetCount = CI4 ? 1 : 4;
-@@ -160,14 +225,14 @@ namespace RT64 {
+@@ -160,15 +228,25 @@ namespace RT64 {
                          for (uint32_t i = 0; i < bitsetCount; i++) {
                              // Fast path for a full bitset.
                              if (tlutBitset[i] == UINT64_MAX) {
@@ -610,16 +613,31 @@ index 8c6af2b..35f38ad 100644
 +                                xxh3.update(&TMEM[paletteAddress + i * 0x200], 0x200);
                              }
                              else {
-                                 // Must check every bit individually.
-                                 while (tlutBitset[i] > 0) {
-                                     bitsetIndex = bitScanForward64(tlutBitset[i]);
+-                                // Must check every bit individually.
+-                                while (tlutBitset[i] > 0) {
+-                                    bitsetIndex = bitScanForward64(tlutBitset[i]);
++                                // Each run of used indices in one update, as their palette bytes are side by side, and a lone
++                                // one as 8 bytes.
++                                uint64_t bits = tlutBitset[i];
++                                while (bits > 0) {
++                                    bitsetIndex = bitScanForward64(bits);
                                      paletteIndex = (i * 0x40) + bitsetIndex;
 -                                    XXH3_64bits_update(&xxh3, &TMEM[paletteAddress + paletteIndex * 8], 8);
-+                                    xxh3.update(&TMEM[paletteAddress + paletteIndex * 8], 8);
-                                     tlutBitset[i] &= ~(1ULL << bitsetIndex);
+-                                    tlutBitset[i] &= ~(1ULL << bitsetIndex);
++                                    if (((bits >> bitsetIndex) & 2) == 0) {
++                                        xxh3.update(&TMEM[paletteAddress + paletteIndex * 8], 8);
++                                        bits &= bits - 1;
++                                        continue;
++                                    }
++
++                                    const uint64_t above = ~(bits >> bitsetIndex);
++                                    const uint32_t runLength = (above == 0) ? (64 - bitsetIndex) : bitScanForward64(above);
++                                    xxh3.update(&TMEM[paletteAddress + paletteIndex * 8], runLength * 8);
++                                    bits = ((bitsetIndex + runLength) >= 64) ? 0 : (bits & (~0ULL << (bitsetIndex + runLength)));
                                  }
                              }
-@@ -176,7 +241,7 @@ namespace RT64 {
+                         }
+@@ -176,7 +254,7 @@ namespace RT64 {
                  }
                  else {
                      const int32_t bytesToHash = CI4 ? 0x80 : 0x800;
@@ -628,7 +646,7 @@ index 8c6af2b..35f38ad 100644
                  }
              }
              
-@@ -187,14 +252,14 @@ namespace RT64 {
+@@ -187,14 +265,14 @@ namespace RT64 {
              static_assert(sizeof(loadTile.line) == 2, "Hash must use 16-bit line.");
              static_assert(sizeof(loadTile.siz) == 1, "Hash must use 8-bit siz.");
              static_assert(sizeof(loadTile.fmt) == 1, "Hash must use 8-bit fmt.");
@@ -2176,10 +2194,30 @@ index e08b02c..7b7d896 100644
          void threadAdvanceBarrier();
          void threadLoop();
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index a10c11a..4df8355 100644
+index a10c11a..0bb28f3 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
-@@ -959,7 +959,8 @@ namespace RT64 {
+@@ -388,6 +388,19 @@ namespace RT64 {
+             TMEM[((tmemAddress + 2) ^ tmemXorMask) | UpperTMEM] = RDRAM[(textureAddress + (6 & offsetMask)) ^ 3];
+             TMEM[((tmemAddress + 3) ^ tmemXorMask) | UpperTMEM] = RDRAM[(textureAddress + (7 & offsetMask)) ^ 3];
+         }
++#if defined(__EMSCRIPTEN__)
++        // A word from a word-aligned address (nearly every load block and tile) as two 32-bit reads, byteswapped from
++        // RDRAM's order: a phone's draw-list thread spent 5% of its time copying textures a byte at a time. tmemAddress is
++        // a multiple of 8 here, so the xor mask (0 or 4) only swaps the two halves.
++        else if (!TLUT && ((textureAddress & 0x3) == 0) && ((tmemAddress & 0x7) == 0)) {
++            uint32_t words[2];
++            memcpy(words, &RDRAM[textureAddress], sizeof(words));
++            words[0] = __builtin_bswap32(words[0]);
++            words[1] = __builtin_bswap32(words[1]);
++            memcpy(&TMEM[tmemAddress ^ tmemXorMask], &words[0], 4);
++            memcpy(&TMEM[(tmemAddress + 4) ^ tmemXorMask], &words[1], 4);
++        }
++#endif
+         else {
+             // Copy the entire word.
+             for (uint32_t i = 0; i < 8; i++) {
+@@ -959,7 +972,8 @@ namespace RT64 {
      }
      
      void RDP::setPrimDepth(uint16_t z, uint16_t dz) {
@@ -2897,7 +2935,7 @@ index 8ea27d5..f97f6c6 100644
  
          void reset();
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..e623d6a 100644
+index 5a331aa..3aca75c 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -111,12 +111,19 @@ namespace RT64 {
@@ -3250,11 +3288,36 @@ index 5a331aa..e623d6a 100644
  
                          {
                              std::scoped_lock<std::mutex> managerLock(ext.sharedResources->interpolatedMutex);
-@@ -1164,7 +1289,16 @@ namespace RT64 {
+@@ -1164,7 +1289,41 @@ namespace RT64 {
  
                  threadConfigurationValidate();
  
 -                if (!workload.paused) {
++#           if defined(__EMSCRIPTEN__)
++                // present-stats: every 5 s or so, how many game frames a second came and how many frames were drawn for them.
++                // A game slower than the rate it reports (viOriginalRate) is its own frames falling behind, on the CPU, where
++                // presents short of the display's rate can be either: Rush 2049's race on a phone reported 30 and came at
++                // 19-25, while RT64 drew 46 frames a second for them. The clock is read every 16th frame: on a phone each
++                // read is a trip out of wasm that costs.
++                if (ext.presentQueue->presentStats && !offscreenPass) {
++                    if ((statsGameFrames == 0) && (statsFramesDrawn == 0)) {
++                        statsStart = Timer::current();
++                    }
++
++                    statsGameFrames++;
++                    statsFramesDrawn += framesRendered;
++                    if ((statsGameFrames % 16) == 0) {
++                        const double seconds = Timer::deltaMicroseconds(statsStart, Timer::current()) / 1000000.0;
++                        if (seconds >= 5.0) {
++                            printf("RT64: %.1f game frames a second (the game reports %u), %.1f frames drawn for them\n", statsGameFrames / seconds,
++                                workload.viOriginalRate, statsFramesDrawn / seconds);
++                            statsGameFrames = 0;
++                            statsFramesDrawn = 0;
++                        }
++                    }
++                }
++#           endif
++
 +                // The barrier stays on the frame before an offscreen pass, and catches up once the next frame is drawn.
 +                if (offscreenPass) {
 +                    barrierHeld = true;
@@ -3269,7 +3332,7 @@ index 5a331aa..e623d6a 100644
                  }
  
 diff --git a/src/hle/rt64_workload_queue.h b/src/hle/rt64_workload_queue.h
-index bde2f03..2cebca9 100644
+index bde2f03..3eb3b9e 100644
 --- a/src/hle/rt64_workload_queue.h
 +++ b/src/hle/rt64_workload_queue.h
 @@ -23,11 +23,26 @@
@@ -3300,12 +3363,18 @@ index bde2f03..2cebca9 100644
      struct WorkloadQueue {
          struct External {
              RenderDevice *device = nullptr;
-@@ -91,6 +106,9 @@ namespace RT64 {
+@@ -91,6 +106,15 @@ namespace RT64 {
          std::unique_ptr<RSPProcessor> rspProcessor;
          std::unique_ptr<VertexProcessor> vertexProcessor;
          std::unique_ptr<RenderTarget> dummyDepthTarget;
 +#   if RT64_WGSL
 +        DummyDepthTargets dummyDepthTargets;
++#   endif
++#   if defined(__EMSCRIPTEN__)
++        // present-stats: the game frames since statsStart, and the frames drawn for them (renderThreadLoop()).
++        uint32_t statsGameFrames = 0;
++        uint32_t statsFramesDrawn = 0;
++        Timestamp statsStart;
 +#   endif
          std::unique_ptr<RenderQueryPool> queryPool;
          FramebufferChangePool scratchFbChangePool;
