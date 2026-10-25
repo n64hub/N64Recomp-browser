@@ -468,4 +468,15 @@ rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_O
 RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
                        times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
                        heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's
+rt64 27e2e15           with render to RAM's late copy and a frontend's Application::Core::rdpDone, a list that ends at
+                       its full sync tells the game its RDP is done once its draws are interpreted and its tiles
+                       loaded, before RT64 records and submits its last batch, that batch's framebuffers kept whole
+                       for it to read; a pending copy still lands before the next list's RDP is done, at its start,
+                       and a desktop build (no rdpDone) is unchanged (docs/phones.md, Conker's Bad Fur Day on a
+                       Galaxy S21)
+N64ModernRuntime       Emscripten: ultramodern::renderer::rdp_done() sends a graphics task's DP message from inside
+51dd220                send_dl, and dp_complete() doesn't send it again (take_rdp_done()); nothing calls it on a
+                       desktop build
+RecompFrontend 8c7de5e Emscripten: RT64's Application::Core::rdpDone is ultramodern's rdp_done(), only while send_dl
+                       runs a game's task (a pipeline warm-up or a dummy workload tells the game nothing)
 ```
