@@ -16,10 +16,11 @@ numbers that mean nothing.
   (play_phone.mjs) and its screencaps. A step run outside the turn can land in another agent's play.
 - The script puts back what it changed before it exits, on failure too (a `trap ... EXIT` in a shell script): the
   next turn starts from the phone as this one left it. That is Chrome's command line (the file deleted, the flag
-  reset, Chrome restarted), each `scaling_max_freq` at the value read before it was written, `svc power stayon` and
-  `screen_off_timeout`, the forwards and reverses it made (`adb forward --remove tcp:<port>`,
-  `adb reverse --remove tcp:<port>`), and the tabs it opened (`/json/close/<id>`). play_phone.mjs makes its forward
-  and opens its tab but leaves both when it ends, so the script removes them.
+  reset, Chrome restarted), each `scaling_max_freq` at the value read before it was written, the forwards and
+  reverses it made (`adb forward --remove tcp:<port>`, `adb reverse --remove tcp:<port>`), and the tabs it opened
+  (`/json/close/<id>`). play_phone.mjs makes its forward and opens its tab but leaves both when it ends, so the script
+  removes them. Not the screen's timeout or `svc power stayon`: a shared phone left to sleep locks, and only a person
+  unlocks it, so every turn leaves them long and on.
 - One play a turn, as on the GPU, so other agents' turns come between a series; the phone rests between plays anyway
   (Measuring, heat). A turn's limit fits its play and the restarts around it.
 
@@ -42,8 +43,8 @@ numbers that mean nothing.
   the notification shade): `adb shell dumpsys window | grep mCurrentFocus` names the window in front.
 - The phone's clock is not the computer's: the console's timestamps ran 11.1-11.8 s ahead. play_phone.mjs reads the
   lead at the start and takes it off.
-- Keep the screen on while a computer drives it: `adb shell svc power stayon true` (and `false` after), or a longer
-  `settings put system screen_off_timeout <ms>`; note the old value to put back.
+- Keep the screen on while a computer drives it: `adb shell svc power stayon true` and a long
+  `settings put system screen_off_timeout <ms>`, left so after (Sharing a phone).
 
 ## Driving a page
 
@@ -126,8 +127,10 @@ while game frames fall. Telling them apart:
 - A game that runs at 60 where it can (Rush 2049 at its 60 fps, Perfect Dark) and that a phone's CPU holds to 30-50
   mixes frames of one and two VIs. Timed at the shortest of the last three (RT64_UNEVEN_FRAME_RATES before rt64
   7844c07), the display's own 60 leaves RT64 nothing to interpolate, so it drew one frame for each game frame and
-  presents fell to about the game's rate. Now, while the longer took 3 of the last 8 frames, a frame is timed at the
-  longer and gets two: Rush 2049's race without its own hold presented 53 a second against 38-42 (below). The same
+  presents fell to about the game's rate. Now, where the shorter is one VI and the longer took 3 of the last 8 frames,
+  a frame is timed at the longer and gets two: Rush 2049's race without its own hold presented 53 a second against
+  38-42 (below). A game at 30 mixing frames of 2 and 3 VIs or more is timed at the shorter, as before: timed at the
+  longer, each frame was set three or more, and RT64 skipped them (Other games on a Galaxy S21). The same
   game held to 30 gets two for each frame and drops none, and still presents a few more, so such a game's own code
   holds it to 30 on a page while it can't keep 60 up (Rush 2049 and Perfect Dark below).
 - A GPU's load says little on a phone: its clock follows the load, so a lighter frame (resolution Original) ran the
@@ -263,6 +266,31 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   Racing 57.8 (30-60), Pilotwings 64 54.3 (34-62), Pokémon Snap 53.2 (48-60), Perfect Dark 47.1 (16-57), Rush 2 35.6
   (3-55) and Banjo-Tooie 30.3 (2-58), its title scene at 6-30. plume waited for fewer presents in flight only in
   Perfect Dark's worst stretch, so the GPU held back none of the others.
+- The same, main (v0.109.0, whose present-stats has the RT64 line) against the page from Pages, interleaved, the last
+  minute of each, big cores at 1.04 GHz and the GPU at 403 MHz, skin 37-38 °C: Perfect Dark 60.1 presents a second
+  against 60.0, the game at 30.2 and RT64 drawing 60.4 for it; Pilotwings 64 58.1 against 52.4, the game at 54.7; Rush
+  2 49.3 against 43.3; Banjo-Tooie 29.4, the game at 29 and RT64 drawing 30.2 for it, where Pages' run froze at a
+  frame, then ran out of memory (Aborted(OOM)); Diddy Kong Racing 44 against 56.4, the game at 28.5 and 40.3 drawn;
+  Pokémon Snap 41.7 against 53.5, the game at 14.9 and 41.4 drawn. So main had made the last two worse.
+- What did: RT64_UNEVEN_FRAME_RATES timing a frame at the slowest of the last three while it took 3 of the last 8
+  frames (rt64 7844c07), for a game at 30 mixing frames of 2 and 3 VIs or more. Diddy Kong Racing on v0.108.0 (before
+  7844c07) against v0.109.0, interleaved, the same caps: 57.0 and 57.4 frames drawn a second against 49.8 and 50.3,
+  presents 56.3 and 56.9 against 53.8 and 51.6, the game at 28-30 in all four. Timed at 20, each game frame was set
+  three frames, RT64's workload thread ran past their shares, and it skipped them.
+- That slowest taken only where the fastest took one VI (rt64 9c88af0), against 7844c07, interleaved (the fix,
+  7844c07, 7844c07, the fix), big cores at 1.35 GHz and the GPU at 858 MHz, skin 34-36 °C: Pokémon Snap 52.8 and
+  51.1 presents a second against 29.9 and 24.0, 51.1 and 52.9 drawn against 29.7 and 30.7; where its attract's frames
+  came at 12-20 a second (3-5 VIs) 7844c07 drew one a game frame, the fix 45-55 a second. Diddy Kong Racing 58.1
+  presents and 58.3 drawn against 57.5 and 53.7, and at 1.04 GHz 58.8 and 54 against v0.109.0's above. A game at 60 the
+  phone holds to 30-50 (1 and 2 VIs) is timed as 7844c07 timed it.
+- Banjo-Tooie, both ways: from about 90 s after Start Game, its game at 28-30 of the 30 it reports and RT64 drawing
+  one frame for each, so presents about 30. RT64's workload thread took 37-78 ms to set up each game frame, more than
+  the game frame's 33, so it had no time for the frame between and skipped it: the CPU, in RT64's own work for this
+  game's frames, not the GPU (plume never waited for fewer presents in flight there).
+- Rush 2's attract, both ways: the game at 5-7 frames a second (it reports 5-7, 30 on a console), RT64 drawing 50 for
+  them, the interpolated frames 80-105 ms of the workload thread's time a game frame, each present done on the GPU
+  35 ms after it and plume waiting 41-44 ms a second for fewer than 4 in flight. Its game frames hold it, the GPU
+  besides.
 
 ## Conker's Bad Fur Day on a Galaxy S21
 
