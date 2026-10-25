@@ -35,8 +35,9 @@
 // and prints what it returns (the hub's game is frames[0], its files frames[0].FS); ["untilEval", "<js>", ms] waits
 // for <js> in the top document to be truthy (60 s if left out) and prints it; ["mark"] notes the time and ["at",
 // seconds] waits until that long after the last mark (or the play's start), so a play lasts as long whatever its steps
-// took; ["shot", file] saves the phone's screen (adb
-// screencap); ["profile", seconds, prefix] samples V8's profiler every 0.5 ms in the tab's page and each of its workers
+// took; ["leave", seconds] goes to the phone's home screen, as a player who leaves Chrome for another app does, and
+// brings Chrome back after that long (its launcher's intent, which shows the tab it left, then 2 s for it to come
+// back); ["shot", file] saves the phone's screen (adb screencap); ["profile", seconds, prefix] samples V8's profiler every 0.5 ms in the tab's page and each of its workers
 // (the game's threads) for that long, writes each thread's profile to <prefix>.<n>.cpuprofile (DevTools' Performance
 // panel opens one), and prints each thread's share of the time outside its waits and its top functions by self time,
 // which is how a game frame's work on the CPU is found (docs/phones.md, What holds a page back). Without --steps a person plays on the phone while it measures. It ends after --seconds (240) or, with
@@ -82,7 +83,7 @@ if (!url || args.length > 1) {
 // is there, or a string; a ? after one leaves it out.
 const stepArgs = { wait: ['ms'], until: ['regex', 'ms?'], untilEval: ['js', 'ms?'], tap: ['x', 'y'], planTap: ['x', 'y'],
   tapText: ['text', 'selector?', 'inner?'], key: ['code', 'key', 'keyCode', 'ms?'], eval: ['js'], shot: ['file'],
-  profile: ['seconds', 'prefix'], mark: [], at: ['seconds'] };
+  profile: ['seconds', 'prefix'], mark: [], at: ['seconds'], leave: ['seconds'] };
 const stepProblem = (step) => {
   if (!Array.isArray(step) || !Object.hasOwn(stepArgs, step[0])) return 'is no step: its first item names none of ' + Object.keys(stepArgs).join(', ');
   const [kind, ...a] = step;
@@ -357,6 +358,12 @@ try {
     } else if (kind === 'eval') console.log(`${at().toFixed(1).padStart(6)}  ${JSON.stringify(await evaluate(a[0]))}`);
     else if (kind === 'shot') fs.writeFileSync(a[0], shell('exec-out', 'screencap', '-p'));
     else if (kind === 'profile') await profile(a[0], a[1]);
+    else if (kind === 'leave') {
+      shell('shell', 'input', 'keyevent', 'KEYCODE_HOME');
+      await new Promise((ok) => setTimeout(ok, a[0] * 1000));
+      shell('shell', 'monkey', '-p', 'com.android.chrome', '-c', 'android.intent.category.LAUNCHER', '1');
+      await new Promise((ok) => setTimeout(ok, 2000));
+    }
     else throw new Error(`unknown step ${JSON.stringify(step)}`);
   }
 } catch (error) {
