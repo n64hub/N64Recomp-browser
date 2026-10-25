@@ -106,7 +106,7 @@ while game frames fall. Telling them apart:
   mixes frames of one and two VIs, and RT64_UNEVEN_FRAME_RATES takes a frame's length from the shortest of the last
   three, so RT64 draws about one frame for each game frame: presents fall to about the game's rate. The same game held
   to 30 gets two for each, near 60 presents. So such a game's own code holds it to 30 on a page while it can't keep
-  60 up (Rush 2049 below).
+  60 up (Rush 2049 and Perfect Dark below).
 - A GPU's load says little on a phone: its clock follows the load, so a lighter frame (resolution Original) ran the
   Mali-G78 at 130 MHz, still 60-80% busy, and presented no more.
 
@@ -187,8 +187,8 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
 - Mario Kart 64, a race on Luigi Raceway with the gas held: 59.5 presents a second, the GPU 67-81% busy at 130 MHz.
 - Super Mario 64, Castle Grounds: 59.9.
 - Banjo-Kazooie, its attract demo in Spiral Mountain: 59.7 (55-60), the GPU up to 90% busy at a low clock.
-- Majora's Mask, Donkey Kong 64 and Ocarina of Time, 80 s of each one's attract after Start Game, big cores at
-  1.04 GHz: 59.9, 60 and 60.2, the GPU 21-30% busy at 130 MHz.
+- GoldenEye 007, Majora's Mask, Donkey Kong 64 and Ocarina of Time, 80 s of each one's attract after Start Game, big
+  cores at 1.04 GHz: 59.6, 59.9, 60 and 60.2, the GPU 21-30% busy at 130 MHz.
 - Conker's Bad Fur Day, the same: 46.8 (45.8-53.2), each present done on the GPU 19-21 ms after it, the GPU 65-84%
   busy and its clock held at 130 MHz of a cap of 767-858, so its GPU holds it, at the clock the phone gives it.
 - Perfect Dark, its intro: 48 (48-51), the GPU 50-75% busy at 130 MHz, so the CPU holds it.
@@ -196,3 +196,8 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   the page from Pages, interleaved (2 pairs, big cores at 1.35-1.56 GHz, skin 33-36 °C): presents 50-52 a second over
   the intro against 50.6-52.6, and 40.7-40.9 over its last minute against 41.8-42.4, its game at 31.7-32.9. Its
   cutscenes' own stops (docs/findings.md) come and go with the shots, so the intro doesn't tell a few presents apart.
+- Perfect Dark held to 30 while it can't keep 60 up (perfect-dark-recomp's `patches/frame_rate.c`), its intro for
+  140 s, interleaved with the same tree without it, big cores at 1.04 GHz, GPU not capped, skin 35-36 °C: drawn
+  51.5 and 54.4 a second against 45.9 and 46.8, presents 49.5 and 48.8 over the last minute against 44.2 and 46.6,
+  the game at 25-27. It tried 60 again 10 s into each hold and kept it at 52-54 frames for most of a minute, where
+  the game mixes frames still.
