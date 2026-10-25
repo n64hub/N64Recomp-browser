@@ -130,6 +130,11 @@ while game frames fall. Telling them apart:
   holds it to 30 on a page while it can't keep 60 up (Rush 2049 and Perfect Dark below).
 - A GPU's load says little on a phone: its clock follows the load, so a lighter frame (resolution Original) ran the
   Mali-G78 at 130 MHz, still 60-80% busy, and presented no more.
+- Nor does the time from a present to its end on the GPU: the Mali-G78's governor (Interactive, in
+  `/sys/kernel/gpu/gpu_governor`) keeps the GPU at its lowest clock while a frame leaves it time to spare, so a
+  present takes 18-23 ms there with the GPU waiting on nothing. plume's waits for fewer presents in flight
+  (present-stats) say whether the GPU holds presents back: none is no. The GPU's time at each clock over a run is
+  in `/sys/devices/platform/18500000.mali/time_in_state` on an Exynos 2100, read before and after it.
 
 ## What a phone does differently
 
@@ -222,7 +227,7 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
 - GoldenEye 007, Majora's Mask, Donkey Kong 64 and Ocarina of Time, 80 s of each one's attract after Start Game, big
   cores at 1.04 GHz: 59.6, 59.9, 60 and 60.2, the GPU 21-30% busy at 130 MHz.
 - Conker's Bad Fur Day, the same: 46.8 (45.8-53.2), each present done on the GPU 19-21 ms after it, the GPU 65-84%
-  busy and its clock held at 130 MHz of a cap of 767-858, so its GPU holds it, at the clock the phone gives it.
+  busy at 130 MHz of a cap of 767-858. Its game frames hold it, not its GPU (Conker's Bad Fur Day on a Galaxy S21).
 - Perfect Dark, its intro: 48 (48-51), the GPU 50-75% busy at 130 MHz, so the CPU holds it.
 - Perfect Dark's intro with plume's device thread waiting one execution behind and RT64's TMEM loads by words, against
   the page from Pages, interleaved (2 pairs, big cores at 1.35-1.56 GHz, skin 33-36 °C): presents 50-52 a second over
@@ -243,3 +248,35 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   a cooler phone (big cores at 1.56-2.08 GHz, skin 27-33 °C): 59.7 and 55.4 presents a second against 58.6 and 58.6. It
   held in both its runs (45 frames a second, each try at 60 reaching 27-40), but with that much more CPU the page's 60
   presented more than in the pair above, and the hold showed no clear gain.
+
+## Conker's Bad Fur Day on a Galaxy S21
+
+Its attract after Start Game, about 80 s of it, Chrome 156, not charging: the page from Pages (built on v0.106.0) and
+main's build (v0.107.0) served in its place, with present-stats.
+
+- 50.4-54.8 presents a second cool (skin 31-35 °C, big cores not capped), the game at 25.4-27.6 frames a second where
+  it reports 30, RT64 drawing two frames for each and plume never waiting for fewer presents in flight. With big
+  cores held at 1.35 GHz by heat 48-49.4, the game at 19.6-24.6; at 1.04 GHz 50.3, the game at 18.3 where it
+  reported 20. So presents follow the game's frames.
+- Power saving off (`settings put global low_power 0`) against on, interleaved (2 pairs, cool): 50.8 and 51.6 presents
+  a second against 54.8 and 50.9, the GPU at 130 MHz for 77-78% of each run against 70-78%, at 221 MHz most of the
+  rest. The governor raises the GPU's clock no more with it off.
+- A present's GPU passes (tools/pass_probe.js, Chrome's timestamps, 245-257 presents a reading, main's build): 12.9-13.3
+  ms at Auto's 928x432 (2 times its 216 lines, the canvas 773x360). The scene 6.4-6.7 ms (422 draws, fragment shaders
+  of 10 and 9 KB the most); render to RAM's second draw at 292x216 1.1-2.0 ms (141 draws, one for each game frame);
+  RSPProcessCS 1.25 ms and RSPWorldCS 0.39 ms for its ~7,800 vertices (122 workgroups), 0.05 ms in all on a desktop;
+  a depth-only pass of one draw before the scene 1.3 ms, the game's fill rect into its depth buffer, which covers less
+  than the whole target, so plume draws it; the canvas's clear 0.4-0.5 ms and the frame drawn into it 0.5-0.6 ms;
+  render to RAM's compute passes over the 292x216 frame 0.3 ms. All of it RT64's own, as on a desktop
+  (docs/findings.md).
+- The canvas's clear is a pass of its own because RT64's present clears it, sets a barrier for the frame's texture and
+  then draws, and plume's barrier ends the pass a pending clear starts. Kept pending across the barrier, the clear and
+  the draw were one pass of 0.74 ms against 0.38 and 0.49, 0.14 ms of 13, and presents 50.4-50.7 against 50.9-54.3
+  (3 pairs, interleaved, skin 31-35 °C): the Mali clears a target alone cheaply, and the change was dropped.
+- Resolution Original (464x216): 10.1 ms of GPU passes a present, the scene 3.3 ms, the GPU at 130 MHz for 96% of the
+  run, and 49.4 presents a second, the game at 23.8-24.6, big cores at 1.35 GHz: no more than at Auto.
+- A profile of every thread (main's build linked with `--profiling-funcs`, big cores at 1.35 GHz, 20 s): the display
+  list thread 44% busy (RT64's `RSP::drawIndexedTri`, `setVertexCommon`, Conker's F3DEX2 microcode), RT64's
+  workload thread 33% (`RigidBody::lerp`, `GameFrame::match`, its interpolation), the audio microcode's 28%, the
+  page's thread 54% and the game's 12%. No thread is near full, so a game frame is set by its threads waiting for each
+  other, a chain to cut as Rush 2049's was (What holds a page back).
