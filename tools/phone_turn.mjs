@@ -15,8 +15,9 @@
 // desktop plan (its play_plan.json, a path or a URL): its page names the build's files, its load steps wait for the
 // launcher (a wait for the shaders' build given 180 s at least, a phone's), and its first rom step and the click after
 // it are Load ROM and Start Game, tapped where the plan clicks them as page_driver.mjs moves a click to another viewport
-// (play_phone.mjs's planTap), so no turn guesses the phone's launcher spots. The page's file picker is answered with
-// --rom, served by the proxy. --steps are the card's own, play_phone.mjs's steps, run once Start Game is tapped; the
+// (play_phone.mjs's planTap), so no turn guesses the phone's launcher spots; a plan that takes them with a key (a rom
+// step with a key, a key or pressUntil step after it) gets that key, a pressUntil's three times its everyMs apart (its
+// test reads the desktop driver's helpers). The page's file picker is answered with --rom, served by the proxy. --steps are the card's own, play_phone.mjs's steps, run once Start Game is tapped; the
 // game plays --seconds (90) from there, however long the steps take, then the play ends. --shots <prefix> saves the
 // screen at the launcher and at the end (<prefix>-launcher.png, <prefix>-end.png; a screencap shows the phone's
 // notifications too). --preload adds the card's script after this one's, --json is play_phone.mjs's.
@@ -177,12 +178,12 @@ const check = async (base) => {
     const before = [...(plan.setup ?? []), ...(plan.start ?? [])];
     const i = before.findIndex((s) => s[0] === 'rom');
     romStep = before[i];
-    startStep = i >= 0 ? before.slice(i + 1).find((s) => s[0] === 'click') : null;
+    startStep = i >= 0 ? before.slice(i + 1).find((s) => ['click', 'key', 'pressUntil'].includes(s[0])) : null;
     const spot = (s) => s.length >= 3 && Number.isFinite(s[1]) && Number.isFinite(s[2]) && s[1] >= 0 && s[1] <= 1256 && s[2] >= 0 && s[2] <= 645;
     if (!romStep) fail('the plan has no rom step (Load ROM) in its setup or start');
     else if (typeof romStep[1] !== 'string' && !spot(romStep)) fail(`the plan's rom step ${JSON.stringify(romStep)} is no spot in 1256x645`);
-    if (romStep && !startStep) fail('the plan has no click after its rom step (Start Game)');
-    else if (startStep && !spot(startStep)) fail(`the plan's Start Game ${JSON.stringify(startStep)} is no spot in 1256x645`);
+    if (romStep && !startStep) fail('the plan has no click, key or pressUntil after its rom step (Start Game)');
+    else if (startStep && startStep[0] === 'click' && !spot(startStep)) fail(`the plan's Start Game ${JSON.stringify(startStep)} is no spot in 1256x645`);
     load = (plan.load ?? []).map((s) => s[0] === 'until' ? ['until', s[1], Math.max(s[2] ?? 60000, 180000)] : s);
     if (/^https?:\/\//.test(planFile)) {
       for (const s of [plan.load, plan.setup, plan.start, plan.play, ...(plan.sections ?? []).map((x) => x.steps)].flat().filter((s) => s?.[0] === 'evalFile')) {
@@ -222,11 +223,14 @@ const check = async (base) => {
   const turn = { steps: [], tmp: fs.mkdtempSync(path.join(os.tmpdir(), 'phone-turn-')) };
   if (romStep && startStep && tile) {
     const tap = (s) => typeof s[1] === 'string' ? ['key', s[1], s[2], s[3]] : ['planTap', s[1], s[2]];
+    const press = ['key', ...startStep.slice(1, 5)];
+    const start = startStep[0] === 'click' ? [tap(startStep)] : startStep[0] === 'key' ? [press]
+      : [press, ['wait', startStep[5] ?? 1500], press, ['wait', startStep[5] ?? 1500], press];
     let mine = [];
     if (stepsFile) try { mine = JSON.parse(fs.readFileSync(stepsFile, 'utf8')); } catch { /* play_phone.mjs --check says why, below */ }
     turn.steps = [['wait', 3000], ['tapText', tile, 'article.tile', '.art'], ...load,
       ...(shots ? [['shot', `${shots}-launcher.png`]] : []), tap(romStep), ['untilEval', 'frames[0]?.__phoneTurnRom', 60000],
-      ['untilEval', romStored((romSize + 3) & ~3), 60000], tap(startStep), ['mark'], ...(Array.isArray(mine) ? mine : [mine]),
+      ['untilEval', romStored((romSize + 3) & ~3), 60000], ...start, ['mark'], ...(Array.isArray(mine) ? mine : [mine]),
       ['at', seconds], ...(shots ? [['shot', `${shots}-end.png`]] : [])];
   }
   turn.stepsFile = path.join(turn.tmp, 'steps.json');
@@ -246,7 +250,7 @@ const check = async (base) => {
     fs.rmSync(turn.tmp, { recursive: true, force: true });
     throw new Error(problems.join('\n'));
   }
-  log(`the check passed: ${tile}'s ${page} from ${build ?? 'Pages'}, Load ROM and Start Game where the plan clicks them, ${turn.steps.length} steps, ${seconds} s of play`);
+  log(`the check passed: ${tile}'s ${page} from ${build ?? 'Pages'}, Load ROM and Start Game where the plan takes them, ${turn.steps.length} steps, ${seconds} s of play`);
   return turn;
 };
 
