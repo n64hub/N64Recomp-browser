@@ -115,8 +115,10 @@ while game frames fall. Telling them apart:
 - What costs on a phone that a desktop hides: a clock read (`emscripten_get_now`, `clock_gettime`) leaves wasm for
   JavaScript, and one per texture uploaded took 9.6% of the display list thread; the web build's `memcmp` (musl's)
   compares a byte at a time, and one over 6 MB a frame took 5 ms; a byte-at-a-time copy (RT64's TMEM loads) is slow
-  where a word at a time vectorizes; and a wait for the page's thread (plume's device thread) waits behind everything
-  queued there, which on a phone is milliseconds.
+  where a word at a time vectorizes; a wait for the page's thread (plume's device thread) waits behind everything
+  queued there, which on a phone is milliseconds; and a wait for the GPU that a desktop's has long finished, such as
+  render to RAM's late copy landing at the next list's start, which was a quarter of Conker's display list thread
+  (Conker's Bad Fur Day on a Galaxy S21).
 - Presents short of the display with neither the game's frames nor the GPU behind are RT64's interpolated frames:
   with present-stats, frames drawn a second under twice the game frames of a game interpolated at 30 is RT64
   skipping a game frame's later frames, which it does when its workload thread runs past each frame's share of the
@@ -293,3 +295,29 @@ main's build (v0.107.0) served in its place, with present-stats.
   workload thread 33% (`RigidBody::lerp`, `GameFrame::match`, its interpolation), the audio microcode's 28%, the
   page's thread 54% and the game's 12%. No thread is near full, so a game frame is set by its threads waiting for each
   other, a chain to cut as Rush 2049's was (What holds a page back).
+- The chain, from a trace of the display list thread, the scheduler and the game's threads (25 s of the attract, a
+  build with timestamps at each wait): Conker's scheduler swaps the frame when the RDP is done and starts the next
+  graphics task at the VI after, and the game's thread has built the next list meanwhile, so a game frame is one
+  display list's time on RT64's thread rounded up to whole VIs. Lists of 20-31 ms (p10-p90) made frames of 2 VIs,
+  of 33-47 ms frames of 3, and the 30 a second the game asks for needs every list under 33 ms.
+- A quarter of that thread's time (24% of a profile's samples, 31% of `send_dl`'s) went in `DTBuffer::map` at each
+  list's start: render to RAM's late copy of the list before landed there, and the GPU, at 130 MHz while it keeps up,
+  had not finished that frame yet (a present takes it 18-23 ms, What holds a page back). With the copy landing only
+  once the GPU has it (rt64 330f84a), against main's build, the same attract, played in turn, from 150 s on: game
+  frames a second (the range of its 5 s windows) and presents a second.
+
+  | play | build | big cores, GPU's cap, skin | game frames | presents |
+  |---|---|---|---|---|
+  | 1 | main | 1.35 GHz, 858 MHz, 33.8-38.3 °C | 25.4 (16.5-27.3) | 53.7 |
+  | 2 | the change | 1.04 GHz, 403 MHz, 36.8-39.1 °C | 23.8 (22.2-29.3) | 57.7 |
+  | 3 | the change | 1.04 GHz, 403 MHz, 37.1-39.7 °C | 22.6 (20.8-24.0) | 58.0 |
+  | 4 | main | 1.04 GHz, 403 MHz, 37.5-39.9 °C | 19.7 (18.5-21.0) | 56.8 |
+  | 5 | main | 1.04 GHz, 403 MHz, 38.2-40.3 °C | 19.9 (17.9-23.4) | 55.9 |
+  | 6 | the change | 1.04 GHz, 403 MHz, 38.2-40.4 °C | 24.0 (21.3-30.2) | 58.4 |
+
+  The first play started cooler, its big cores at 1.35 GHz until heat held them at 1.04, and compares with none of
+  the others. Held alike, the change drew 15-21% more game frames than main in the same minutes, and presents followed.
+  The CPU wrote to a framebuffer with a pending copy twice in every play of either build.
+- What is left of a list is RT64's own work, as on a desktop: in that profile, without the wait, `State::fullSync`
+  25% of the thread (the tiles' TMEM loads and hashes 11.5%, recording the workload 8.5%) and the microcode's vertices
+  and triangles 20%.
