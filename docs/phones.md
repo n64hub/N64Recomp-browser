@@ -117,6 +117,9 @@ while game frames fall. Telling them apart:
   rounds the canvas's lines up to a whole multiple of the game's 240: 2x at 280-480 lines, so it draws 480 lines for a
   280-line canvas, about 2.9 times the canvas's pixels.
 - The ROM picker offers the camera and photos first (above).
+- Memory is set as on a desktop: every page reserves a 1536 MB heap (`frontend/CMakeLists.txt`) and only what it touches
+  is resident. Jet Force Gemini's page from Pages, a minute into its game on a Galaxy S21 (7.2 GB): the page's process
+  1.23 GB (PSS), Chrome's GPU process 450 MB and the browser 320 MB, 1.8 GB still available.
 
 ## Rush 2049 on a Galaxy S21
 
@@ -178,8 +181,10 @@ race on its first track with the gas held, cool unless said.
   41.1 and 42.7 without it, and 53.4 at Original, big cores at 1.04 GHz each time (the GPU's cap 403-858 MHz), and
   57.4 at 1.35 GHz. Holding after one second of 20-50 frames held a page on a desktop GPU at 30 for 10 s after each
   load, whose second falls short (42 and 50 frames in Rush 2049's regular plan); after two in a row it never held
-  there, 300 and 301 presents a second uncapped against 304-318 without it, and the phone presented 52.8 against
-  45.5.
+  there, 300 and 301 presents a second uncapped against 304-318 without it, and the phone presented 52.8 against 45.5.
+  The night's changes together (the fork changes, the font scan, Rewind and the two-second hold) against the page Pages
+  serves, on a desktop GPU uncapped (one pair, the host serving phone plays): 308.1 presents a second against 322.9,
+  within the 300-325 its plays read that night, and no hold.
 
 ## Other games on a Galaxy S21
 
@@ -208,3 +213,7 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   after its launcher's Start with no input, interleaved (2 pairs, big cores at 1.35-1.56 GHz, skin 33-35 °C):
   presents 60.3 and 59.9 a second against 56.2 and 57.1, the GPU 21-86% busy, mostly at 130 MHz. As with Rush 2049
   and Perfect Dark, 30 interpolated to 60 presents more than a 60 the CPU can't keep. Its port has no hold of its own.
+- A hold like theirs in Jet Force Gemini's port (tried, not on its main), at the page's 60 against Pages, interleaved on
+  a cooler phone (big cores at 1.56-2.08 GHz, skin 27-33 °C): 59.7 and 55.4 presents a second against 58.6 and 58.6. It
+  held in both its runs (45 frames a second, each try at 60 reaching 27-40), but with that much more CPU the page's 60
+  presented more than in the pair above, and the hold showed no clear gain.
