@@ -10,6 +10,7 @@
 # - persistent_home.js: HOME (/home/web_user, where RecompFrontend keeps settings, saves and the ROM it was given)
 #   kept in the browser's IndexedDB, a database for each page on a site, a file of 1 MB or more (a ROM) stored
 #   there by a worker, off the page's thread,
+# - save_sync.js: the saves in HOME synced with the player's own Google Drive, once they have signed in on the hub,
 # - sdl_audio.js: SDL2's audio opened from a thread, which Emscripten's port can't do by itself,
 # - audio_output.h: sound played on the browser's audio thread, which a recomp uses instead of SDL's queue: SDL2's
 #   port plays it from the page's thread, where it breaks up whenever WebGPU keeps that thread busy,
@@ -39,6 +40,7 @@ target_link_options(n64recomp_browser_frontend INTERFACE
     -lidbfs.js
     "-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=$addRunDependency,$removeRunDependency"
     "--pre-js=${CMAKE_CURRENT_SOURCE_DIR}/persistent_home.js"
+    "--pre-js=${CMAKE_CURRENT_SOURCE_DIR}/save_sync.js"
     "--pre-js=${CMAKE_CURRENT_SOURCE_DIR}/sdl_audio.js"
     "--pre-js=${CMAKE_CURRENT_SOURCE_DIR}/audio_output.js"
     "--pre-js=${CMAKE_CURRENT_SOURCE_DIR}/worker_alert.js"
@@ -58,7 +60,8 @@ function(n64recomp_browser_frontend_page target)
     set_target_properties(${target} PROPERTIES SUFFIX ".html")
     # The page's scripts go into it at link time, so a change to one relinks it.
     set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS
-        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/persistent_home.js" "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/sdl_audio.js"
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/persistent_home.js" "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/save_sync.js"
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/sdl_audio.js"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/audio_output.js"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/worker_alert.js" "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/thread_stdio.js"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/shell.html" "${rt64_SOURCE_DIR}/src/contrib/plume/plume_webgpu_device.js")

@@ -3,7 +3,7 @@
 # (n64hub/n64hub.github.io): https://n64hub.github.io/, or the custom domain its Pages has (n64hub.com). Every game's page is a
 # folder of the hub beside it (tools/publish_page.sh --into <folder>, as tools/publish_pages.sh publishes them), the
 # same origin, so a game plays in the page's frame. The top is site/'s files, frontend/coi_serviceworker.js (Pages
-# can't send the cross-origin headers a frame with threads needs), a .nojekyll, and a CNAME naming the domain once the
+# can't send the cross-origin headers a frame with threads needs), frontend/save_sync.js (sign-in's upload), a .nojekyll, and a CNAME naming the domain once the
 # repo has one; they replace the files at the top of gh-pages and every folder stays. The page reads the Games table
 # from main's README.md each visit, so only a change to site/ needs publishing again.
 # The domain is set once, in the repo's Pages settings, after its DNS points at GitHub Pages: a CNAME published before
@@ -18,7 +18,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
 cp -r "$root"/site/. "$stage"/
-cp "$root"/frontend/coi_serviceworker.js "$stage"/
+cp "$root"/frontend/coi_serviceworker.js "$root"/frontend/save_sync.js "$stage"/
 domain="$(gh api "repos/$repo/pages" --jq ".cname // empty")"
 [ -z "$domain" ] || echo "$domain" > "$stage"/CNAME
 if $dry_run; then
