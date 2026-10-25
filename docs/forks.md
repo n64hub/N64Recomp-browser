@@ -481,4 +481,7 @@ rt64 737169e           a load taller than TMEM skips the rows the later ones ove
                        TMEM: the same bytes as each row written in turn in 600,000 random loads, the old skip wrong
                        in 541,644 of the 541,823 it took; on every build. Majora's Mask's and Banjo-Kazooie's tall
                        loads take it, from TMEM's first byte without gaps, which the old skip got right too
+rt64 15e8e91           the flat, multisampled dual-source RasterPS gets VERTEX_FLAT_COLOR: 85a6ad5's line for it was
+                       garbled, and CMake passed dxc the pieces, so it was the smooth one; nothing includes it (a page
+                       draws without MSAA), so no binary changes
 ```
