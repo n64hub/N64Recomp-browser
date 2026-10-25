@@ -254,6 +254,13 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   against 53.2 and 53.1 without, the game at 25.5-28.1 either way. It held in both its runs (29-48 frames a second),
   and gained nothing: the slower-rate rule gives a 60 the CPU can't keep the two frames each a hold did, so the hold
   stays off Jet Force Gemini's main.
+- The seven pages not played here before, and Perfect Dark's intro beside them: the page from Pages (v0.106.0), its
+  attract after Start Game with no input, presents a second from Start Game to 90 s after it (median of 5 s samples,
+  their range). Wave Race 64 cool (big cores at 1.35-1.56 GHz, skin 33-36 °C): 59.4 (56.5-60.5). The rest hot and
+  charging, big cores held at 1.04 GHz and the GPU at 403 MHz, skin 36-40 °C: Star Fox 64 59.3 (52-61), Diddy Kong
+  Racing 57.8 (30-60), Pilotwings 64 54.3 (34-62), Pokémon Snap 53.2 (48-60), Perfect Dark 47.1 (16-57), Rush 2 35.6
+  (3-55) and Banjo-Tooie 30.3 (2-58), its title scene at 6-30. plume waited for fewer presents in flight only in
+  Perfect Dark's worst stretch, so the GPU held back none of the others.
 
 ## Conker's Bad Fur Day on a Galaxy S21
 
