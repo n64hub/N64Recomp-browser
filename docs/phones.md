@@ -272,17 +272,20 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   2 49.3 against 43.3; Banjo-Tooie 29.4, the game at 29 and RT64 drawing 30.2 for it, where Pages' run froze at a
   frame, then ran out of memory (Aborted(OOM)); Diddy Kong Racing 44 against 56.4, the game at 28.5 and 40.3 drawn;
   Pokémon Snap 41.7 against 53.5, the game at 14.9 and 41.4 drawn. So main had made the last two worse.
-- What did: RT64_UNEVEN_FRAME_RATES timing a frame at the slowest of the last three while it took 3 of the last 8
-  frames (rt64 7844c07), for a game at 30 mixing frames of 2 and 3 VIs or more. Diddy Kong Racing on v0.108.0 (before
-  7844c07) against v0.109.0, interleaved, the same caps: 57.0 and 57.4 frames drawn a second against 49.8 and 50.3,
-  presents 56.3 and 56.9 against 53.8 and 51.6, the game at 28-30 in all four. Timed at 20, each game frame was set
-  three frames, RT64's workload thread ran past their shares, and it skipped them.
-- That slowest taken only where the fastest took one VI (rt64 9c88af0), against 7844c07, interleaved (the fix,
-  7844c07, 7844c07, the fix), big cores at 1.35 GHz and the GPU at 858 MHz, skin 34-36 °C: Pokémon Snap 52.8 and
-  51.1 presents a second against 29.9 and 24.0, 51.1 and 52.9 drawn against 29.7 and 30.7; where its attract's frames
-  came at 12-20 a second (3-5 VIs) 7844c07 drew one a game frame, the fix 45-55 a second. Diddy Kong Racing 58.1
-  presents and 58.3 drawn against 57.5 and 53.7, and at 1.04 GHz 58.8 and 54 against v0.109.0's above. A game at 60 the
-  phone holds to 30-50 (1 and 2 VIs) is timed as 7844c07 timed it.
+- What did: State's layout. rt64 7844c07 put two of VIHistory's fields under `#if RT64_UNEVEN_FRAME_RATES` in
+  rt64_vi.h, but CMake defined it for rt64's own files only, so the two games' own code that includes rt64_state.h
+  (Diddy Kong Racing's F3DDKR and scenery code, Pokémon Snap's render context) read every State member after it at
+  another offset than rt64 wrote it. On a desktop GPU too: Diddy Kong Racing's race presented 47-68 a second uncapped
+  from v0.109.0 on against 287-305 on v0.106.0-v0.108.0, the GPU 99% busy, and 291.8 with the definition public
+  (rt64 43ef41c). On the phone, Diddy Kong Racing on v0.108.0 against v0.109.0, interleaved, the same caps: 57.0 and
+  57.4 frames drawn a second against 49.8 and 50.3, presents 56.3 and 56.9 against 53.8 and 51.6.
+- With the layout right in both, 7844c07's slowest of the last three against it taken only where the fastest took one
+  VI (rt64 9c88af0), interleaved (9c88af0, 7844c07, 7844c07, 9c88af0), big cores at 1.04 GHz and the GPU at 403 MHz,
+  skin 37.6-40.2 °C: Diddy Kong Racing 58.3 and 58.7 presents a second against 57.0 and 54.7, 57.2-58.0 drawn in all
+  four, the game at 28-30. Pokémon Snap 48.4 and 57.5 against 46.1 and 38.0, but its attract went another way in the
+  last play (a minute at 12-17 game frames a second, then 30), and over the same stretches the other three drew alike:
+  59-60 a second where the game came at 30, 22-59 where it came at 7-20. So 9c88af0 changes little. An earlier pair of
+  the two had the layout wrong in both builds and read Pokémon Snap at 51-53 against 24-30.
 - Banjo-Tooie, both ways: from about 90 s after Start Game, its game at 28-30 of the 30 it reports and RT64 drawing
   one frame for each, so presents about 30. RT64's workload thread took 37-78 ms to set up each game frame, more than
   the game frame's 33, so it had no time for the frame between and skipped it: the CPU, in RT64's own work for this
