@@ -3,7 +3,7 @@
 // until the player signs in on the hub (site/site.js), which keeps the access token in localStorage, the origin's, so
 // every game's page on the hub finds it. A page linked with n64recomp_browser_frontend (--pre-js, after
 // persistent_home.js) syncs; the hub loads this file too (tools/publish_site.sh copies it) and uploads the saves a
-// browser already has when the player signs in.
+// browser already has when the player signs in, and those changed since each time it loads or a game closes.
 //
 // What syncs: the runtime's save files, HOME/.config/<program id>/saves/... (N64ModernRuntime's pi.cpp), named in the
 // Drive by their path under HOME, so a game's saves are the same file on every device. Never their .temp and .bak, and
