@@ -122,6 +122,7 @@ jfg    n64hub/JetForceGemini-Recomp-web      JetForceGeminiRecompiled web-build/
 dkr    n64hub/DKR-R-web                      DKR-R                build-web/bin/Release diddy-kong-racing
 snap   n64hub/Snap64Recomp-web               Snap64Recomp         build-web pokemon-snap
 rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush-2
+1080   n64hub/1080-Snowboarding-recomp-web   1080SnowboardingRecompiled build-web 1080-snowboarding
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
 "
@@ -352,6 +353,11 @@ build_snap() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
 build_rush2() {
+    # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
+    # (build-web-prep/web-patched).
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
+build_1080() {
     # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
     # (build-web-prep/web-patched).
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }

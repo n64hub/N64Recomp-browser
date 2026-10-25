@@ -344,6 +344,23 @@ title's demos, a race on each of the 7 tracks, a stunt course), recorded by `web
 menus by the front end's screen and the track select's entry in RDRAM. Its docs/BUILDING.md (The web page) and the
 header of `tools/build_web.sh` has the rest.
 
+`n64hub/1080-Snowboarding-recomp-web` is 1080° Snowboarding: Recompiled, 1080° Snowboarding (USA), GPL-3.0. It is
+on cdlewis's rt64, N64ModernRuntime and RecompFrontend, the ones Snowboard Kids' recomps are on, which its own
+`patches/runtime/` change further (rt64's camera cuts and the stale write-backs it skips, a projection depth remap,
+the HD boards' per-texture scale), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Its
+`tools/build_web.sh` applies the game's patches first, then `apply.cmake` project by project, but for the files where
+both change the same lines (`web/patches/files.txt`: 11 of rt64's, hlslpp's `wasm.h`, N64Recomp's `cgenerator.cpp`,
+RecompFrontend's `profiles.cpp`), whose web change is its `web/patches/<project>.patch`, merged by hand, and what
+N64Recomp-browser has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's
+`snowboarding-patches` job runs its `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. Its rt64 is
+newer than the web's: its texture decoder is shared with the CPU (`src/shared`, which calls TMEM's sizes
+`TMEM_RDP_*`), and with `RT64_UNEVEN_FRAME_RATES` the web's rate for uneven frames is used in `rt64_vi.cpp`, the
+game's otherwise. The page leaves out RetroAchievements, which needs a server, and MSAA, and keeps every other
+option at the desktop's defaults. Its list is 54 shaders: the boot (the launcher, the intro, the title and its demo,
+the menus, 43) and 4 sections (Crystal Lake's Match Race, Time Attack on Crystal Peak and Golden Forest, Training),
+recorded by `tools/shader_plan.json`, which knows where the game is by its loaded modules (`tools/game_state.js`). Its
+BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the rest.
+
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
 the commits GoldenEye's are on (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`

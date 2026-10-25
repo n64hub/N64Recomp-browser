@@ -78,6 +78,7 @@ const ART = {
   'CBFD-Recompiled-web': 'cover', 'DKR-R-web': 'cover',
   'pilotwings-64-recomp-web': 'cover unnamed', 'wave-race-64-recomp-web': 'cover unnamed',
   'JetForceGemini-Recomp-web': 'logo', 'Snap64Recomp-web': 'logo', 'rush2recompiled-web': 'logo',
+  '1080-Snowboarding-recomp-web': 'icon',
   'GoldenEye64Recomp-web': 'icon', 'MarioKart64Recomp-web': 'icon', 'Starfox64Recomp-web': 'icon', 'Zelda64Recomp-web': 'icon',
 };
 
