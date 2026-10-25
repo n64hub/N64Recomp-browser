@@ -377,6 +377,32 @@ jobs:
           ln -s "$GITHUB_WORKSPACE" "$rush2/lib/N64Recomp-browser"
           bash "$rush2/tools/build_web.sh" --patches
 
+  # The patches under 1080° Snowboarding's web fork's own (1080-Snowboarding-recomp-web, its main), as
+  # Snap64Recomp-web's: its rt64, hlslpp, N64Recomp and RecompFrontend are newer than the patches' upstream commits and
+  # carry the game's own patches, so its web/patches take over the files where the two meet. Red on a PR means the same
+  # as snap-patches', merged into 1080-Snowboarding-recomp-web's web/patches by hand.
+  1080-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: 1080-Snowboarding-recomp-web's apply over them
+        run: |
+          game="$RUNNER_TEMP/1080"
+          git clone -q --depth 1 https://github.com/n64hub/1080-Snowboarding-recomp-web "$game"
+          git -C "$game" log -1 --format='1080-Snowboarding-recomp-web %h %s'
+          git -C "$game" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3 \
+            lib/rt64 lib/N64ModernRuntime lib/RecompFrontend
+          git -C "$game/lib/rt64" -c protocol.version=2 submodule update -q --init --depth 1 src/contrib/plume src/contrib/hlslpp
+          git -C "$game/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 N64Recomp
+          rmdir "$game/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
+          bash "$game/tools/build_web.sh" --patches
+
   # Super Mario 64's own changes over the patches (super-mario-64-recomp, its main): its CMakeLists.txt applies its
   # runtime-patches/<project>-<n>-*.patch to its upstream submodules after patches/apply.cmake, and they change files
   # the patches change too (RecompFrontend's renderer). Each project a patch is for is patched here as there, and the
@@ -488,7 +514,7 @@ jobs:
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, snap-patches,
-      rush2-patches, sm64-patches, emscripten]
+      rush2-patches, 1080-patches, sm64-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
