@@ -209,6 +209,7 @@ async function openGame(game, push = true) {
 function hideGame() {
   if (frame.contentDocument?.fullscreenElement) frame.contentDocument.exitFullscreen();
   else if (document.fullscreenElement) document.exitFullscreen();  // a phone's (landscape()); it unlocks the orientation
+  frame.addEventListener('load', uploadSaves, { once: true });
   showFrame('about:blank');  // ends the game: its threads and sound go with the document
   player.hidden = true;
   document.body.classList.remove('playing');
@@ -375,6 +376,16 @@ async function localSaves() {
     db.close();
   }
   return { saves: local, folders };
+}
+
+// Signed in, the saves this browser holds that changed since they last synced go up, as a game's page sends them: when
+// the hub loads without opening a game, and when a game closes. A page built before frontend/save_sync.js sends none of
+// its own, and one that does has sent them already. The Drive's that changed, and a save changed on both sides, are
+// left for the game's page to settle at its start.
+function uploadSaves() {
+  if (!GOOGLE_CLIENT_ID || signingIn || !SaveSync.token()) return;
+  localSaves().then(({ saves }) => SaveSync.sync(saves))
+    .catch((error) => console.error('Save sync: could not upload: ' + error.message));
 }
 
 // A game by its program id, from its page's folder: where its saves are in this browser (folders, localSaves()), or
@@ -605,6 +616,7 @@ async function main() {
   const game = gameFromHash();
   // Not before coi_serviceworker.js's reload, nor while a sign-in asks whose saves to keep.
   if (game && window.crossOriginIsolated && !signingIn) openGame(game, false);
+  else uploadSaves();
 }
 
 if (!syncStart()) main();
