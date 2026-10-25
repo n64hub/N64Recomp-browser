@@ -122,10 +122,12 @@ while game frames fall. Telling them apart:
   skipping a game frame's later frames, which it does when its workload thread runs past each frame's share of the
   game frame's time. The page's thread and RT64's present thread were each under half busy then.
 - A game that runs at 60 where it can (Rush 2049 at its 60 fps, Perfect Dark) and that a phone's CPU holds to 30-50
-  mixes frames of one and two VIs, and RT64_UNEVEN_FRAME_RATES takes a frame's length from the shortest of the last
-  three, so RT64 draws about one frame for each game frame: presents fall to about the game's rate. The same game held
-  to 30 gets two for each, near 60 presents. So such a game's own code holds it to 30 on a page while it can't keep
-  60 up (Rush 2049 and Perfect Dark below).
+  mixes frames of one and two VIs. Timed at the shortest of the last three (RT64_UNEVEN_FRAME_RATES before rt64
+  7844c07), the display's own 60 leaves RT64 nothing to interpolate, so it drew one frame for each game frame and
+  presents fell to about the game's rate. Now, while the longer took 3 of the last 8 frames, a frame is timed at the
+  longer and gets two: Rush 2049's race without its own hold presented 53 a second against 38-42 (below). The same
+  game held to 30 gets two for each frame and drops none, and still presents a few more, so such a game's own code
+  holds it to 30 on a page while it can't keep 60 up (Rush 2049 and Perfect Dark below).
 - A GPU's load says little on a phone: its clock follows the load, so a lighter frame (resolution Original) ran the
   Mali-G78 at 130 MHz, still 60-80% busy, and presented no more.
 - Nor does the time from a present to its end on the GPU: the Mali-G78's governor (Interactive, in
@@ -187,7 +189,7 @@ race on its first track with the gas held, cool unless said.
   against the same page without, interleaved, big cores capped at 1.35 GHz, GPU not capped: 34.6 and 34.7 game frames
   a second against 29.1, 40.7-41.5 drawn against 48.6, presents 40-41.9 against 43.6 (skin 33-35 °C). The page without
   them reached 37.4 game frames only with its big cores at 2.08 GHz. With the game above 30, more of its frames are 1
-  VI long and RT64_UNEVEN_FRAME_RATES gives them fewer frames between, so presents stay about 42 (the next bullets).
+  VI long and RT64_UNEVEN_FRAME_RATES then gave them fewer frames between, so presents stay about 42 (the next bullets).
 - The display list thread is the one the game waits on: 64% busy in a race at 1.04 GHz, about 25 ms of each game
   frame, the game's own threads mostly waiting. 18.6% of it was `RT64::TMEMHasher::hash`: counted, the race hashed
   about 65,000 textures a second (2,600 a game frame), 97% of them CI, with 25 updates of the hash each on average,
@@ -199,7 +201,7 @@ race on its first track with the gas held, cool unless said.
 - Rush 2049's Game Frame Rate at Original (30) against its default 60, the same page: 55.2-55.9 presents a second
   against 40.8-44.3 (2 pairs, big cores at 1.04-1.35 GHz), the game at 27.8-29.7 frames a second against 30.1-31, so
   RT64 drew 1.9 frames a game frame against 1.4. At 60 the game the phone can't keep at 60 mixes frames of 1 and 2
-  VIs, and RT64_UNEVEN_FRAME_RATES takes a frame's length from the shortest of the last three, so most frames get one
+  VIs, and RT64_UNEVEN_FRAME_RATES took a frame's length from the shortest of the last three, so most frames got one
   drawn; at 30 every frame is 2 VIs and gets two. The page now holds the game to 30 while it can't keep 60 up
   (rush-2049-recomp's `src/frame_rate.cpp`): at the default 60 it presented 51.6, 52.5 and 52 a second against 44.9,
   41.1 and 42.7 without it, and 53.4 at Original, big cores at 1.04 GHz each time (the GPU's cap 403-858 MHz), and
@@ -209,6 +211,11 @@ race on its first track with the gas held, cool unless said.
   The night's changes together (the fork changes, the font scan, Rewind and the two-second hold) against the page Pages
   serves, on a desktop GPU uncapped (one pair, the host serving phone plays): 308.1 presents a second against 322.9,
   within the 300-325 its plays read that night, and no hold.
+- RT64_UNEVEN_FRAME_RATES timing a frame at the longer of the last three's VIs while it took 3 of the last 8 frames
+  (rt64 7844c07), the same tree built three ways, a race each with the gas held, interleaved: with the game's own hold
+  off, 53.0 and 53.0 presents a second against 38.1 and 42.1 timed at the shortest (big cores at 1.04-1.35 GHz, skin
+  34-35.5 °C); with the game's hold on and the shortest, 56.1 and 53.7 against 46.9 and 48.0 for the longer with the
+  hold off (big cores at 1.04-1.35 GHz, skin 34.4-35.6 °C). So the hold stays, and a game without one gets most of it.
 
 ## Other games on a Galaxy S21
 
