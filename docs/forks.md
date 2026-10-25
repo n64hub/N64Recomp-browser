@@ -484,4 +484,9 @@ rt64 737169e           a load taller than TMEM skips the rows the later ones ove
 rt64 15e8e91           the flat, multisampled dual-source RasterPS gets VERTEX_FLAT_COLOR: 85a6ad5's line for it was
                        garbled, and CMake passed dxc the pieces, so it was the smooth one; nothing includes it (a page
                        draws without MSAA), so no binary changes
+plume a501afa,         the swap chain puts the canvas's asked-for size back after configuring its surface, which set
+rt64 40b0ff6           it to the size resize() had read: on a phone, back in Chrome from another app, the tap that goes
+                       fullscreen and then landscape resizes twice in 0.3 s, and 2 of 6 tries on GoldenEye's page lost
+                       the landscape size that way, the game drawn upright and stretched across the landscape screen;
+                       with it 6 of 6 kept it
 ```
