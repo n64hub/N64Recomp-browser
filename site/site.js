@@ -536,7 +536,8 @@ function showAccount(note) {
   if (signingIn || !record?.token) {
     box.replaceChildren(...(note ? [el('span', { className: 'note' }, note)] : []), signingIn
       ? el('span', { className: 'note' }, 'Checking your saves…')
-      : button('Sign in with Google', () => signIn(hub, false), { className: 'primary' }));
+      : el('span', { className: 'invite' }, button('Sign in with Google', () => signIn(hub, false), { className: 'link' }),
+        ' to sync your saves'));
     return;
   }
   // The player's name, asked for once a sign-in has a token.

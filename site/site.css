@@ -22,6 +22,13 @@ h1 { margin: 0; font-size: 26px; letter-spacing: -0.03em; }
 h1 a { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
 #account { position: relative; display: flex; align-items: center; gap: 10px; }
 #account .note { color: var(--dim); font-size: 14px; }
+/* Signed out: why to sign in, the sign-in itself a link. */
+#account .invite { color: var(--dim); }
+#account .link {
+  padding: 0; font-weight: 600; color: #9cc0ff; background: none; border: 0; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#account .link:hover { color: #c3d8ff; background: none; }
 #account .who { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; }
 #account .avatar {
   display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-weight: 700;
