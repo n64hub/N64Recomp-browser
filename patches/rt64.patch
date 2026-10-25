@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 088236646f23bdb642c9371fb7108ee342cf4146
+rt64: https://github.com/n64hub/rt64-web f7c4220727fcc58a70c64abf3e10603569a330d7
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -455,19 +455,23 @@ index c4b080b..a7de6b4 100644
          // that are available without root privileges are lower priority. Instead you can set the thread's "nice" value, which ranges
          // from -20 to 19 (lower being higher priority). However, by strict POSIX spec "nice" is meant to be per-process instead of
 diff --git a/src/common/rt64_tmem_hasher.h b/src/common/rt64_tmem_hasher.h
-index 8c6af2b..d80053d 100644
+index 8c6af2b..b48d981 100644
 --- a/src/common/rt64_tmem_hasher.h
 +++ b/src/common/rt64_tmem_hasher.h
-@@ -4,6 +4,8 @@
+@@ -4,6 +4,12 @@
  
  #pragma once
  
 +#include <cstring>
 +
++#if defined(__wasm_simd128__)
++#   include <wasm_simd128.h>
++#endif
++
  // Referenced from zstd.
  
  static unsigned bitScanForward64(uint64_t val) {
-@@ -23,7 +25,7 @@ static unsigned bitScanForward64(uint64_t val) {
+@@ -23,7 +29,7 @@ static unsigned bitScanForward64(uint64_t val) {
          __assume(0);
      }
  #endif
@@ -476,10 +480,52 @@ index 8c6af2b..d80053d 100644
      return (unsigned)__builtin_ctzll(val);
  #elif defined(__ICCARM__)
      return (unsigned)__builtin_ctzll(val);
-@@ -45,12 +47,48 @@ namespace RT64 {
+@@ -45,12 +51,90 @@ namespace RT64 {
              return tmemBytesPerRow > drawBytesPerRow;
          }
  
++#   if defined(__wasm_simd128__)
++        // The palette indices a CI4 texture's bytes use, bit i for index i: both nibbles of every byte, 16 bytes at a time,
++        // each nibble looked up in a table of its bit in the low or the high byte of the set. The lanes are folded into
++        // one set only at the end, as a texture hashed row by row adds a short row at a time.
++        struct CI4Indices {
++            v128_t lowSet = wasm_u8x16_splat(0);
++            v128_t highSet = wasm_u8x16_splat(0);
++            uint64_t rest = 0;
++
++            void add(const uint8_t *bytes, uint32_t byteCount) {
++                const v128_t lowBits = wasm_u8x16_make(1, 2, 4, 8, 16, 32, 64, 128, 0, 0, 0, 0, 0, 0, 0, 0);
++                const v128_t highBits = wasm_u8x16_make(0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 8, 16, 32, 64, 128);
++                const v128_t nibbleMask = wasm_u8x16_splat(0x0F);
++                uint32_t i = 0;
++                for (; (i + 16) <= byteCount; i += 16) {
++                    const v128_t v = wasm_v128_load(&bytes[i]);
++                    const v128_t lowNibbles = wasm_v128_and(v, nibbleMask);
++                    const v128_t highNibbles = wasm_u8x16_shr(v, 4);
++                    lowSet = wasm_v128_or(lowSet, wasm_v128_or(wasm_i8x16_swizzle(lowBits, lowNibbles), wasm_i8x16_swizzle(lowBits, highNibbles)));
++                    highSet = wasm_v128_or(highSet, wasm_v128_or(wasm_i8x16_swizzle(highBits, lowNibbles), wasm_i8x16_swizzle(highBits, highNibbles)));
++                }
++
++                for (; i < byteCount; i++) {
++                    rest |= (1ULL << (bytes[i] & 0xF)) | (1ULL << (bytes[i] >> 4));
++                }
++            }
++
++            uint64_t get() const {
++                // Every lane's bits in one byte: OR the halves, then the quarters and so on.
++                auto foldLanes = [](v128_t set) {
++                    set = wasm_v128_or(set, wasm_i64x2_shuffle(set, set, 1, 0));
++                    set = wasm_v128_or(set, wasm_u64x2_shr(set, 32));
++                    set = wasm_v128_or(set, wasm_u64x2_shr(set, 16));
++                    set = wasm_v128_or(set, wasm_u64x2_shr(set, 8));
++                    return uint64_t(wasm_u8x16_extract_lane(set, 0));
++                };
++
++                return foldLanes(lowSet) | (foldLanes(highSet) << 8) | rest;
++            }
++        };
++#   endif
++
 +        // Collects the bytes a hash covers into one buffer and hashes them in one go. XXH3 gives the same hash for the same
 +        // bytes whether they come at once or piece by piece, and this skips the cost of every small streaming update.
 +        struct GatheredXXH3 {
@@ -527,7 +573,7 @@ index 8c6af2b..d80053d 100644
              const bool RGBA32 = (loadTile.siz == G_IM_SIZ_32b) && (loadTile.fmt == G_IM_FMT_RGBA);
              const bool usesTLUT = tlut > 0;
              bool halfTMEM = RGBA32;
-@@ -66,21 +104,23 @@ namespace RT64 {
+@@ -66,21 +150,33 @@ namespace RT64 {
              const uint32_t tmemMask = halfTMEM ? TMEMMask16 : TMEMMask8;
              const uint32_t tmemAddress = (loadTile.tmem << 3) & tmemMask;
              uint64_t tlutBitset[4] = {};
@@ -536,32 +582,41 @@ index 8c6af2b..d80053d 100644
 +            // in tlutBitset waits on the update before it. Turned into tlutBitset once all of it is hashed.
 +            alignas(16) uint8_t tlutSeen[256];
 +            bool tlutSeenUsed = false;
++#       if defined(__wasm_simd128__)
++            CI4Indices ci4Indices;
++#       endif
              auto hashUpdate = [&](const uint8_t *tmemBytes, uint32_t byteCount) {
 -                XXH3_64bits_update(&xxh3, tmemBytes, byteCount);
 +                xxh3.update(tmemBytes, byteCount);
  
                  // Version 5 parses every byte individually if TLUT is enabled to determine the TLUT bytes that can be hashed.
                  if ((version >= 5) && usesTLUT) {
--                    if (loadTile.siz == G_IM_SIZ_4b) {
++#               if defined(__wasm_simd128__)
+                     if (loadTile.siz == G_IM_SIZ_4b) {
 -                        for (uint32_t i = 0; i < byteCount; i++) {
 -                            tlutBitset[0] |= (1ULL << (tmemBytes[i] & 0xFU));
 -                            tlutBitset[0] |= (1ULL << ((tmemBytes[i] >> 4U) & 0xFU));
 -                        }
-+                    if (!tlutSeenUsed) {
-+                        memset(tlutSeen, 0, sizeof(tlutSeen));
-+                        tlutSeenUsed = true;
++                        ci4Indices.add(tmemBytes, byteCount);
++                        return;
                      }
 -                    else {
 -                        for (uint32_t i = 0; i < byteCount; i++) {
 -                            tlutBitset[tmemBytes[i] >> 6U] |= (1ULL << (tmemBytes[i] & 0x3FU));
 -                        }
++#               endif
++
++                    if (!tlutSeenUsed) {
++                        memset(tlutSeen, 0, sizeof(tlutSeen));
++                        tlutSeenUsed = true;
++                    }
 +
 +                    for (uint32_t i = 0; i < byteCount; i++) {
 +                        tlutSeen[tmemBytes[i]] = 1;
                      }
                  }
              };
-@@ -141,6 +181,34 @@ namespace RT64 {
+@@ -141,6 +237,38 @@ namespace RT64 {
                  }
              }
  
@@ -593,10 +648,14 @@ index 8c6af2b..d80053d 100644
 +                }
 +            }
 +
++#       if defined(__wasm_simd128__)
++            tlutBitset[0] |= ci4Indices.get();
++#       endif
++
              // If TLUT is active, we also hash the corresponding palette bytes.
              if (usesTLUT) {
                  const bool CI4 = (loadTile.siz == G_IM_SIZ_4b);
-@@ -151,7 +219,7 @@ namespace RT64 {
+@@ -151,7 +279,7 @@ namespace RT64 {
                  if (version >= 5) {
                      // Fast path for a full bitset for CI4.
                      if (CI4 && (tlutBitset[0] == UINT16_MAX)) {
@@ -605,7 +664,7 @@ index 8c6af2b..d80053d 100644
                      }
                      else {
                          const uint32_t bitsetCount = CI4 ? 1 : 4;
-@@ -160,15 +228,25 @@ namespace RT64 {
+@@ -160,15 +288,25 @@ namespace RT64 {
                          for (uint32_t i = 0; i < bitsetCount; i++) {
                              // Fast path for a full bitset.
                              if (tlutBitset[i] == UINT64_MAX) {
@@ -637,7 +696,7 @@ index 8c6af2b..d80053d 100644
                                  }
                              }
                          }
-@@ -176,7 +254,7 @@ namespace RT64 {
+@@ -176,7 +314,7 @@ namespace RT64 {
                  }
                  else {
                      const int32_t bytesToHash = CI4 ? 0x80 : 0x800;
@@ -646,7 +705,7 @@ index 8c6af2b..d80053d 100644
                  }
              }
              
-@@ -187,14 +265,14 @@ namespace RT64 {
+@@ -187,14 +325,14 @@ namespace RT64 {
              static_assert(sizeof(loadTile.line) == 2, "Hash must use 16-bit line.");
              static_assert(sizeof(loadTile.siz) == 1, "Hash must use 8-bit siz.");
              static_assert(sizeof(loadTile.fmt) == 1, "Hash must use 8-bit fmt.");
@@ -2357,10 +2416,21 @@ index e08b02c..7b7d896 100644
          void threadAdvanceBarrier();
          void threadLoop();
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index a10c11a..0bb28f3 100644
+index a10c11a..52c060b 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
-@@ -388,6 +388,19 @@ namespace RT64 {
+@@ -6,6 +6,10 @@
+ 
+ #include <cassert>
+ 
++#if defined(__wasm_simd128__)
++#   include <wasm_simd128.h>
++#endif
++
+ #include "../include/rt64_extended_gbi.h"
+ 
+ #include "common/rt64_math.h"
+@@ -388,6 +392,19 @@ namespace RT64 {
              TMEM[((tmemAddress + 2) ^ tmemXorMask) | UpperTMEM] = RDRAM[(textureAddress + (6 & offsetMask)) ^ 3];
              TMEM[((tmemAddress + 3) ^ tmemXorMask) | UpperTMEM] = RDRAM[(textureAddress + (7 & offsetMask)) ^ 3];
          }
@@ -2380,7 +2450,35 @@ index a10c11a..0bb28f3 100644
          else {
              // Copy the entire word.
              for (uint32_t i = 0; i < 8; i++) {
-@@ -959,7 +972,8 @@ namespace RT64 {
+@@ -461,6 +478,27 @@ namespace RT64 {
+             tmemAddress = tmemAddressRow;
+             wordCount = wordsPerRow;
+             while (wordCount > 0) {
++#if defined(__wasm_simd128__)
++                // Two words in one 16-byte shuffle where they are side by side in RDRAM (from a word-aligned address)
++                // and in TMEM with the same xor mask (TMEM doesn't wrap, and a load block's dxt doesn't swap, between
++                // them): TMEM byte j is RDRAM's byte j ^ 3 of the two, or j ^ 7 with the halves of each word swapped. As
++                // a loop of its own, so a row of one word costs what it did.
++                if constexpr (!RGBA32 && !TLUT) {
++                    while ((wordCount >= 2) && ((textureAddress & 0x3) == 0) && ((tmemAddress + 16) <= (tmemMask + 1)) && (!BLOCK || ((dxtCounter + dxtIncrement) < DXTSwap))) {
++                        const v128_t words = wasm_v128_load(&RDRAM[textureAddress]);
++                        const v128_t swapped = (tmemXorMask == 0) ? wasm_i8x16_shuffle(words, words, 3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12)
++                            : wasm_i8x16_shuffle(words, words, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
++                        wasm_v128_store(&TMEM[tmemAddress], swapped);
++                        loadWordStep();
++                        loadWordStep();
++                        wordCount -= 2;
++                    }
++
++                    if (wordCount == 0) {
++                        break;
++                    }
++                }
++#endif
+                 loadWord<RGBA32, TLUT>(TMEM, tmemAddress, tmemXorMask, RDRAM, textureAddress);
+                 loadWordStep();
+                 wordCount--;
+@@ -959,7 +997,8 @@ namespace RT64 {
      }
      
      void RDP::setPrimDepth(uint16_t z, uint16_t dz) {
