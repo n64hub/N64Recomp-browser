@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web dfbb47c28c6f5e8f5bb8beb87fc744a94fc08c9b
+rt64: https://github.com/n64hub/rt64-web fd2e830a52638fc21681ea2cbf4f8e2d4b551c56
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -669,6 +669,36 @@ index 8c6af2b..d80053d 100644
          }
  
          static bool requiresRawTMEM(const LoadTile &loadTile, uint16_t width, uint16_t height, uint32_t tlutFormat) {
+diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
+index 6255872..a8925fe 100644
+--- a/src/gbi/rt64_gbi_rdp.cpp
++++ b/src/gbi/rt64_gbi_rdp.cpp
+@@ -7,6 +7,9 @@
+ #include "../include/rt64_extended_gbi.h"
+ 
+ #include "rt64_f3d.h"
++#include "rt64_gbi_f3d.h"
++
++#include "hle/rt64_interpreter.h"
+ 
+ namespace RT64 {
+     namespace GBI_RDP {
+@@ -254,7 +257,15 @@ namespace RT64 {
+ 
+         void fullSync(State *state, DisplayList **dl) {
+             RT64_LOG_PRINTF("GBI_RDP::fullSync()");
++
++            // Whether the next command ends the list at its top level (State::listEndsAfterFullSync), read before the
++            // game may be told the RDP is done and write over it.
++            const Interpreter *interpreter = state->ext.interpreter;
++            const uint8_t nextOpCode = ((*dl) + 1)->w0 >> 24;
++            const bool nextExtended = (interpreter->extendedOpCode != 0) && (nextOpCode == interpreter->extendedOpCode);
++            state->listEndsAfterFullSync = state->returnAddressStack.empty() && !nextExtended && (interpreter->hleGBI->map[nextOpCode] == &GBI_F3D::endDl);
+             state->fullSync();
++            state->listEndsAfterFullSync = false;
+             state->dpInterrupt();
+         }
+ 
 diff --git a/src/gui/rt64_file_dialog.cpp b/src/gui/rt64_file_dialog.cpp
 index 72faede..ed1138c 100644
 --- a/src/gui/rt64_file_dialog.cpp
@@ -2498,7 +2528,7 @@ index 8858dac..933b80e 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..e037c01 100644
+index 2970e71..c35bdbe 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -2550,7 +2580,7 @@ index 2970e71..e037c01 100644
          }
  
          rdramCheckPending = false;
-@@ -781,6 +802,123 @@ namespace RT64 {
+@@ -781,6 +802,136 @@ namespace RT64 {
          }
      }
      
@@ -2584,6 +2614,19 @@ index 2970e71..e037c01 100644
 +            image.words.resize(wordCount);
 +            memcpy(&image.words[oldWordCount], &RDRAM[image.start + oldWordCount * 4], (wordCount - oldWordCount) * 4);
 +        }
++    }
++
++    const uint8_t *State::keptRAM(uint32_t address, uint32_t byteCount) const {
++        // Once the game has been told the list's RDP is done it may write to RDRAM, so the rest of the list reads a
++        // framebuffer's memory from what keepPendingRAMImage() kept of it before then.
++        for (const auto &it : pendingRAMImages) {
++            const PendingRAMImage &image = it.second;
++            if ((address >= image.start) && ((uint64_t(address) + byteCount) <= (uint64_t(image.start) + image.words.size() * 4))) {
++                return reinterpret_cast<const uint8_t *>(image.words.data()) + (address - image.start);
++            }
++        }
++
++        return &RDRAM[address];
 +    }
 +
 +    void State::landRAMCopies(bool onlyIfReady) {
@@ -2674,7 +2717,7 @@ index 2970e71..e037c01 100644
      void State::listProcessBegin() {
          dlCpuProfiler.start();
      }
-@@ -790,6 +928,7 @@ namespace RT64 {
+@@ -790,6 +941,7 @@ namespace RT64 {
      }
  
      void State::fullSync() {
@@ -2682,7 +2725,7 @@ index 2970e71..e037c01 100644
          flush();
          submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
  
-@@ -809,6 +948,7 @@ namespace RT64 {
+@@ -809,6 +961,7 @@ namespace RT64 {
          // Copy the current state's extended parameters into the workload.
          workload.extended.ditherNoiseStrength = extended.ditherNoiseStrength;
          workload.extended.texcoordWrapPoint = extended.texcoordWrapPoint;
@@ -2690,15 +2733,15 @@ index 2970e71..e037c01 100644
  
          auto emitTileWarning = [&](CommandWarning warning, size_t tileIndex) {
              warning.indexType = CommandWarning::IndexType::TileIndex;
-@@ -819,6 +959,7 @@ namespace RT64 {
+@@ -819,6 +972,7 @@ namespace RT64 {
          // Validate all tile copies to be used during the rendering.
          const bool extendedRenderToRAMSet = (extended.renderToRAM < UINT8_MAX);
          const bool renderToRDRAM = extendedRenderToRAMSet ? (extended.renderToRAM != 0) : ext.emulatorConfig->framebuffer.renderToRAM;
-+        bool rdramHashed = false;
++        bool rdpToldDone = false;
          const bool warningsEnabled = ext.userConfig->developerMode;
          const bool linearFiltering = !ext.userConfig->threePointFiltering;
          const size_t callTileCount = workload.drawData.callTiles.size();
-@@ -1103,7 +1244,8 @@ namespace RT64 {
+@@ -1103,7 +1257,8 @@ namespace RT64 {
  
                      // Submit the shader to the cache so compilation can start right away.
                      // Ignore any calls that use fill type, as they're emulated without using a shader.
@@ -2708,7 +2751,7 @@ index 2970e71..e037c01 100644
                          ext.rasterShaderCache->submit(shaderDesc);
                      }
  
-@@ -1254,6 +1396,10 @@ namespace RT64 {
+@@ -1254,6 +1409,10 @@ namespace RT64 {
                              resizedTargets.emplace(colorDepthPair.second);
                          }
                      }
@@ -2719,7 +2762,7 @@ index 2970e71..e037c01 100644
                  }
  
                  for (RenderTarget *renderTarget : resizedTargets) {
-@@ -1264,6 +1410,9 @@ namespace RT64 {
+@@ -1264,6 +1423,9 @@ namespace RT64 {
              };
  
              auto renderAndSynchronize = [&](uint32_t maxFramebufferPair) {
@@ -2729,7 +2772,7 @@ index 2970e71..e037c01 100644
                  // Preprocess all the framebuffer operations.
                  uint32_t pairCursor = framebufferPairCursor;
                  while (pairCursor < maxFramebufferPair) {
-@@ -1280,7 +1429,12 @@ namespace RT64 {
+@@ -1280,7 +1442,12 @@ namespace RT64 {
                  while (pairCursor < maxFramebufferPair) {
                      const FramebufferPair &fbPair = workload.fbPairs[pairCursor];
                      if (getTargetsFromPair(pairCursor)) {
@@ -2743,7 +2786,7 @@ index 2970e71..e037c01 100644
                          FramebufferRenderer::DrawParams drawParams;
                          drawParams.worker = ext.framebufferGraphicsWorker;
                          drawParams.fbStorage = &fbStorage;
-@@ -1346,7 +1500,7 @@ namespace RT64 {
+@@ -1346,7 +1513,7 @@ namespace RT64 {
                  }
  
                  // Record all setup previous to drawing any of the recorded framebuffers.
@@ -2752,7 +2795,25 @@ index 2970e71..e037c01 100644
                  framebufferRenderer->recordSetup(ext.framebufferGraphicsWorker, bufferUploaders, queuedProcessor, nullptr, &workload.outputBuffers, false);
  
                  // Record the command list for the framebuffer pairs.
-@@ -1471,15 +1625,26 @@ namespace RT64 {
+@@ -1385,7 +1552,7 @@ namespace RT64 {
+                             uint32_t readRowCount = colorFb->height - colorFb->readHeight;
+                             uint32_t readFbBytes = readRowBytes * readRowCount;
+                             uint32_t storageAddress = colorImg.address + readRowBytes * colorFb->readHeight;
+-                            workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress], readFbBytes);
++                            workload.fbStorage.store(pairCursor, storageAddress, rdpToldDone ? keptRAM(storageAddress, readFbBytes) : &RDRAM[storageAddress], readFbBytes);
+                             FramebufferChange *colorFbChange = colorFb->readChangeFromStorage(ext.framebufferGraphicsWorker, workload.fbStorage, scratchFbChangePool, Framebuffer::Type::Color,
+                                 colorImg.fmt, pairCursor, colorFb->readHeight, readRowCount, ext.shaderLibrary);
+ 
+@@ -1429,7 +1596,7 @@ namespace RT64 {
+                                 uint32_t readRowCount = depthFb->height - depthFb->readHeight;
+                                 uint32_t readFbBytes = readRowBytes * readRowCount;
+                                 uint32_t storageAddress = depthImg.address + readRowBytes * depthFb->readHeight;
+-                                workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress], readFbBytes);
++                                workload.fbStorage.store(pairCursor, storageAddress, rdpToldDone ? keptRAM(storageAddress, readFbBytes) : &RDRAM[storageAddress], readFbBytes);
+                                 FramebufferChange *depthFbChange = depthFb->readChangeFromStorage(ext.framebufferGraphicsWorker, workload.fbStorage, scratchFbChangePool, Framebuffer::Type::Depth,
+                                     G_IM_FMT_DEPTH, pairCursor, depthFb->readHeight, readRowCount, ext.shaderLibrary);
+ 
+@@ -1471,15 +1638,26 @@ namespace RT64 {
                  ext.framebufferGraphicsWorker->commandList->end();
                  framebufferRenderer->waitForUploaders();
                  ext.framebufferGraphicsWorker->execute();
@@ -2782,7 +2843,7 @@ index 2970e71..e037c01 100644
                          }
                      }
  
-@@ -1508,8 +1673,10 @@ namespace RT64 {
+@@ -1508,8 +1686,10 @@ namespace RT64 {
                          colorFb->readHeight = 0;
                      }
  
@@ -2794,7 +2855,7 @@ index 2970e71..e037c01 100644
                          if (dummyDepthTarget == nullptr) {
                              dummyDepthTarget = std::make_unique<RenderTarget>(0, Framebuffer::Type::Depth, renderTargetManager.multisampling, renderTargetManager.usesHDR);
                              dummyDepthTarget->setupDepth(ext.framebufferGraphicsWorker, rtWidth, rtHeight);
-@@ -1520,6 +1687,7 @@ namespace RT64 {
+@@ -1520,6 +1700,7 @@ namespace RT64 {
                          }
  
                          colorDepthPairs.emplace_back(colorTarget, dummyDepthTarget.get());
@@ -2802,28 +2863,37 @@ index 2970e71..e037c01 100644
                      }
                      // Resize the depth target if necessary.
                      else if (depthTarget != nullptr) {
-@@ -1560,8 +1728,33 @@ namespace RT64 {
+@@ -1560,8 +1741,42 @@ namespace RT64 {
                  fullSyncFramebufferPairTiles(workload, fbPair, loadOpCursor, rdpTileCursor);
              }
  
-+            // With the late copy every tile is loaded now, so all RT64 still reads of RDRAM for this list is what it holds
-+            // where the last batch's copies land, kept here, and what the next list compares it with (hashTracking()).
-+            // So the game is told the RDP is done before the batch is recorded and submitted, and goes on meanwhile. A
-+            // copy still lands before the next list's RDP is done, at that list's start.
-+            if (ext.emulatorConfig->framebuffer.renderToRAMLate) {
++            // With the late copy every tile is loaded now, so all RT64 still reads of RDRAM for this list is the last
++            // batch's framebuffers, kept here whole (where its copies land, and what it reads of one it hasn't read yet,
++            // keptRAM()), and what the next list compares them with (hashTracking()). So if the list ends here the game
++            // is told the RDP is done before the batch is recorded and submitted, and goes on meanwhile. A copy still
++            // lands before the next list's RDP is done, at that list's start.
++            if (ext.emulatorConfig->framebuffer.renderToRAMLate && listEndsAfterFullSync && (ext.app->core.rdpDone != nullptr)) {
 +                for (uint32_t f = framebufferPairCursor; f < workload.fbPairCount; f++) {
 +                    if (getFramebufferPairs(f)) {
-+                        keepPendingRAMImage(colorFb, colorWriteWidth, std::min(colorRowEnd, colorFb->height));
-+                        if (depthWriteWidth > 0) {
-+                            keepPendingRAMImage(depthFb, depthWriteWidth, std::min(depthRowEnd, depthFb->height));
++                        keepPendingRAMImage(colorFb, colorFb->width, colorFb->height);
++                        if (depthFb != nullptr) {
++                            keepPendingRAMImage(depthFb, depthFb->width, depthFb->height);
 +                        }
 +                    }
 +                }
 +
 +                framebufferManager.hashTracking(RDRAM);
-+                rdramHashed = true;
-+                if (ext.app->core.rdpDone != nullptr) {
-+                    ext.app->core.rdpDone();
++                rdpToldDone = true;
++                ext.app->core.rdpDone();
++            }
++
++            // WIP, to drop: how many lists told the game early.
++            {
++                static uint32_t lists = 0, early = 0;
++                lists++;
++                early += rdpToldDone ? 1 : 0;
++                if ((lists & 255) == 0) {
++                    fprintf(stderr, "RT64 erd: early RDP done in %u of %u lists\n", early, lists);
 +                }
 +            }
 +
@@ -2836,7 +2906,7 @@ index 2970e71..e037c01 100644
          }
          else {
              // Process all tiles.
-@@ -1591,11 +1784,18 @@ namespace RT64 {
+@@ -1591,11 +1806,18 @@ namespace RT64 {
              textureManager.removeHashes(evictedTextureHashes);
          }
  
@@ -2850,13 +2920,13 @@ index 2970e71..e037c01 100644
              ext.textureCache->decrementLock();
  
 -            framebufferManager.hashTracking(RDRAM);
-+            if (!rdramHashed) {
++            if (!rdpToldDone) {
 +                framebufferManager.hashTracking(RDRAM);
 +            }
  
              advanceFramebufferRenderer();
  
-@@ -1836,6 +2036,10 @@ namespace RT64 {
+@@ -1836,6 +2058,10 @@ namespace RT64 {
      }
      
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
@@ -2867,7 +2937,7 @@ index 2970e71..e037c01 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1909,6 +2113,7 @@ namespace RT64 {
+@@ -1909,6 +2135,7 @@ namespace RT64 {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
@@ -2875,7 +2945,7 @@ index 2970e71..e037c01 100644
                          {
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
-@@ -1971,6 +2176,9 @@ namespace RT64 {
+@@ -1971,6 +2198,9 @@ namespace RT64 {
          renderTargetManager.destroyAll();
          renderTargetManager.setMultisampling(multisampling);
          dummyDepthTarget.reset();
@@ -2885,7 +2955,7 @@ index 2970e71..e037c01 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,6 +2868,27 @@ namespace RT64 {
+@@ -2660,6 +2890,27 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -2913,7 +2983,7 @@ index 2970e71..e037c01 100644
      }
  
      void State::advancePresent(Present &present, bool paused) {
-@@ -2724,6 +2953,25 @@ namespace RT64 {
+@@ -2724,6 +2975,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  
@@ -2940,7 +3010,7 @@ index 2970e71..e037c01 100644
          extended.ditherNoiseStrength = noiseStrength;
      }
 diff --git a/src/hle/rt64_state.h b/src/hle/rt64_state.h
-index 7a8c13b..bb1e3ef 100644
+index 7a8c13b..077f0ad 100644
 --- a/src/hle/rt64_state.h
 +++ b/src/hle/rt64_state.h
 @@ -4,6 +4,8 @@
@@ -2976,7 +3046,7 @@ index 7a8c13b..bb1e3ef 100644
          DrawCall drawCall;
          DrawStatus drawStatus;
          SpriteCommand activeSpriteCommand;
-@@ -91,6 +103,28 @@ namespace RT64 {
+@@ -91,6 +103,33 @@ namespace RT64 {
          std::vector<uint32_t> drawFbDiscards;
          std::vector<DisplayList *> returnAddressStack;
          std::vector<Framebuffer *> differentFbs;
@@ -3002,10 +3072,15 @@ index 7a8c13b..bb1e3ef 100644
 +        std::vector<PendingRAMCopy> pendingRAMCopies;
 +        std::unordered_map<uint32_t, PendingRAMImage> pendingRAMImages;
 +        uint32_t lateRAMCopyCpuWrites = 0;
++
++        // Set by the RDP's full sync while fullSync() runs if the command after it ends the list at its top level: only
++        // then has the RSP read every command of the list by the time the RDP is done, so the game may be told so before
++        // the last batch is recorded (Application::Core::rdpDone) without the interpreter reading what it writes next.
++        bool listEndsAfterFullSync = false;
          GameConfiguration gameConfig;
          uint32_t displayListAddress;
          uint64_t displayListCounter;
-@@ -129,6 +163,7 @@ namespace RT64 {
+@@ -129,6 +168,7 @@ namespace RT64 {
              bool vertexTestZActive = false;
              float ditherNoiseStrength = 1.0f;
              bool extendRDRAM = false;
@@ -3013,17 +3088,18 @@ index 7a8c13b..bb1e3ef 100644
          };
  
          Extended extended;
-@@ -144,6 +179,9 @@ namespace RT64 {
+@@ -144,6 +184,10 @@ namespace RT64 {
          void flush();
          void submitFramebufferPair(FramebufferPair::FlushReason flushReason);
          void checkRDRAM();
 +        void addPendingRAMCopy(Framebuffer *fb, uint32_t rowWidth, uint32_t rowStart, uint32_t rowEnd);
 +        void keepPendingRAMImage(Framebuffer *fb, uint32_t rowWidth, uint32_t rowEnd);
++        const uint8_t *keptRAM(uint32_t address, uint32_t byteCount) const;
 +        void landRAMCopies(bool onlyIfReady);
          void fullSync();
          void fullSyncFramebufferPairTiles(Workload &workload, FramebufferPair &fbPair, uint32_t &loadOpCursor, uint32_t &rdpTileCursor);
          void listProcessBegin();
-@@ -162,6 +200,7 @@ namespace RT64 {
+@@ -162,6 +206,7 @@ namespace RT64 {
          DisplayList *popReturnAddress();
          void setRefreshRate(uint16_t refreshRate);
          void setRenderToRAM(uint8_t renderToRAM);
