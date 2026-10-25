@@ -35,7 +35,8 @@
 # from what Pages serves, and their builds stay in the copies to fetch with remote_build.sh -n <copy> get and play.
 # Once the pins are moved there (a fork's main, Rush 2049's by a pull request on its repo), a run without it builds
 # the same bytes and publishes them. PAGES_COPY=<prefix> builds in copies of its own, <prefix>-<game> (Rush 2049's
-# too), for a test build of a branch beside others' builds in the usual copies.
+# too), for a test build of a branch beside others' builds in the usual copies; a new one starts from its usual
+# copy's git objects (seed, below), not a clone from GitHub.
 # --ref <commit> builds that commit of the one game named in place of its main, as a dry run, in PAGES_COPY's copies
 # (needed: its patches can be other than main's, which a usual copy's next build of main would start from). So a game
 # fork's change that has to land with its pin (its own patch rebased onto a tag, which no longer applies at the old
@@ -379,6 +380,33 @@ on_host=" pd sm64 "
 # --- Here ---
 
 files() { echo "$1.html $1.js $1.wasm $1.data coi_serviceworker.js"; }
+# seed <clone> <copy> <usual copy>: a copy of its own (PAGES_COPY) not yet on the host starts from the game's usual
+# copy's git objects, when that copy is there: its repo is cloned with the usual one's as a reference and each
+# submodule borrows the usual one's (submodule.alternateLocation), so remote_build.sh's sync fetches from GitHub only
+# what the usual copy lacks (a shallow submodule's too). Measured on Banjo-Tooie on a busy host: a cold sync 95 s, rt64
+# and every other submodule cloned from GitHub (on a slow line it ran past 24 min); seeded 46 s, and 11 s to
+# dissociate. A copy of the usual one's whole folder (cp -a) won't build: its build dirs' CMakeCache.txt name that copy.
+seed() {
+    [[ $2 != "$3" ]] || return 0
+    ssh -o BatchMode=yes "$BUILD_HOST" "cd ~/rush2049 && if [ ! -d $2/repo/.git ] && [ -d $3/repo/.git ]; then
+        mkdir -p $2 && git clone -q --reference $3/repo -c submodule.alternateLocation=superproject \
+            -c submodule.alternateErrorStrategy=info $(git -C "$1" remote get-url origin) $2/repo; fi"
+}
+# dissociate <copy>: once synced, a seeded copy copies in what it borrowed and stops borrowing (git repack -a, as
+# git clone --dissociate does), so cleaning the usual copy, or a gc there, can't break it. Submodules go first, so a
+# copy whose repo borrows nothing has nothing left to dissociate.
+dissociate() {
+    ssh -o BatchMode=yes "$BUILD_HOST" "cd ~/rush2049/$1 && exec flock .lock bash -s" << 'EOF'
+set -e
+cd repo
+[ -f .git/objects/info/alternates ] || exit 0
+git submodule foreach --recursive -q 'a="$(git rev-parse --git-path objects/info/alternates)"
+    [ ! -f "$a" ] || { git repack -a -d -q && rm "$a"; }
+    git config --unset-all submodule.alternateLocation || :; git config --unset-all submodule.alternateErrorStrategy || :'
+git config --unset-all submodule.alternateLocation || :; git config --unset-all submodule.alternateErrorStrategy || :
+git repack -a -d -q && rm .git/objects/info/alternates
+EOF
+}
 # same_files <clone> <main> <pin> <commit>: whether <commit>'s files are <main>'s with N64Recomp-browser at <pin>,
 # checked in a scratch index, so a merge or a squash of the pin's PR passes too.
 same_files() {
@@ -396,7 +424,7 @@ for g in "${selected[@]}"; do
     start=$SECONDS
     echo "== $g: $repo"
     if [[ $g == rush ]]; then
-        clone="$rush" copy="${PAGES_COPY:+$PAGES_COPY-rush}" copy="${copy:-publish}"
+        clone="$rush" copy="${PAGES_COPY:+$PAGES_COPY-rush}" copy="${copy:-publish}" usual=publish
         git -C "$clone" fetch -q origin main
         from="$(base "$clone")" || { failed+=("$g"); continue; }
         target=$from
@@ -412,7 +440,7 @@ for g in "${selected[@]}"; do
             unset GIT_INDEX_FILE
         fi
     else
-        clone="$cache/$g" copy="${PAGES_COPY:-pages}-$g"
+        clone="$cache/$g" copy="${PAGES_COPY:-pages}-$g" usual=pages-$g
         [[ -d "$clone/.git" ]] || git clone -q --filter=blob:none --no-checkout "https://github.com/$repo" "$clone"
         git -C "$clone" fetch -q origin main
         from="$(base "$clone")" || { failed+=("$g"); continue; }
@@ -429,7 +457,8 @@ for g in "${selected[@]}"; do
             echo "   main $sha is not main ${was:0:7} with N64Recomp-browser ${pin:0:7}: build it"; failed+=("$g"); continue
         fi
         built="$(cd "$out" && git hash-object $(files $name) | tr '\n' ' ')"
-    elif ! bash "$remote_build" -C "$clone" -n $copy sync $target > "$work/$g.log" 2>&1; then
+    elif ! { seed "$clone" $copy $usual && bash "$remote_build" -C "$clone" -n $copy sync $target && dissociate $copy; } \
+        > "$work/$g.log" 2>&1; then
         echo "   sync failed:"; tail -5 "$work/$g.log"; failed+=("$g"); continue
     elif [[ $g == rush ]]; then
         bash "$remote_build" -n $copy build > "$work/$g.log" 2>&1 || { echo "   build failed:"; tail -20 "$work/$g.log"; failed+=("$g"); continue; }
