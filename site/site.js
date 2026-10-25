@@ -301,8 +301,12 @@ function signIn(back, silent) {
 }
 const triedLately = () => Date.now() - (SaveSync.stored()?.tried || 0) < 60000;
 
+// A sign-in's token, until the player has chosen whose saves to keep (finishSignIn): null once stored, or with none.
+let signingIn = null;
+
 // Google's answer, a page asking for a new token (#sync-refresh=<its address>, frontend/shell.html), or an old token:
-// true when this goes elsewhere, and the hub isn't drawn.
+// true when this goes elsewhere, and the hub isn't drawn. A new token where this browser had one is a renewal, and is
+// stored at once; one where it had none is a sign-in, which main() finishes.
 function syncStart() {
   if (!GOOGLE_CLIENT_ID) return false;
   const params = new URLSearchParams(location.hash.slice(1));
@@ -312,9 +316,10 @@ function syncStart() {
   if (params.has('access_token') || params.has('error')) {
     const back = sameOrigin(params.get('state'));
     if (params.get('scope')?.split(' ').includes(DRIVE_SCOPE)) {
-      SaveSync.store({ ...SaveSync.stored(), token: params.get('access_token'),
-        expires: Date.now() + Number(params.get('expires_in')) * 1000, hub });
-      sessionStorage.setItem('save-sync-upload', '1');
+      const token = { token: params.get('access_token'), hub,
+                      expires: Date.now() + Number(params.get('expires_in')) * 1000 };
+      if (SaveSync.stored()?.token) SaveSync.store({ ...SaveSync.stored(), ...token });
+      else signingIn = token;
     } else if (params.has('error')) {
       console.log('Google sign-in: ' + params.get('error'));
     }
@@ -340,7 +345,8 @@ function syncStart() {
 }
 
 // The saves this browser holds, in every game's database on this origin (frontend/persistent_home.js, each named
-// '/home/web_user <its page's folder>'): saves, path -> { data, time }, and folders, program id -> its page's folder.
+// '/home/web_user <its page's folder>'): saves, path -> { data, time, played }, and folders, program id -> its page's
+// folder.
 async function localSaves() {
   const home = '/home/web_user/', ask = (request) => new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -360,7 +366,7 @@ async function localSaves() {
       const entry = await ask(files().get(key));
       const time = new Date(entry?.timestamp).getTime();
       if (entry?.contents && SaveSync.isSave(path, entry.contents.byteLength) && !(local.get(path)?.time >= time)) {
-        local.set(path, { data: entry.contents, time });
+        local.set(path, { data: entry.contents, time, played: SaveSync.played(name.slice(home.length)) });
         folders.set(SaveSync.game(path), name.slice(home.length));
       }
     }
@@ -369,8 +375,16 @@ async function localSaves() {
   return { saves: local, folders };
 }
 
-// Under the sign-in line, while signed in: the games held at a sign-in (frontend/save_sync.js), each asking whose saves
-// to keep, and the copies the Drive kept of replaced saves, each of which can be made its game's save again.
+// A game's name by its program id, from the folder its saves are in.
+const gameOf = (id, folders) => games.find((g) => sameOriginFolder(g.page) === folders.get(id));
+// Seconds played, in words.
+const playTime = (s) => s < 60 ? 'under a minute' : s < 3600 ? Math.round(s / 60) + ' min'
+  : (s / 3600).toFixed(1).replace(/\.0$/, '') + ' h';
+const savedAt = (time) => new Date(time).toLocaleString(undefined,
+  { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+// Under the sign-in line, while signed in: the copies the Drive kept of replaced saves, each of which can be made its
+// game's save again.
 async function showSaves() {
   const box = document.getElementById('saves');
   if (!SaveSync.token()) {
@@ -378,7 +392,7 @@ async function showSaves() {
     return;
   }
   const [{ folders }, copies] = await Promise.all([localSaves(), SaveSync.copies()]);
-  const gameName = (id) => games.find((g) => sameOriginFolder(g.page) === folders.get(id))?.name ?? id;
+  const gameName = (id) => gameOf(id, folders)?.name ?? id;
   const act = (text, run) => {
     const b = el('button', { type: 'button', textContent: text });
     b.addEventListener('click', async () => {
@@ -392,28 +406,126 @@ async function showSaves() {
     });
     return b;
   };
-  const choose = (id, keepMine) => async () => SaveSync.settle((await localSaves()).saves, id, keepMine);
-  const held = [...SaveSync.held()].map((id) => el('p', {},
-    `${gameName(id)}: this browser has other saves than your Drive. `,
-    act("Keep this browser's", choose(id, true)), ' ', act("Use the Drive's", choose(id, false))));
-  const copy = (c) => el('p', {}, `${gameName(SaveSync.game(c.path))}, ${c.path.replace(/^.*\/saves\//, '')}, ` +
-    `from ${new Date(c.time).toLocaleString()} `, act('Use this one', () => SaveSync.restore(c)));
+  const copy = (c) => el('p', {}, [gameName(SaveSync.game(c.path)), c.path.replace(/^.*\/saves\//, ''),
+    'saved ' + savedAt(c.time) + (c.from ? ' in ' + c.from : ''),
+    c.played !== undefined && 'played ' + playTime(c.played)].filter(Boolean).join(', ') + ' ',
+    act('Use this one', () => SaveSync.restore(c)));
   const kept = copies.length
     ? [el('details', {}, el('summary', {}, `Earlier saves in your Drive (${copies.length})`), ...copies.map(copy))] : [];
-  box.replaceChildren(...held, ...kept);
+  box.replaceChildren(...kept);
   box.hidden = !box.childElementCount;
+}
+
+// A sign-in's last step (frontend/save_sync.js): this browser's saves are compared with the Drive's, those of a game the
+// Drive has none of go up, and where a game's differ the player picks whose to keep in a popup, the Drive's
+// recommended. It closes only by a choice or by Cancel, which signs out, and the token is stored only once the player
+// has chosen, so a tab closed before that leaves them signed out.
+async function finishSignIn() {
+  const line = document.getElementById('sync'), pending = signingIn;
+  const revoke = () => fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(pending.token),
+    { method: 'POST' }).catch(() => {});
+  const signedIn = async (local, keep = []) => {
+    SaveSync.store({ ...SaveSync.stored(), ...pending });
+    signingIn = null;
+    for (const id of keep) await SaveSync.settle(local, id);
+    await SaveSync.sync(local).catch((error) => console.error('Save sync: could not upload: ' + error.message));
+  };
+  let local, folders, conflicts, only;
+  try {
+    ({ saves: local, folders } = await localSaves());
+    ({ conflicts, only } = await SaveSync.compare(local, pending.token));
+  } catch (error) {
+    console.error('Save sync: could not compare the saves: ' + error.message);
+    revoke();
+    signingIn = null;
+    showSync();
+    line.prepend(`Your Google Drive couldn't be reached (${error.message}), so you aren't signed in. `);
+    return;
+  }
+  if (!conflicts.size) {
+    await signedIn(local);
+    showSync();
+    showSaves();
+    return;
+  }
+
+  const dialog = document.getElementById('save-choice'), [cancel, keep] = dialog.querySelectorAll('.foot button');
+  const lead = dialog.querySelector('.lead'), choices = dialog.querySelector('.choices');
+  const name = (id) => gameOf(id, folders)?.name ?? id;
+  const n = conflicts.size;
+  lead.textContent = `Your Google Drive already has saves for ${n === 1 ? 'a game' : n + ' games'}, and this browser ` +
+    `has different ones. Pick one for ${n === 1 ? 'it' : 'each game'} to finish signing in.`;
+  // A side of a game's choice: whose, when it was last saved, from which browser and how long it was played.
+  const option = (id, mine, side) => {
+    const about = [`Last saved ${savedAt(side.time)}`, side.from && (mine ? side.from : 'from ' + side.from),
+      side.played !== undefined && 'Played ' + playTime(side.played)].filter(Boolean);
+    return el('label', { className: 'option' },
+      el('input', { type: 'radio', name: id, value: mine ? 'mine' : 'drive', checked: !mine }),
+      el('span', { className: 'side' }, mine ? 'This browser' : 'Your Google Drive',
+        ...(mine ? [] : [el('span', { className: 'recommended' }, 'Recommended')])),
+      el('span', { className: 'about' }, ...about.flatMap((s) => [el('br'), s]).slice(1)));
+  };
+  const sections = [...conflicts].map(([id, { mine, theirs }]) => {
+    const game = gameOf(id, folders);
+    const art = game && ART[game.repoName] && el('img', { src: `img/${game.repoName}.webp`, alt: '' });
+    return el('section', {}, el('h3', {}, ...(art ? [art] : []), name(id)),
+      el('div', { className: 'options' }, option(id, false, theirs), option(id, true, mine)));
+  });
+  const uploaded = [...only].map(name).sort(), many = uploaded.length > 1;
+  const said = many ? uploaded.slice(0, -1).join(', ') + ' and ' + uploaded.at(-1) : uploaded[0];
+  choices.replaceChildren(...(uploaded.length ? [el('p', { className: 'uploaded' }, `${said} ${many ? 'have' : 'has'} ` +
+    `saves only in this browser, so ${many ? 'they go' : 'it goes'} to your Drive too.`)] : []), ...sections);
+
+  let chosen = false;
+  const busy = (on) => { cancel.disabled = keep.disabled = on; };
+  const signOut = () => {
+    chosen = true;
+    revoke();
+    SaveSync.store(null);
+    signingIn = null;
+    dialog.close();
+    showSync();
+    showSaves();
+  };
+  cancel.onclick = signOut;
+  dialog.oncancel = (event) => event.preventDefault();  // Escape
+  dialog.onclose = () => chosen || signOut();  // closed some other way: the browser's own close request
+  keep.onclick = async () => {
+    busy(true);
+    try {
+      const mine = (id) => dialog.querySelector(`input[name="${CSS.escape(id)}"][value="mine"]`).checked;
+      await signedIn(local, [...conflicts.keys()].filter(mine));
+    } catch (error) {
+      console.error('Save sync: ' + error.message);
+      lead.textContent = `Your choice couldn't be saved to your Drive (${error.message}). Try again, or cancel to ` +
+        'sign out.';
+      busy(false);
+      return;
+    }
+    chosen = true;
+    dialog.close();
+    showSync();
+    showSaves();
+  };
+  busy(false);
+  dialog.showModal();
 }
 
 function showSync() {
   const line = document.getElementById('sync');
   if (!GOOGLE_CLIENT_ID) return;
+  if (signingIn) {
+    line.replaceChildren('Checking your saves against your Google Drive…');
+    line.hidden = false;
+    return;
+  }
   const record = SaveSync.stored(), signedIn = !!record?.token;
   const button = (text, click) => {
     const b = el('button', { type: 'button', textContent: text });
     b.addEventListener('click', click);
     return b;
   };
-  const signInButton = button(signedIn ? 'Sign in again' : 'Sign in with Google', () => signIn(location.href, false));
+  const signInButton = button(signedIn ? 'Sign in again' : 'Sign in with Google', () => signIn(hub, false));
   const signOut = button('Sign out', () => {
     if (record.token) fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(record.token), { method: 'POST' })
       .catch(() => {});
@@ -429,14 +541,8 @@ function showSync() {
 
 async function main() {
   showSync();
-  // After a sign-in this browser's saves go up, or its games are held where the Drive has others.
-  let saves = Promise.resolve();
-  if (sessionStorage.getItem('save-sync-upload')) {
-    sessionStorage.removeItem('save-sync-upload');
-    saves = localSaves().then(({ saves }) => SaveSync.signedIn(saves))
-      .catch((error) => console.error('Save sync: could not upload this browser\'s saves: ' + error.message));
-  }
-  const listSaves = () => GOOGLE_CLIENT_ID && saves.then(showSaves)
+  // A sign-in is finished once the games are known, which the popup names.
+  const listSaves = () => GOOGLE_CLIENT_ID && (signingIn ? finishSignIn() : showSaves())
     .catch((error) => console.error('Save sync: could not list the saves in the Drive: ' + error.message));
   const grid = document.getElementById('grid');
   try {
@@ -453,7 +559,8 @@ async function main() {
   const sorted = [...games].sort((a, b) => title(a).localeCompare(title(b)));
   grid.replaceChildren(...sorted.map((g, i) => tile(g, i)));
   const game = gameFromHash();
-  if (game && window.crossOriginIsolated) openGame(game, false);  // not before coi_serviceworker.js's reload
+  // Not before coi_serviceworker.js's reload, nor while a sign-in asks whose saves to keep.
+  if (game && window.crossOriginIsolated && !signingIn) openGame(game, false);
 }
 
 if (!syncStart()) main();

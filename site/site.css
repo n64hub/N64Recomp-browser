@@ -37,6 +37,43 @@ body.no-games .art { filter: grayscale(0.85) brightness(0.55); cursor: not-allow
 header .tagline { color: var(--text); font-size: 18px; }
 #saves summary { color: var(--dim); cursor: pointer; }
 
+/* Whose saves to keep, at a sign-in: the games' choices scroll between the question and its buttons. */
+#save-choice {
+  width: min(660px, calc(100vw - 24px)); max-height: min(90vh, 820px); padding: 22px 24px; color: var(--text);
+  background: var(--panel); border: 1px solid #3a4152; border-radius: 14px; box-shadow: 0 20px 60px rgb(0 0 0 / 0.6);
+}
+#save-choice[open] { display: flex; flex-direction: column; }
+#save-choice::backdrop { background: rgb(5 6 10 / 0.72); backdrop-filter: blur(2px); }
+#save-choice h2 { margin: 0 0 6px; font-size: 22px; }
+#save-choice .lead { margin: 0 0 6px; color: var(--dim); }
+#save-choice .choices { overflow-y: auto; min-height: 0; padding-right: 4px; }
+#save-choice .uploaded {
+  margin: 8px 0; padding: 8px 12px; font-size: 14px; color: var(--dim); background: #11141c; border: 1px solid var(--line);
+  border-radius: 8px;
+}
+#save-choice .uploaded::before { content: "✓ "; color: #7fd19b; }
+#save-choice h3 { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; font-size: 15px; }
+#save-choice h3 img { width: 64px; height: 36px; border-radius: 5px; object-fit: cover; }
+#save-choice .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+#save-choice .option {
+  display: grid; grid-template-columns: 20px 1fr; gap: 2px 8px; padding: 10px 12px; cursor: pointer;
+  background: #12151d; border: 1px solid #3a4152; border-radius: 10px;
+}
+#save-choice .option:has(input:checked) { background: #16203a; border-color: #5b8def; }
+#save-choice .option input { margin: 4px 0 0; accent-color: #5b8def; }
+#save-choice .side { font-weight: 600; }
+#save-choice .recommended {
+  margin-left: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #7fd19b;
+}
+#save-choice .about { grid-column: 2; color: var(--dim); font-size: 13px; }
+#save-choice .foot {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+}
+#save-choice .foot small { flex: 1 1 260px; color: var(--dim); font-size: 13px; }
+#save-choice .primary { font-weight: 600; background: #2f5fd0; border-color: #5b8def; }
+#save-choice .primary:hover { background: #3a6be0; }
+
 main { max-width: 1200px; margin: 0 auto; padding: 12px 24px 32px; }
 /* How it is made, under the games. The source link stays whole, on the next line when it doesn't fit. */
 footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; color: var(--dim); font-size: 13px; }

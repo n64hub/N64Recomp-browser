@@ -29,7 +29,7 @@
     Its WebGPU doesn't run them, so they won't start here. Open this page in Chrome to play.</p>
   <!-- Sign-in for saves kept in the player's Google Drive, shown once the hub has an OAuth client (site.js). -->
   <p id="sync" hidden></p>
-  <!-- Under it, while signed in: a game whose saves wait for the player's choice, and earlier saves to restore. -->
+  <!-- Under it, while signed in: earlier saves to restore. -->
   <div id="saves" hidden></div>
 </header>
 <main>
@@ -47,6 +47,17 @@
   <iframe id="player-frame" title="Game" allow="fullscreen; gamepad; autoplay; cross-origin-isolated"></iframe>
   <button id="player-turn" type="button">Tap to play in landscape.</button>
 </div>
+<!-- At a sign-in where this browser and the Drive hold a game's saves differently: whose to keep (site.js). -->
+<dialog id="save-choice">
+  <h2>Which saves should we keep?</h2>
+  <p class="lead"></p>
+  <div class="choices"></div>
+  <div class="foot">
+    <small>The saves you don't pick aren't deleted. They stay in your Drive under <i>Earlier saves</i>, and you can switch
+      back to them later.</small>
+    <span><button type="button">Cancel and sign out</button> <button type="button" class="primary">Keep these</button></span>
+  </div>
+</dialog>
 <script src="save_sync.js"></script>
 <script src="site.js"></script>
 </body>
