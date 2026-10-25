@@ -443,4 +443,7 @@ plume f3cb1a7,         an upload buffer of 16 MB or more maps the backend's memo
 rt64 e74c09d           5aa2cbe, without a copy of its own on the calling side: that copy doubled each buffer in the
                        heap, and RecompFrontend's buffer for its launcher's images (an SVG drawn at 4K) took
                        GoldenEye's page, which boots at 1458 MB of its 1536, past its heap 1.7 s after load
+RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
+                       times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
+                       heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's
 ```
