@@ -447,4 +447,7 @@ rt64 9c88af0           7844c07's slowest of the last three only where the fastes
                        frames of 2 and 3 VIs or more is timed at the fastest again, as RT64 skipped the third frame it
                        set each; on a phone Pokémon Snap's attract presented 51-53 a second against 24-30, Diddy Kong
                        Racing drew 58.3 frames a second against 53.7
+RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
+                       times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
+                       heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's
 ```
