@@ -275,7 +275,9 @@ the runtime read the ROM 1 KB at a time, until v0.82.0. N64ModernRuntime's `mesg
 the web's held messages (66539ab): DKR-R's own `runtime-deferred-events.patch` does the same, a blocked external
 message kept in a list of its own until a receive frees its queue, and is staged over that file at configure time.
 rt64-web 0a9fcb6 keeps the web's lines off those DKR-R's and Jet Force Gemini's patches change, as 03b9dcc and d5121c9
-do for Conker's. A first run plays DKR-R's Modern profile, the only one that interpolates (Accurate, the desktop's
+do for Conker's, and 3c6a1cc off those where they and Snap64's add their includes. rt64 9086c93's frame matching by
+each hash's group of calls replaces the loop DKR-R's `patches/rt64/0007` changes, so `patches/web` takes the web's
+loop with 0007's look at condition where each side's calls are collected (DKR-R-web 2bd6689). A first run plays DKR-R's Modern profile, the only one that interpolates (Accurate, the desktop's
 default, holds RT64 at Original and 30), widescreen as Modern is by default (a first run's settings would give it the
 runtime's starting 4:3), and a profile the player saves from DKR-R's overlay is kept: the overlay opens on a page
 (Escape, F1, a controller's Back) through rt64-web's inspector on plume (8b9dce2), without online play, its restart
