@@ -1139,8 +1139,8 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   next list started, which waited there for the GPU where the GPU took longer over a frame than the game between lists
   (a phone's, at its lowest clock); since rt64 330f84a it lands at the first VI or list start that finds the GPU done,
   or at the latest where the next list's draws are synced, before that list's RDP is done (docs/phones.md, Conker's Bad
-  Fur Day). Majora's Mask can't: it flushes its task queue and reads the pictograph and the pause background at once, so it keeps the exact copy. Nor
-  can a game that puts something in a framebuffer's memory once the RDP is done: the copy lands while the game runs,
+  Fur Day). Majora's Mask can't: it flushes its task queue and reads the pictograph and the pause background at once,
+  so it keeps the exact copy. Nor can a game that puts something in a framebuffer's memory once the RDP is done: the copy lands while the game runs,
   and though it keeps every word the CPU changed (rt64 cb75c5c), a word written with the value it held looks untouched
   and gets the frame. Jet Force Gemini's CPU reworks its shadows' render targets once the RDP has drawn them, and with
   the copy late they came out blurred or as dots, so its page keeps the exact copy too. The console reports each write
