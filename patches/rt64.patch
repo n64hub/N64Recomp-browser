@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web b15112b0a11e193c97206155ecbbae27ec31f091
+rt64: https://github.com/n64hub/rt64-web 63703df2f043388a114c07fa162697d80976bfba
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -455,7 +455,7 @@ index c4b080b..a7de6b4 100644
          // that are available without root privileges are lower priority. Instead you can set the thread's "nice" value, which ranges
          // from -20 to 19 (lower being higher priority). However, by strict POSIX spec "nice" is meant to be per-process instead of
 diff --git a/src/common/rt64_tmem_hasher.h b/src/common/rt64_tmem_hasher.h
-index 8c6af2b..35f38ad 100644
+index 8c6af2b..d80053d 100644
 --- a/src/common/rt64_tmem_hasher.h
 +++ b/src/common/rt64_tmem_hasher.h
 @@ -4,6 +4,8 @@
@@ -561,7 +561,7 @@ index 8c6af2b..35f38ad 100644
                      }
                  }
              };
-@@ -141,6 +181,31 @@ namespace RT64 {
+@@ -141,6 +181,34 @@ namespace RT64 {
                  }
              }
  
@@ -579,11 +579,14 @@ index 8c6af2b..35f38ad 100644
 +                }
 +
 +                if (loadTile.siz == G_IM_SIZ_4b) {
-+                    for (uint32_t v = 0; v < 256; v++) {
-+                        if ((byteBitset[v >> 6] >> (v & 0x3FU)) & 1) {
-+                            tlutBitset[0] |= (1ULL << (v & 0xFU)) | (1ULL << (v >> 4U));
-+                        }
++                    // Byte v uses indices v & 0xF and v >> 4: the low ones are the OR of the set's 16-bit pieces, and
++                    // high index h is used when piece h (bytes h * 16 to h * 16 + 15) isn't empty.
++                    uint64_t nibbles = 0;
++                    for (uint32_t h = 0; h < 16; h++) {
++                        const uint64_t piece = (byteBitset[h >> 2] >> ((h & 3) * 16)) & 0xFFFFU;
++                        nibbles |= piece | (uint64_t(piece != 0) << h);
 +                    }
++                    tlutBitset[0] |= nibbles;
 +                }
 +                else {
 +                    memcpy(tlutBitset, byteBitset, sizeof(tlutBitset));
@@ -593,7 +596,7 @@ index 8c6af2b..35f38ad 100644
              // If TLUT is active, we also hash the corresponding palette bytes.
              if (usesTLUT) {
                  const bool CI4 = (loadTile.siz == G_IM_SIZ_4b);
-@@ -151,7 +216,7 @@ namespace RT64 {
+@@ -151,7 +219,7 @@ namespace RT64 {
                  if (version >= 5) {
                      // Fast path for a full bitset for CI4.
                      if (CI4 && (tlutBitset[0] == UINT16_MAX)) {
@@ -602,7 +605,7 @@ index 8c6af2b..35f38ad 100644
                      }
                      else {
                          const uint32_t bitsetCount = CI4 ? 1 : 4;
-@@ -160,14 +225,14 @@ namespace RT64 {
+@@ -160,15 +228,25 @@ namespace RT64 {
                          for (uint32_t i = 0; i < bitsetCount; i++) {
                              // Fast path for a full bitset.
                              if (tlutBitset[i] == UINT64_MAX) {
@@ -610,16 +613,31 @@ index 8c6af2b..35f38ad 100644
 +                                xxh3.update(&TMEM[paletteAddress + i * 0x200], 0x200);
                              }
                              else {
-                                 // Must check every bit individually.
-                                 while (tlutBitset[i] > 0) {
-                                     bitsetIndex = bitScanForward64(tlutBitset[i]);
+-                                // Must check every bit individually.
+-                                while (tlutBitset[i] > 0) {
+-                                    bitsetIndex = bitScanForward64(tlutBitset[i]);
++                                // Each run of used indices in one update, as their palette bytes are side by side, and a lone
++                                // one as 8 bytes.
++                                uint64_t bits = tlutBitset[i];
++                                while (bits > 0) {
++                                    bitsetIndex = bitScanForward64(bits);
                                      paletteIndex = (i * 0x40) + bitsetIndex;
 -                                    XXH3_64bits_update(&xxh3, &TMEM[paletteAddress + paletteIndex * 8], 8);
-+                                    xxh3.update(&TMEM[paletteAddress + paletteIndex * 8], 8);
-                                     tlutBitset[i] &= ~(1ULL << bitsetIndex);
+-                                    tlutBitset[i] &= ~(1ULL << bitsetIndex);
++                                    if (((bits >> bitsetIndex) & 2) == 0) {
++                                        xxh3.update(&TMEM[paletteAddress + paletteIndex * 8], 8);
++                                        bits &= bits - 1;
++                                        continue;
++                                    }
++
++                                    const uint64_t above = ~(bits >> bitsetIndex);
++                                    const uint32_t runLength = (above == 0) ? (64 - bitsetIndex) : bitScanForward64(above);
++                                    xxh3.update(&TMEM[paletteAddress + paletteIndex * 8], runLength * 8);
++                                    bits = ((bitsetIndex + runLength) >= 64) ? 0 : (bits & (~0ULL << (bitsetIndex + runLength)));
                                  }
                              }
-@@ -176,7 +241,7 @@ namespace RT64 {
+                         }
+@@ -176,7 +254,7 @@ namespace RT64 {
                  }
                  else {
                      const int32_t bytesToHash = CI4 ? 0x80 : 0x800;
@@ -628,7 +646,7 @@ index 8c6af2b..35f38ad 100644
                  }
              }
              
-@@ -187,14 +252,14 @@ namespace RT64 {
+@@ -187,14 +265,14 @@ namespace RT64 {
              static_assert(sizeof(loadTile.line) == 2, "Hash must use 16-bit line.");
              static_assert(sizeof(loadTile.siz) == 1, "Hash must use 8-bit siz.");
              static_assert(sizeof(loadTile.fmt) == 1, "Hash must use 8-bit fmt.");

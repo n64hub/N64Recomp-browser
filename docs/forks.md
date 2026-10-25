@@ -422,4 +422,9 @@ rt64 30df1f5           one just queued, and an upload buffer is mapped at memory
                        the page's thread behind everything queued there, 5.5-6.7 ms of each interpolated frame on a
                        phone, so RT64 skipped the second frame of 35-45% of Rush 2049's game frames; 1-5% with this,
                        and 44.8 presents a second against 39.7 (docs/phones.md)
+rt64 63703df           a TMEM hash takes a CI4 texture's palette indices from 16 pieces of its byte set, not a loop
+                       over 256 values, and each run of used palette indices in one update, not 8 bytes an index:
+                       the same bytes and hashes (2,000,000 random tiles compared), on every build; Rush 2049's race
+                       hashes about 65,000 textures a second, 97% CI, and on a phone a CI4 hash took 0.9-1.1 us
+                       against 1.5-2.6
 ```
