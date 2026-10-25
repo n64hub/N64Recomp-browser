@@ -122,7 +122,9 @@ but nothing has been offered to it). Its tools stay upstream's submodules in `to
 has them, and `tools/publish_pages.sh` runs the fork's `tools/web_patch.sh` too; the three files that leaves out are out
 of apply.cmake's file list, and its `tools/web_timer.patch` does what N64ModernRuntime 1f46855 does upstream's. Its
 changes to those three are the web's as the commit the script names (`MERGED_FROM`) has it, and what the web has
-changed in them since is merged in by `apply.cmake --since`, as Snap64's are. rt64-web
+changed in them since is merged in by `apply.cmake --since`, as Snap64's are; timer.cpp's merge starts at
+N64Recomp-browser 54e69b8 (`TIMER_MERGED_FROM`), since N64ModernRuntime a25ea81's ordered set of timers is upstream's
+set and Conker's patch replaces it with a list, which has no order to lose. rt64-web
 03b9dcc and d5121c9 keep rt64's web includes off the lines Conker's rt64 patch adds to; a new web include goes where a
 game's patch adds none, or the next retest's Conker build stops on it. N64ModernRuntime 6456ba6 keeps the VI thread's
 frame wait off the lines Conker's runtime patch moves its retrace count to, and CI's `cbfd-patches` job applies the
