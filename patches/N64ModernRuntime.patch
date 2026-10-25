@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web b4967036a16887f61c4a2b4a7348abc587c01efa
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 5ea5ee4557d86703573dd4d8c96ad5b787d96b02
 on upstream 589bbf018a3e6d3646ddf7de1e7919f1b7e99bb1 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -1028,7 +1028,7 @@ index 0000000..be6c588
 +
 +#endif
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 2f1cfb5..b757943 100644
+index 2f1cfb5..39b48ec 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -175,6 +175,143 @@ uint64_t total_vis = 0;
@@ -1201,25 +1201,34 @@ index 2f1cfb5..b757943 100644
          if (new_total_vis > total_vis + 1) {
              //printf("Skipped % " PRId64 " frames in VI interupt thread!\n", new_total_vis - total_vis - 1);
          }
-@@ -267,6 +419,17 @@ void dp_complete() {
+@@ -261,12 +413,26 @@ void sp_complete() {
+     ultramodern::enqueue_external_message_src(events_context.sp.mq, events_context.sp.msg, false, ultramodern::EventMessageSource::Sp);
+ }
+ 
++// Whether the graphics task being sent has had its DP message, which the renderer may send before send_dl returns
++// (ultramodern::renderer::rdp_done). True outside a task, so a call outside send_dl does nothing. Only the graphics
++// thread touches it.
++static bool task_dp_completed = true;
++
+ void dp_complete() {
++    if (task_dp_completed) {
++        return;
++    }
++
++    task_dp_completed = true;
+     uint8_t* rdram = events_context.rdram;
+     std::lock_guard lock{ events_context.message_mutex };
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-+// Whether the renderer has sent the DP's message for the graphics task it's being sent (ultramodern::renderer::rdp_done).
-+// True outside a task, so a call outside send_dl does nothing. Only the graphics thread touches it.
-+static bool task_dp_completed = true;
-+
 +void ultramodern::renderer::rdp_done() {
-+    if (!task_dp_completed) {
-+        task_dp_completed = true;
-+        dp_complete();
-+    }
++    dp_complete();
 +}
 +
  void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_ready) {
      ultramodern::set_native_thread_name("SP Task Thread");
      ultramodern::set_native_thread_priority(ultramodern::ThreadPriority::Normal);
-@@ -370,10 +533,11 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -370,6 +536,7 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  ultramodern::extensions::on_displaylist_submitted(displaylist);
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
@@ -1227,11 +1236,6 @@ index 2f1cfb5..b757943 100644
                  renderer_context->send_dl(&task_action->task);
                  [[maybe_unused]] auto renderer_end = std::chrono::high_resolution_clock::now();
  
--                dp_complete();
-+                ultramodern::renderer::rdp_done();
-                 // TODO hook the parsed event up to the actual parsing point when a callback is added to RT64.
-                 ultramodern::extensions::on_displaylist_parsed(displaylist);
-                 ultramodern::extensions::on_displaylist_completed(displaylist);
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
 index 9944a02..b7a1a2a 100644
 --- a/ultramodern/src/mesgqueue.cpp
