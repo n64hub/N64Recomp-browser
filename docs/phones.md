@@ -328,13 +328,16 @@ place. The attract changes level about 125 s and 250 s into the page.
   5,634 presents) where the game's next present came 33-111 ms after it, so a newer one was always queued. Every play
   also went to 0-4 a second for a few seconds at the first level change, as cool (big cores at 1.35 GHz, skin
   33-34 °C) as hot. play_phone.mjs prints a trace site's first lines only, so the drops' own lines stop early in a log.
-- With rt64 b173eb3 (a present dropped only once its workload is done and the newer one's too): 6 of 6 plays kept
+- With rt64 b173eb3 (a present dropped only once its workload is done and the newer one's too): 7 of 7 plays kept
   presenting after the second change, 8-22 a second (big cores at 1.04 GHz, skin 36-42 °C), and none fell under 21 at
   the first; before the changes 53-54 a second (each play's median), as before. After the change the GPU was 0-85%
   busy at 130 MHz, so what holds those 8-22 is the CPU's work for each workload.
-- A rarer hang: in 3 of the 10 plays before the fix the game stopped in or just after a level change's drop (126, 151
-  and 247 s), its watchdog's frame no longer counting and presents at 0. One game thread called `osSendMesg` and `osRecvMesg` in a loop
-  and never blocked, 93% of its time in `QueuedMessage::send_blocked_messages` (from `dequeue_external_messages`), and
-  it ran above the priority of the game's main thread, which waited in `osSetThreadPri` to run again and never did.
-  The runtime's held messages stayed under 16 and no timer fired. None of the 6 plays with the fix hung.
+- A rarer hang, the one that ends in `Aborted(OOM)`: in 3 of the 10 plays before the fix and 1 of the 7 with it, the
+  game stopped in or just after a level change (126, 151, 247 and 257 s), its watchdog's frame no longer counting and
+  presents at 0. One game thread called `osSendMesg` and `osRecvMesg` in a loop and never blocked, 92-93% of its
+  time in `QueuedMessage::send_blocked_messages` (from `dequeue_external_messages`), above the priority of the game's
+  main thread, which waited to run again and never did. The runtime's timer thread ran flat out reading the clock and
+  sending messages, its queue allocating as it went, and the page's heap grew from 664 MB to 1062 MB in the 30 s
+  after the game stopped. play_phone.mjs shows only the console lines it looks for, so a probe's print that names
+  none of RT64, plume, WebGPU, shader, error or warn doesn't reach its log.
 - The page's heap (the break of its 1536 MB) held at 575-717 MB through each play with the fix.
