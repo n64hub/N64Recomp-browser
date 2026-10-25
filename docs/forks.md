@@ -398,10 +398,11 @@ N64ModernRuntime       Module.gameStarted called on the page's thread as the gam
 4746426                launcher: the shell's on-screen controller for phones shows from there, plugged in as a
                        gamepad after SDL has started (SDL opens only a pad that connects later)
 N64ModernRuntime       on a page the timer thread orders its timers by a copy of each one's timestamp, taken as it is
-ba2551b                added, not by the OSTimer's own, which osSetTimer rewrites on the game's thread: a timer
-                       restarted while still pending moved inside the set, its erase missed, and it fired at every
+ba2551b,               added, not by the OSTimer's own, which osSetTimer rewrites on the game's thread: a timer
+a25ea81                restarted while still pending moved inside the set, its erase missed, and it fired at every
                        pass with no wait, so Banjo-Tooie's page on a phone hung at a level change and ended in
-                       Aborted(OOM) (docs/phones.md)
+                       Aborted(OOM) (docs/phones.md); a25ea81 keeps the timers in a TimerSet with a std::set's calls,
+                       so the loop stays each pinned runtime's own (ba2551b's copy of it didn't compile on ca568b6)
 rt64 dd2fd23,          a triangle covers its scissor only where it crosses the camera plane, on every build: one wholly
 baa3753                behind it draws nothing, and one wholly in front has its box from its vertices held to 8192
                        pixels. a8bfc93 made a pass of triangles behind the camera or off one side a write of its whole
