@@ -13,7 +13,8 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const port = Number(process.argv[2] || 8742);
 const pages = 'https://n64hub.github.io';
-const types = { '.md': 'text/markdown', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp' };
+const types = { '.md': 'text/markdown', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp',
+  '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
 
 createServer(async (req, res) => {
   const path = new URL(req.url, 'http://x').pathname;

@@ -10,6 +10,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>N64 Hub: N64 games in the browser</title>
+<!-- The top bar's mark. A game's page links none, so the browser asks the origin for /favicon.ico, the same mark. -->
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="site.css">
 <!-- A game in a frame gets SharedArrayBuffer only if this page is cross-origin isolated too. -->
 <script src="coi_serviceworker.js"></script>
