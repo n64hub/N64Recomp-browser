@@ -240,7 +240,8 @@ The measurements behind each are in docs/findings.md (Ruled out, measured).
 - A cheaper GPU frame for Rush 2049's, Majora's Mask's and Conker's pages in the web's own parts (pass breaks, render to
   RAM's passes, the copies, rt64 008f380's loops). What costs is what the desktop build draws too: RT64's pixel shaders
   and Auto's resolution rounded up to a whole multiple of the game's lines, and changing either would draw differently
-  from the desktop's RT64.
+  from the desktop's RT64. On a phone's Mali too: folding the canvas's clear into the pass that draws into it saved
+  0.14 ms of Conker's 13, and Conker there is held by its game's frames, not its GPU (docs/phones.md).
 - A DirectComposition overlay for a WebGPU canvas in Chrome on Windows: Chromium makes one only of video and
   low-latency canvases, so no flag or page setting gives one.
 - Building Firefox's shader misses where the game sends no frames or with a later section's wait, not at once: a
