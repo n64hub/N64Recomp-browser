@@ -397,6 +397,12 @@ e4c932f                of Time keeps no stored ROM, hands the runtime the player
 N64ModernRuntime       Module.gameStarted called on the page's thread as the game's entrypoint starts, past the
 4746426                launcher: the shell's on-screen controller for phones shows from there, plugged in as a
                        gamepad after SDL has started (SDL opens only a pad that connects later)
+N64ModernRuntime       on a page the timer thread orders its timers by a copy of each one's timestamp, taken as it is
+ba2551b,               added, not by the OSTimer's own, which osSetTimer rewrites on the game's thread: a timer
+a25ea81                restarted while still pending moved inside the set, its erase missed, and it fired at every
+                       pass with no wait, so Banjo-Tooie's page on a phone hung at a level change and ended in
+                       Aborted(OOM) (docs/phones.md); a25ea81 keeps the timers in a TimerSet with a std::set's calls,
+                       so the loop stays each pinned runtime's own (ba2551b's copy of it didn't compile on ca568b6)
 rt64 dd2fd23,          a triangle covers its scissor only where it crosses the camera plane, on every build: one wholly
 baa3753                behind it draws nothing, and one wholly in front has its box from its vertices held to 8192
                        pixels. a8bfc93 made a pass of triangles behind the camera or off one side a write of its whole
@@ -443,7 +449,29 @@ plume f3cb1a7,         an upload buffer of 16 MB or more maps the backend's memo
 rt64 e74c09d           5aa2cbe, without a copy of its own on the calling side: that copy doubled each buffer in the
                        heap, and RecompFrontend's buffer for its launcher's images (an SVG drawn at 4K) took
                        GoldenEye's page, which boots at 1458 MB of its 1536, past its heap 1.7 s after load
+rt64 9c88af0           7844c07's slowest of the last three only where the fastest took one VI: a game at 30 mixing
+                       frames of 2 and 3 VIs or more is timed at the fastest again, as RT64 skipped the third frame it
+                       set each; on a phone, with State's layout right (rt64 43ef41c) both ways, Diddy Kong Racing
+                       presented 58.3 and 58.7 a second against 57.0 and 54.7 (docs/phones.md)
+rt64 b173eb3,          on the web a present is dropped for a newer one only once its own workload is done and the
+rt64 01d734b,          newer one's is too, not as it is taken from the queue: where workloads end after the game's
+rt64 2f9290c           next present comes, every present found a newer one queued and was dropped, and Banjo-Tooie's
+                       page on a phone showed nothing from its attract's second level change on, its game still
+                       running (docs/phones.md); 01d734b moves the function it adds out of the lines Jet Force
+                       Gemini's own RT64 patch changes, and 2f9290c out of where Pokémon Snap's port adds one, where
+                       its web fork's three-way merge put it inside that function without a conflict
+rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_OFFSCREEN_WORKLOADS is: 7844c07 put
+                       fields of VIHistory under it in rt64_vi.h, so a recomp's own code that includes rt64_state.h
+                       (Diddy Kong Racing's F3DDKR and scenery code, Pokémon Snap's render context) saw every State
+                       member after it at another offset than rt64 did; Diddy Kong Racing's race on a desktop GPU
+                       presented 47-68 a second from v0.109.0 on, against 287-305 before and 291.8 with it
 RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
                        times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
                        heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's
+rt64 737169e           a load taller than TMEM skips the rows the later ones overwrite from the row it ends on,
+                       assigned rather than added to where it starts (a load starting past TMEM's first byte wrote
+                       up to 4 KB past TMEM), and only where the rows have no gap between them or the stride divides
+                       TMEM: the same bytes as each row written in turn in 600,000 random loads, the old skip wrong
+                       in 541,644 of the 541,823 it took; on every build. Majora's Mask's and Banjo-Kazooie's tall
+                       loads take it, from TMEM's first byte without gaps, which the old skip got right too
 ```

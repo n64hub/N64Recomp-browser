@@ -1,8 +1,8 @@
-rt64: https://github.com/n64hub/rt64-web 325c7253c39dbe34d2886d7e5703059fb1a1fe32
+rt64: https://github.com/n64hub/rt64-web 737169e68ea5ca369776ca10e81333eb9a6b6f8d
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 79dfc38..48f3a09 100644
+index 79dfc38..fabddc3 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -11,7 +11,14 @@ endif()
@@ -200,7 +200,7 @@ index 79dfc38..48f3a09 100644
 +    target_compile_definitions(rt64 PRIVATE RT64_FREE_DISCARDED_TARGETS=1)
 +endif()
 +if (RT64_UNEVEN_FRAME_RATES OR RT64_WGSL)
-+    target_compile_definitions(rt64 PRIVATE RT64_UNEVEN_FRAME_RATES=1)
++    target_compile_definitions(rt64 PUBLIC RT64_UNEVEN_FRAME_RATES=1)
 +endif()
 +
  # Add common libraries.
@@ -1587,19 +1587,20 @@ index 60b0fa4..11b7dbe 100644
          FlushReason flushReason;
  
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
-index 87392d0..7066b8f 100644
+index 87392d0..2b55545 100644
 --- a/src/hle/rt64_game_frame.cpp
 +++ b/src/hle/rt64_game_frame.cpp
-@@ -2,6 +2,8 @@
+@@ -2,6 +2,9 @@
  // RT64
  //
  
 +#include <algorithm>
++#include <tuple>
 +
  #include "common/rt64_math.h"
  
  #include "rt64_game_frame.h"
-@@ -168,6 +170,55 @@ namespace RT64 {
+@@ -168,6 +171,55 @@ namespace RT64 {
          return (lhs.first < rhs.first) || ((lhs.first == rhs.first) && lhs.second < rhs.second);
      }
  
@@ -1655,7 +1656,7 @@ index 87392d0..7066b8f 100644
      struct MatchCandidate {
          uint32_t curIndex = 0;
          uint32_t prevIndex = 0;
-@@ -403,8 +454,10 @@ namespace RT64 {
+@@ -403,8 +455,10 @@ namespace RT64 {
              return;
          }
  
@@ -1668,7 +1669,7 @@ index 87392d0..7066b8f 100644
          curCallHashMap.clear();
          prevCallHashMap.clear();
  
-@@ -509,17 +562,24 @@ namespace RT64 {
+@@ -509,69 +563,159 @@ namespace RT64 {
              buildCallHashMap(p, prevWorkload, prevProj, prevCallHashMap);
          }
  
@@ -1690,50 +1691,191 @@ index 87392d0..7066b8f 100644
          tileCheckSet.clear();
          lookAtCheckSet.clear();
  
-         // Traverse the map and fill the set with all the combinations of transforms to check.
-         for (std::pair<uint64_t, GameCallMap> curIt : curCallHashMap) {
+-        // Traverse the map and fill the set with all the combinations of transforms to check.
+-        for (std::pair<uint64_t, GameCallMap> curIt : curCallHashMap) {
 -            auto prevRange = prevCallHashMap.equal_range(curIt.first);
-+            auto prevRange = std::equal_range(prevCallHashMap.begin(), prevCallHashMap.end(), std::pair<uint64_t, GameCallMap>{ curIt.first, {} }, byHash);
-             for (auto prevIt = prevRange.first; prevIt != prevRange.second; prevIt++) {
-                 const GameIndices::Projection &curProjIndices = curScene.projections[curIt.second.sceneProjIndex];
-                 const Workload &curWorkload = workloadQueue.workloads[curProjIndices.workloadIndex];
-@@ -542,7 +602,7 @@ namespace RT64 {
-                         const uint32_t prevGroupIndex = prevWorkload.drawData.worldTransformGroups[prevWorldMatrix];
-                         const TransformGroup &prevGroup = prevWorkload.drawData.transformGroups[prevGroupIndex];
-                         if ((curGroup.matrixId == prevGroup.matrixId) && ((curGroup.matrixId == G_EX_ID_AUTO) || ((curGroup.matrixId != G_EX_ID_IGNORE) && (curGroup.ordering == G_EX_ORDER_AUTO)))) {
+-            for (auto prevIt = prevRange.first; prevIt != prevRange.second; prevIt++) {
+-                const GameIndices::Projection &curProjIndices = curScene.projections[curIt.second.sceneProjIndex];
+-                const Workload &curWorkload = workloadQueue.workloads[curProjIndices.workloadIndex];
+-                const FramebufferPair &curFbPair = curWorkload.fbPairs[curProjIndices.fbPairIndex];
+-                const Projection &curProj = curFbPair.projections[curProjIndices.projectionIndex];
+-                const GameCall &curCall = curProj.gameCalls[curIt.second.callIndex];
+-                const GameIndices::Projection &prevProjIndices = prevScene.projections[prevIt->second.sceneProjIndex];
+-                const Workload &prevWorkload = workloadQueue.workloads[prevProjIndices.workloadIndex];
+-                const FramebufferPair &prevFbPair = prevWorkload.fbPairs[prevProjIndices.fbPairIndex];
+-                const Projection &prevProj = prevFbPair.projections[prevProjIndices.projectionIndex];
+-                const GameCall &prevCall = prevProj.gameCalls[prevIt->second.callIndex];
+-                const uint32_t curWorldMatrixCount = (curCall.callDesc.maxWorldMatrix - curCall.callDesc.minWorldMatrix) + 1;
+-                const uint32_t prevWorldMatrixCount = (prevCall.callDesc.maxWorldMatrix - prevCall.callDesc.minWorldMatrix) + 1;
+-                if ((curWorldMatrixCount == prevWorldMatrixCount) && curIt.second.doTransformMatching && prevIt->second.doTransformMatching) {
+-                    for (uint32_t w = 0; w < curWorldMatrixCount; w++) {
+-                        const uint32_t curWorldMatrix = curCall.callDesc.minWorldMatrix + w;
+-                        const uint32_t curGroupIndex = curWorkload.drawData.worldTransformGroups[curWorldMatrix];
+-                        const TransformGroup &curGroup = curWorkload.drawData.transformGroups[curGroupIndex];
+-                        const uint32_t prevWorldMatrix = prevCall.callDesc.minWorldMatrix + w;
+-                        const uint32_t prevGroupIndex = prevWorkload.drawData.worldTransformGroups[prevWorldMatrix];
+-                        const TransformGroup &prevGroup = prevWorkload.drawData.transformGroups[prevGroupIndex];
+-                        if ((curGroup.matrixId == prevGroup.matrixId) && ((curGroup.matrixId == G_EX_ID_AUTO) || ((curGroup.matrixId != G_EX_ID_IGNORE) && (curGroup.ordering == G_EX_ORDER_AUTO)))) {
 -                            transformCheckSet.emplace(curWorldMatrix, prevWorldMatrix);
-+                            transformCheckSet.emplace_back(curWorldMatrix, prevWorldMatrix);
++        // Fill the sets with every combination of transforms, tiles and look ats the calls of a hash could match with the
++        // previous frame's calls of the same hash, a hash's calls at a time. A pair of calls adds the pairs of their
++        // matrices (from their workloads, at the same place in each call's range), of their tiles and of their look
++        // ats, so it adds only what each call's own are: calls with the same range of matrices add the same transform
++        // pairs, and those with no tiles to interpolate or no texture generation add none of those. A group of many
++        // alike calls cost its square: Banjo-Tooie's levels drew up to 398 calls of one hash, a frame of 1,000 calls
++        // made 167,000 pairs of calls for 200-1,800 pairs of transforms, and the matching took 18-23 ms of each game
++        // frame on a phone, 13 ms of it making the pairs. So each side's distinct ranges are paired, and only the calls
++        // that can add a tile or look at pair are, each call's lookups made once. The sets are sorted and their repeats
++        // dropped after, so they hold what pairing every two calls put in them.
++        struct CallMatrices {
++            uint32_t workloadIndex;
++            uint32_t minWorldMatrix;
++            uint32_t maxWorldMatrix;
++
++            bool operator<(const CallMatrices &o) const {
++                return std::tie(workloadIndex, minWorldMatrix, maxWorldMatrix) < std::tie(o.workloadIndex, o.minWorldMatrix, o.maxWorldMatrix);
++            }
++
++            bool operator==(const CallMatrices &o) const {
++                return (workloadIndex == o.workloadIndex) && (minWorldMatrix == o.minWorldMatrix) && (maxWorldMatrix == o.maxWorldMatrix);
++            }
++        };
++
++        struct CallTiles {
++            const Workload *workload;
++            uint32_t tileIndex;
++            uint32_t tileCount;
++            bool doTileMatching;
++        };
++
++        using CallHashIterator = std::vector<std::pair<uint64_t, GameCallMap>>::const_iterator;
++        thread_local std::vector<CallMatrices> curMatrices;
++        thread_local std::vector<CallMatrices> prevMatrices;
++        thread_local std::vector<CallTiles> curTiles;
++        thread_local std::vector<CallTiles> prevTiles;
++        thread_local std::vector<uint32_t> curLookAts;
++        thread_local std::vector<uint32_t> prevLookAts;
++        auto collectCalls = [&](const GameScene &scene, CallHashIterator begin, CallHashIterator end, std::vector<CallMatrices> &matrices,
++            std::vector<CallTiles> &tiles, std::vector<uint32_t> &lookAts)
++        {
++            matrices.clear();
++            tiles.clear();
++            lookAts.clear();
++            for (CallHashIterator it = begin; it != end; it++) {
++                const GameCallMap &callMap = it->second;
++                const GameIndices::Projection &projIndices = scene.projections[callMap.sceneProjIndex];
++                const Workload &workload = workloadQueue.workloads[projIndices.workloadIndex];
++                const FramebufferPair &fbPair = workload.fbPairs[projIndices.fbPairIndex];
++                const Projection &proj = fbPair.projections[projIndices.projectionIndex];
++                const GameCall &call = proj.gameCalls[callMap.callIndex];
++                if (callMap.doTransformMatching) {
++                    matrices.push_back({ projIndices.workloadIndex, call.callDesc.minWorldMatrix, call.callDesc.maxWorldMatrix });
++                }
++
++                if (callMap.doTileInterpolation && (call.callDesc.tileCount > 0)) {
++                    tiles.push_back({ &workload, call.callDesc.tileIndex, call.callDesc.tileCount, bool(callMap.doTileMatching) });
++                }
++
++                // FIXME: We assume the same look at is used throughout the entire draw call, so we only check the first vertex.
++                const uint32_t textureGenMask = G_LIGHTING | G_TEXTURE_GEN;
++                if ((call.callDesc.geometryMode & textureGenMask) == textureGenMask) {
++                    const uint32_t vertexIndex = workload.drawData.faceIndices[call.meshDesc.faceIndicesStart];
++                    lookAts.push_back(workload.drawData.lookAtIndices[vertexIndex] >> RSP_LOOKAT_INDEX_SHIFT);
++                }
++            }
++
++            std::sort(matrices.begin(), matrices.end());
++            matrices.erase(std::unique(matrices.begin(), matrices.end()), matrices.end());
++            std::sort(lookAts.begin(), lookAts.end());
++            lookAts.erase(std::unique(lookAts.begin(), lookAts.end()), lookAts.end());
++        };
++
++        for (CallHashIterator curBegin = curCallHashMap.cbegin(); curBegin != curCallHashMap.cend();) {
++            CallHashIterator curEnd = curBegin;
++            while ((curEnd != curCallHashMap.cend()) && (curEnd->first == curBegin->first)) {
++                curEnd++;
++            }
++
++            auto prevRange = std::equal_range(prevCallHashMap.cbegin(), prevCallHashMap.cend(), *curBegin, byHash);
++            if (prevRange.first != prevRange.second) {
++                collectCalls(curScene, curBegin, curEnd, curMatrices, curTiles, curLookAts);
++                collectCalls(prevScene, prevRange.first, prevRange.second, prevMatrices, prevTiles, prevLookAts);
++                for (const CallMatrices &cur : curMatrices) {
++                    const Workload &curWorkload = workloadQueue.workloads[cur.workloadIndex];
++                    for (const CallMatrices &prev : prevMatrices) {
++                        if ((cur.maxWorldMatrix - cur.minWorldMatrix) != (prev.maxWorldMatrix - prev.minWorldMatrix)) {
++                            continue;
++                        }
++
++                        const Workload &prevWorkload = workloadQueue.workloads[prev.workloadIndex];
++                        const uint32_t worldMatrixCount = (cur.maxWorldMatrix - cur.minWorldMatrix) + 1;
++                        for (uint32_t w = 0; w < worldMatrixCount; w++) {
++                            const uint32_t curWorldMatrix = cur.minWorldMatrix + w;
++                            const uint32_t curGroupIndex = curWorkload.drawData.worldTransformGroups[curWorldMatrix];
++                            const TransformGroup &curGroup = curWorkload.drawData.transformGroups[curGroupIndex];
++                            const uint32_t prevWorldMatrix = prev.minWorldMatrix + w;
++                            const uint32_t prevGroupIndex = prevWorkload.drawData.worldTransformGroups[prevWorldMatrix];
++                            const TransformGroup &prevGroup = prevWorkload.drawData.transformGroups[prevGroupIndex];
++                            if ((curGroup.matrixId == prevGroup.matrixId) && ((curGroup.matrixId == G_EX_ID_AUTO) || ((curGroup.matrixId != G_EX_ID_IGNORE) && (curGroup.ordering == G_EX_ORDER_AUTO)))) {
++                                transformCheckSet.emplace_back(curWorldMatrix, prevWorldMatrix);
++                            }
                          }
                      }
                  }
-@@ -556,7 +616,7 @@ namespace RT64 {
+ 
+-                if ((curCall.callDesc.tileCount == prevCall.callDesc.tileCount) && (curIt.second.doTileInterpolation && prevIt->second.doTileInterpolation)) {
+-                    for (uint32_t t = 0; t < curCall.callDesc.tileCount; t++) {
+-                        const DrawCallTile &curCallTile = curWorkload.drawData.callTiles[curCall.callDesc.tileIndex + t];
+-                        const DrawCallTile &prevCallTile = prevWorkload.drawData.callTiles[prevCall.callDesc.tileIndex + t];
+-                        bool doTileMatching = curIt.second.doTileMatching && prevIt->second.doTileMatching;
+-                        if (doTileMatching && (curCallTile.tmemHashOrID != prevCallTile.tmemHashOrID)) {
++                for (const CallTiles &cur : curTiles) {
++                    for (const CallTiles &prev : prevTiles) {
++                        if (cur.tileCount != prev.tileCount) {
                              continue;
                          }
  
 -                        tileCheckSet.emplace(curCall.callDesc.tileIndex + t, prevCall.callDesc.tileIndex + t);
-+                        tileCheckSet.emplace_back(curCall.callDesc.tileIndex + t, prevCall.callDesc.tileIndex + t);
++                        const bool doTileMatching = cur.doTileMatching && prev.doTileMatching;
++                        for (uint32_t t = 0; t < cur.tileCount; t++) {
++                            const DrawCallTile &curCallTile = cur.workload->drawData.callTiles[cur.tileIndex + t];
++                            const DrawCallTile &prevCallTile = prev.workload->drawData.callTiles[prev.tileIndex + t];
++                            if (doTileMatching && (curCallTile.tmemHashOrID != prevCallTile.tmemHashOrID)) {
++                                continue;
++                            }
++
++                            tileCheckSet.emplace_back(cur.tileIndex + t, prev.tileIndex + t);
++                        }
                      }
                  }
  
-@@ -569,11 +629,16 @@ namespace RT64 {
-                     const uint32_t prevVertexIndex = prevWorkload.drawData.faceIndices[prevCall.meshDesc.faceIndicesStart];
-                     const uint32_t curLookAtIndex = curWorkload.drawData.lookAtIndices[curVertexIndex] >> RSP_LOOKAT_INDEX_SHIFT;
-                     const uint32_t prevLookAtIndex = prevWorkload.drawData.lookAtIndices[prevVertexIndex] >> RSP_LOOKAT_INDEX_SHIFT;
+-                const uint32_t textureGenMask = G_LIGHTING | G_TEXTURE_GEN;
+-                const bool curUsesTextureGen = (curCall.callDesc.geometryMode & textureGenMask) == textureGenMask;
+-                const bool prevUsesTextureGen = (prevCall.callDesc.geometryMode & textureGenMask) == textureGenMask;
+-                if (curUsesTextureGen && prevUsesTextureGen && (true && true)) { // TODO: Do look at matching condition.
+-                    // FIXME: We assume the same look at is used throughout the entire draw call, so we only check the first vertex.
+-                    const uint32_t curVertexIndex = curWorkload.drawData.faceIndices[curCall.meshDesc.faceIndicesStart];
+-                    const uint32_t prevVertexIndex = prevWorkload.drawData.faceIndices[prevCall.meshDesc.faceIndicesStart];
+-                    const uint32_t curLookAtIndex = curWorkload.drawData.lookAtIndices[curVertexIndex] >> RSP_LOOKAT_INDEX_SHIFT;
+-                    const uint32_t prevLookAtIndex = prevWorkload.drawData.lookAtIndices[prevVertexIndex] >> RSP_LOOKAT_INDEX_SHIFT;
 -                    lookAtCheckSet.emplace(curLookAtIndex, prevLookAtIndex);
-+                    lookAtCheckSet.emplace_back(curLookAtIndex, prevLookAtIndex);
++                for (uint32_t curLookAt : curLookAts) {
++                    for (uint32_t prevLookAt : prevLookAts) {
++                        lookAtCheckSet.emplace_back(curLookAt, prevLookAt);
++                    }
                  }
              }
-         }
- 
++
++            curBegin = curEnd;
++        }
++
 +        // Sorted and without repeats, as the sets were.
 +        for (std::vector<IndexPair> *checkSet : { &transformCheckSet, &tileCheckSet, &lookAtCheckSet }) {
 +            sortUniqueIndexPairs(*checkSet);
-+        }
-+
+         }
+ 
          // Compute all the differences between transforms and insert them into a vector that will be sorted according to the differences.
-         thread_local std::vector<MatchCandidate> matchCandidates;
-         matchCandidates.clear();
-@@ -669,14 +734,48 @@ namespace RT64 {
+@@ -669,14 +813,48 @@ namespace RT64 {
              const bool wrappedUlt = (curTile.cmt == G_TX_WRAP) && (modulo(integerUlt, curTile.maskt * 4) == modulo(expectedUlt, curTile.maskt * 4));
              const bool wrappedLrs = (curTile.cms == G_TX_WRAP) && (modulo(integerLrs, curTile.masks * 4) == modulo(expectedLrs, curTile.masks * 4));
              const bool wrappedLrt = (curTile.cmt == G_TX_WRAP) && (modulo(integerLrt, curTile.maskt * 4) == modulo(expectedLrt, curTile.maskt * 4));
@@ -1786,7 +1928,7 @@ index 87392d0..7066b8f 100644
              curTileMap.mapped = true;
              firstCurWorkloadMap.prevTilesMapped[indices.second] = true;
              tileInterpolationUsed = tileInterpolationUsed || tileScrolled;
-@@ -784,7 +883,7 @@ namespace RT64 {
+@@ -784,7 +962,7 @@ namespace RT64 {
          }
      }
      
@@ -1795,7 +1937,7 @@ index 87392d0..7066b8f 100644
          for (uint32_t c = 0; c < proj.gameCallCount; c++) {
              const GameCall &call = proj.gameCalls[c];
              uint32_t matrixIdHash = 0;
-@@ -802,7 +901,7 @@ namespace RT64 {
+@@ -802,7 +980,7 @@ namespace RT64 {
                  doTileMatching = doTileMatching || (group.tileInterpolation == G_EX_COMPONENT_AUTO);
              }
  
@@ -1838,7 +1980,7 @@ index dccaa87..aeae7a6 100644
                      func(state, &dl);
                  }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index 3227ab1..ad46c52 100644
+index 3227ab1..2eda300 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -7,6 +7,10 @@
@@ -1964,11 +2106,11 @@ index 3227ab1..ad46c52 100644
 +#               else
                      Timer::preciseSleepUntil(presentTimestamp + std::chrono::nanoseconds(1'000'000'000 / targetRate));
 +#               endif
-+                }
+                 }
 +#           if defined(__EMSCRIPTEN__)
 +                else {
 +                    presentSlot = Timestamp();
-                 }
++                }
 +#           endif
  
                  if (presentWaitEnabled) {
@@ -2177,7 +2319,12 @@ index 3227ab1..ad46c52 100644
      void PresentQueue::notifyPresentId(const Present &present) {
          {
              std::scoped_lock<std::mutex> cursorLock(presentIdMutex);
-@@ -450,8 +704,10 @@ namespace RT64 {
+@@ -446,12 +700,15 @@ namespace RT64 {
+ 
+         int processCursor = -1;
+         bool skipPresent = false;
++        bool newerQueued = false;
+         uint32_t displayTimingRate = UINT32_MAX;
          const bool displayTiming = ext.device->getCapabilities().displayTiming;
          bool swapChainValid = !ext.swapChain->needsResize();
          while (presentThreadRunning) {
@@ -2188,10 +2335,20 @@ index 3227ab1..ad46c52 100644
                  cursorCondition.wait(cursorLock, [&]() {
                      return (writeCursor != threadCursor) || !presentThreadRunning;
                  });
-@@ -463,6 +719,22 @@ namespace RT64 {
-                 }
-             }
- 
+@@ -459,7 +716,23 @@ namespace RT64 {
+                 if (presentThreadRunning) {
+                     processCursor = threadCursor;
+                     threadCursor = (threadCursor + 1) % presents.size();
+-                    skipPresent = (writeCursor != threadCursor);
++#               if defined(__EMSCRIPTEN__)
++                    // Decided once this present's workload is done (below).
++                    newerQueued = false;
++#               else
++                    newerQueued = (writeCursor != threadCursor);
++#               endif
++                }
++            }
++
 +            // present-stats: a game frame ended at each present the thread came to without waiting for it, unless the one
 +            // before was dropped (a second of a burst, reported without the frames).
 +            if (presentStats && (processCursor >= 0)) {
@@ -2200,27 +2357,22 @@ index 3227ab1..ad46c52 100644
 +                }
 +                else if (!lastPresentDropped) {
 +                    busyFrames++;
-+                }
-+
-+                lastPresentDropped = skipPresent;
-+                if (skipPresent) {
-+                    reportDroppedPresent(processCursor, threadCursor);
-+                }
-+            }
-+
-             if (processCursor >= 0) {
-                 std::unique_lock<std::mutex> threadLock(threadMutex);
-                 const bool needsResize = ext.swapChain->needsResize() || !swapChainValid;
-@@ -503,13 +775,26 @@ namespace RT64 {
+                 }
+             }
  
-                 skipPresent = skipPresent || ext.swapChain->isEmpty();
+@@ -501,15 +774,49 @@ namespace RT64 {
+                     }
+                 }
  
+-                skipPresent = skipPresent || ext.swapChain->isEmpty();
++                skipPresent = newerQueued || ext.swapChain->isEmpty();
++
 +#           if defined(__EMSCRIPTEN__)
 +                // A hidden page shows nothing, and in Chrome a present's wait could hold this thread for seconds there
 +                // (plume's isHidden()), and the game behind it, whose sound broke up. So it presents nothing until shown.
 +                skipPresent = skipPresent || ext.swapChain->isHidden();
 +#           endif
-+
+ 
                  Present &present = presents[processCursor];
 -                ext.workloadQueue->waitForWorkloadId(present.workloadId);
 +                {
@@ -2232,6 +2384,27 @@ index 3227ab1..ad46c52 100644
                      continue;
                  }
  
++#           if defined(__EMSCRIPTEN__)
++                // A present is dropped for a newer one only if the newer one's workload is done too, so it can be shown in
++                // its place now. Decided when this one was taken from the queue, before its workload, a page whose workloads
++                // end later than the game's next present comes (a phone's CPU, slowed by its heat, at a level's start) found
++                // a newer one queued each time and dropped every present: Banjo-Tooie on a Galaxy S21 went on at 15-20 game
++                // frames a second showing none, for good. Workloads end in order, so the next one is the one to look at.
++                {
++                    const std::scoped_lock cursorLock(cursorMutex);
++                    newerQueued = (writeCursor != threadCursor) && ext.workloadQueue->isWorkloadDone(presents[threadCursor].workloadId);
++                }
++
++                skipPresent = skipPresent || newerQueued;
++#           endif
++
++                if (presentStats) {
++                    lastPresentDropped = newerQueued;
++                    if (newerQueued) {
++                        reportDroppedPresent(processCursor, threadCursor);
++                    }
++                }
++
 +#           if defined(__EMSCRIPTEN__)
 +                pace(skipPresent && !ext.swapChain->isEmpty());
 +#           endif
@@ -2303,20 +2476,10 @@ index e08b02c..7b7d896 100644
          void threadAdvanceBarrier();
          void threadLoop();
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index a10c11a..bce5c80 100644
+index a10c11a..b7fa72d 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
-@@ -4,7 +4,9 @@
- 
- #include "rt64_rdp.h"
- 
-+#include <atomic>
- #include <cassert>
-+#include <cstdio>
- 
- #include "../include/rt64_extended_gbi.h"
- 
-@@ -388,6 +390,19 @@ namespace RT64 {
+@@ -388,6 +388,19 @@ namespace RT64 {
              TMEM[((tmemAddress + 2) ^ tmemXorMask) | UpperTMEM] = RDRAM[(textureAddress + (6 & offsetMask)) ^ 3];
              TMEM[((tmemAddress + 3) ^ tmemXorMask) | UpperTMEM] = RDRAM[(textureAddress + (7 & offsetMask)) ^ 3];
          }
@@ -2336,7 +2499,7 @@ index a10c11a..bce5c80 100644
          else {
              // Copy the entire word.
              for (uint32_t i = 0; i < 8; i++) {
-@@ -446,10 +461,21 @@ namespace RT64 {
+@@ -446,10 +459,13 @@ namespace RT64 {
          };
  
          // As an optimization for large texture loads that end up wrapping around in TMEM, we skip rows that have no effect in the final result.
@@ -2344,14 +2507,6 @@ index a10c11a..bce5c80 100644
 +        // The rows kept cover every word a skipped row wrote only where the rows have no gaps between them, or where the stride divides
 +        // TMEM and each skipped row's words are written again by a kept row: elsewhere a skipped row's words in a gap would be lost.
 +        const uint32_t rowBytes = wordsPerRow * tmemAdvance;
-+        if ((tmemStride > 0) && (rowBytes <= tmemStride) && (int32_t(rowCount) > int32_t((tmemMask + tmemStride) / tmemStride))) {
-+            static std::atomic<int> logged{ 0 };
-+            if (logged.fetch_add(1) < 40) {
-+                const bool skipsNow = (rowBytes == tmemStride) || (((tmemMask + 1) % tmemStride) == 0);
-+                fprintf(stderr, "TMEMSKIP rgba32 %d tlut %d tmemStart %u stride %u rowBytes %u rows %u: old misplaced %d, skips now %d\n",
-+                    RGBA32, TLUT, tmemStart & tmemMask, tmemStride, rowBytes, rowCount, (tmemStart & tmemMask) != 0, skipsNow);
-+            }
-+        }
 +        if ((tmemStride > 0) && ((rowBytes == tmemStride) || ((rowBytes < tmemStride) && (((tmemMask + 1) % tmemStride) == 0)))) {
              int32_t rowsToSkip = rowCount - (tmemMask + tmemStride) / tmemStride;
              if (rowsToSkip > 0) {
@@ -2360,7 +2515,7 @@ index a10c11a..bce5c80 100644
                  textureAddressRow += textureStride * rowsToSkip;
                  tmemXorMask = (rowsToSkip & 0x1) << 2;
                  rowCount -= rowsToSkip;
-@@ -959,7 +985,8 @@ namespace RT64 {
+@@ -959,7 +975,8 @@ namespace RT64 {
      }
      
      void RDP::setPrimDepth(uint16_t z, uint16_t dz) {
@@ -3007,7 +3162,7 @@ index 7a8c13b..7d41b0a 100644
          void setExtendedRDRAM(bool isExtended);
          void setTexcoordWrapPoint(int16_t wrapU, int16_t wrapV);
 diff --git a/src/hle/rt64_vi.cpp b/src/hle/rt64_vi.cpp
-index a870166..ada77d7 100644
+index a870166..5462e7d 100644
 --- a/src/hle/rt64_vi.cpp
 +++ b/src/hle/rt64_vi.cpp
 @@ -93,6 +93,13 @@ namespace RT64 {
@@ -3035,7 +3190,7 @@ index a870166..ada77d7 100644
      }
  
      void VIHistory::pushVI(const VI &vi, uint32_t fbWidth) {
-@@ -159,16 +170,38 @@ namespace RT64 {
+@@ -159,16 +170,37 @@ namespace RT64 {
      void VIHistory::pushFactor(uint32_t factor) {
          factorCursor = (factorCursor + 1) % factors.size();
          factors[factorCursor] = factor;
@@ -3062,10 +3217,9 @@ index a870166..ada77d7 100644
 +        // frames late, and now and then a game frame is not shown. At the fastest such a game got one drawn frame a game
 +        // frame on a 60 Hz display (the game's rate the display's, nothing to interpolate), presents about the game's
 +        // rate. A game at 30 mixing frames of 2 and 3 VIs is interpolated at the fastest however often it takes 3: there
-+        // it already draws two frames a game frame, and a third costs the workload thread more than it shows (such a
-+        // game on a phone drew 50 frames a second for its 29 at the slowest, 57 at the fastest). Only while the slowest
-+        // took at most twice the VIs of the fastest, so a load's frame of dozens of VIs leaves its frames uninterpolated
-+        // as before: RT64 keeps a color target for every display frame of a game frame.
++        // it already draws two frames a game frame, and a third costs the workload thread more than it shows. Only while
++        // the slowest took at most twice the VIs of the fastest, so a load's frame of dozens of VIs leaves its frames
++        // uninterpolated as before: RT64 keeps a color target for every display frame of a game frame.
 +        const auto range = std::minmax_element(factors.begin(), factors.end());
 +        if ((*range.first != 0) && (*range.second <= (*range.first * 2))) {
 +            const uint32_t slowest = *range.second;
@@ -3128,7 +3282,7 @@ index 8ea27d5..f97f6c6 100644
  
          void reset();
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..3aca75c 100644
+index 5a331aa..9059274 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -111,12 +111,19 @@ namespace RT64 {
@@ -3287,7 +3441,19 @@ index 5a331aa..3aca75c 100644
          }
  
          if ((overrideTarget != nullptr) && !usingMSAA) {
-@@ -888,6 +943,9 @@ namespace RT64 {
+@@ -878,6 +933,11 @@ namespace RT64 {
+         workloadIdCondition.notify_all();
+     }
+ 
++    bool WorkloadQueue::isWorkloadDone(uint64_t id) {
++        const std::scoped_lock lock(workloadIdMutex);
++        return (id <= workloadId);
++    }
++
+     void WorkloadQueue::renderThreadLoop() {
+         Thread::setCurrentThreadName("RT64 Workload");
+ 
+@@ -888,6 +948,9 @@ namespace RT64 {
          uint32_t displayRateForTicks = 0;
          int processCursor = -1;
          bool frameReduction = false;
@@ -3297,7 +3463,7 @@ index 5a331aa..3aca75c 100644
          while (threadsRunning) {
              {
                  std::unique_lock<std::mutex> cursorLock(cursorMutex);
-@@ -902,6 +960,12 @@ namespace RT64 {
+@@ -902,6 +965,12 @@ namespace RT64 {
              }
  
              if (processCursor >= 0) {
@@ -3310,7 +3476,7 @@ index 5a331aa..3aca75c 100644
                  std::unique_lock<std::mutex> threadLock(threadMutex);
                  Workload &workload = workloads[processCursor];
                  ext.presentQueue->waitForPresentId(workload.presentId);
-@@ -914,22 +978,36 @@ namespace RT64 {
+@@ -914,22 +983,36 @@ namespace RT64 {
                  workloadProfiler.start();
                  threadConfigurationUpdate(workload.viFbSize, workloadConfig);
  
@@ -3351,7 +3517,7 @@ index 5a331aa..3aca75c 100644
                      std::scoped_lock<std::mutex> managerLock(ext.sharedResources->managerMutex);
                      FramebufferManager &fbManager = ext.sharedResources->framebufferManager;
                      std::vector<uint32_t> &colorVector = ext.sharedResources->colorImageAddressVector;
-@@ -973,7 +1051,7 @@ namespace RT64 {
+@@ -973,7 +1056,7 @@ namespace RT64 {
                  float prevFrameWeight = 0.0f;
                  float curFrameWeight = 1.0f;
                  float deltaTimeMs = 1.0f / 30.0f;
@@ -3360,7 +3526,7 @@ index 5a331aa..3aca75c 100644
                  bool generateInterpolatedFrames = false;
                  bool velocityUploaderUsed = false;
                  bool tileInterpolationUsed = false;
-@@ -1022,7 +1100,7 @@ namespace RT64 {
+@@ -1022,7 +1105,7 @@ namespace RT64 {
                  
                  // Get the current and previous set of frame counters. The other set can be in use by the present queue. Skip if no new present event has arrived before this workload event.
                  InterpolatedFrameCounters &prevFrameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
@@ -3369,7 +3535,7 @@ index 5a331aa..3aca75c 100644
                  if (useDifferentCounters) {
                      ext.sharedResources->interpolatedFramesIndex = ext.sharedResources->interpolatedFramesIndex ^ 1;
                      lastPresentId = workload.presentId;
-@@ -1037,17 +1115,30 @@ namespace RT64 {
+@@ -1037,17 +1120,30 @@ namespace RT64 {
                  }
  
                  InterpolatedFrameCounters &curFrameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
@@ -3404,7 +3570,7 @@ index 5a331aa..3aca75c 100644
                      uint32_t previousSize = uint32_t(interpolatedTargets.size());
                      interpolatedTargets.resize(requiredFrames);
                      for (uint32_t i = previousSize; i < requiredFrames; i++) {
-@@ -1063,6 +1154,15 @@ namespace RT64 {
+@@ -1063,6 +1159,15 @@ namespace RT64 {
                  bool skipWorkloadNow = false;
                  uint32_t targetIndex = 0;
                  uint32_t framesRendered = 0;
@@ -3420,7 +3586,7 @@ index 5a331aa..3aca75c 100644
                  int64_t renderTimeTotalMicro = 0;
                  for (uint32_t frame = 0; (frame < displayFrames) && !skipWorkloadNow; frame++) {
                      // Evaluate if this frame should be skipped. Measure the current time and compare it to what frame is estimated should be have been rendered by now.
-@@ -1086,15 +1186,43 @@ namespace RT64 {
+@@ -1086,15 +1191,43 @@ namespace RT64 {
  
                          // Override the render target.
                          if (usingMSAA || (frame > 0)) {
@@ -3469,7 +3635,7 @@ index 5a331aa..3aca75c 100644
                                  });
                              }
  
-@@ -1130,10 +1258,7 @@ namespace RT64 {
+@@ -1130,10 +1263,7 @@ namespace RT64 {
  
                      // For every additional frame, we increase the frames available and notify the present queue.
                      if (generateInterpolatedFrames && (usingMSAA || (frame > 0))) {
@@ -3481,7 +3647,7 @@ index 5a331aa..3aca75c 100644
  
                          {
                              std::scoped_lock<std::mutex> managerLock(ext.sharedResources->interpolatedMutex);
-@@ -1164,7 +1289,41 @@ namespace RT64 {
+@@ -1164,7 +1294,41 @@ namespace RT64 {
  
                  threadConfigurationValidate();
  
@@ -3525,7 +3691,7 @@ index 5a331aa..3aca75c 100644
                  }
  
 diff --git a/src/hle/rt64_workload_queue.h b/src/hle/rt64_workload_queue.h
-index bde2f03..3eb3b9e 100644
+index bde2f03..2b7884f 100644
 --- a/src/hle/rt64_workload_queue.h
 +++ b/src/hle/rt64_workload_queue.h
 @@ -23,11 +23,26 @@
@@ -3572,6 +3738,14 @@ index bde2f03..3eb3b9e 100644
          std::unique_ptr<RenderQueryPool> queryPool;
          FramebufferChangePool scratchFbChangePool;
          ProfilingTimer rendererCPUProfiler = ProfilingTimer(120);
+@@ -122,5 +146,6 @@ namespace RT64 {
+         void threadAdvanceWorkloadId(uint64_t newWorkloadId);
+         void renderThreadLoop();
+         void idleThreadLoop();
++        bool isWorkloadDone(uint64_t id);
+     };
+ };
+\ No newline at end of file
 diff --git a/src/render/rt64_descriptor_sets.h b/src/render/rt64_descriptor_sets.h
 index 69a82ac..1dd31f7 100644
 --- a/src/render/rt64_descriptor_sets.h

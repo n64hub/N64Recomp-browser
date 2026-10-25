@@ -16,10 +16,11 @@ numbers that mean nothing.
   (play_phone.mjs) and its screencaps. A step run outside the turn can land in another agent's play.
 - The script puts back what it changed before it exits, on failure too (a `trap ... EXIT` in a shell script): the
   next turn starts from the phone as this one left it. That is Chrome's command line (the file deleted, the flag
-  reset, Chrome restarted), each `scaling_max_freq` at the value read before it was written, `svc power stayon` and
-  `screen_off_timeout`, the forwards and reverses it made (`adb forward --remove tcp:<port>`,
-  `adb reverse --remove tcp:<port>`), and the tabs it opened (`/json/close/<id>`). play_phone.mjs makes its forward
-  and opens its tab but leaves both when it ends, so the script removes them.
+  reset, Chrome restarted), each `scaling_max_freq` at the value read before it was written, the forwards and
+  reverses it made (`adb forward --remove tcp:<port>`, `adb reverse --remove tcp:<port>`), and the tabs it opened
+  (`/json/close/<id>`). play_phone.mjs makes its forward and opens its tab but leaves both when it ends, so the script
+  removes them. Not the screen's timeout or `svc power stayon`: a shared phone left to sleep locks, and only a person
+  unlocks it, so every turn leaves them long and on.
 - One play a turn, as on the GPU, so other agents' turns come between a series; the phone rests between plays anyway
   (Measuring, heat). A turn's limit fits its play and the restarts around it.
 
@@ -42,8 +43,8 @@ numbers that mean nothing.
   the notification shade): `adb shell dumpsys window | grep mCurrentFocus` names the window in front.
 - The phone's clock is not the computer's: the console's timestamps ran 11.1-11.8 s ahead. play_phone.mjs reads the
   lead at the start and takes it off.
-- Keep the screen on while a computer drives it: `adb shell svc power stayon true` (and `false` after), or a longer
-  `settings put system screen_off_timeout <ms>`; note the old value to put back.
+- Keep the screen on while a computer drives it: `adb shell svc power stayon true` and a long
+  `settings put system screen_off_timeout <ms>`, left so after (Sharing a phone).
 
 ## Driving a page
 
@@ -126,8 +127,10 @@ while game frames fall. Telling them apart:
 - A game that runs at 60 where it can (Rush 2049 at its 60 fps, Perfect Dark) and that a phone's CPU holds to 30-50
   mixes frames of one and two VIs. Timed at the shortest of the last three (RT64_UNEVEN_FRAME_RATES before rt64
   7844c07), the display's own 60 leaves RT64 nothing to interpolate, so it drew one frame for each game frame and
-  presents fell to about the game's rate. Now, while the longer took 3 of the last 8 frames, a frame is timed at the
-  longer and gets two: Rush 2049's race without its own hold presented 53 a second against 38-42 (below). The same
+  presents fell to about the game's rate. Now, where the shorter is one VI and the longer took 3 of the last 8 frames,
+  a frame is timed at the longer and gets two: Rush 2049's race without its own hold presented 53 a second against
+  38-42 (below). A game at 30 mixing frames of 2 and 3 VIs or more is timed at the shorter, as before: timed at the
+  longer, each frame was set three or more, and RT64 skipped them (Other games on a Galaxy S21). The same
   game held to 30 gets two for each frame and drops none, and still presents a few more, so such a game's own code
   holds it to 30 on a page while it can't keep 60 up (Rush 2049 and Perfect Dark below).
 - A GPU's load says little on a phone: its clock follows the load, so a lighter frame (resolution Original) ran the
@@ -256,6 +259,41 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   against 53.2 and 53.1 without, the game at 25.5-28.1 either way. It held in both its runs (29-48 frames a second),
   and gained nothing: the slower-rate rule gives a 60 the CPU can't keep the two frames each a hold did, so the hold
   stays off Jet Force Gemini's main.
+- The seven pages not played here before, and Perfect Dark's intro beside them: the page from Pages (v0.106.0), its
+  attract after Start Game with no input, presents a second from Start Game to 90 s after it (median of 5 s samples,
+  their range). Wave Race 64 cool (big cores at 1.35-1.56 GHz, skin 33-36 °C): 59.4 (56.5-60.5). The rest hot and
+  charging, big cores held at 1.04 GHz and the GPU at 403 MHz, skin 36-40 °C: Star Fox 64 59.3 (52-61), Diddy Kong
+  Racing 57.8 (30-60), Pilotwings 64 54.3 (34-62), Pokémon Snap 53.2 (48-60), Perfect Dark 47.1 (16-57), Rush 2 35.6
+  (3-55) and Banjo-Tooie 30.3 (2-58), its title scene at 6-30. plume waited for fewer presents in flight only in
+  Perfect Dark's worst stretch, so the GPU held back none of the others.
+- The same, main (v0.109.0, whose present-stats has the RT64 line) against the page from Pages, interleaved, the last
+  minute of each, big cores at 1.04 GHz and the GPU at 403 MHz, skin 37-38 °C: Perfect Dark 60.1 presents a second
+  against 60.0, the game at 30.2 and RT64 drawing 60.4 for it; Pilotwings 64 58.1 against 52.4, the game at 54.7; Rush
+  2 49.3 against 43.3; Banjo-Tooie 29.4, the game at 29 and RT64 drawing 30.2 for it, where Pages' run froze at a
+  frame, then ran out of memory (Aborted(OOM)); Diddy Kong Racing 44 against 56.4, the game at 28.5 and 40.3 drawn;
+  Pokémon Snap 41.7 against 53.5, the game at 14.9 and 41.4 drawn. So main had made the last two worse.
+- What did: State's layout. rt64 7844c07 put two of VIHistory's fields under `#if RT64_UNEVEN_FRAME_RATES` in
+  rt64_vi.h, but CMake defined it for rt64's own files only, so the two games' own code that includes rt64_state.h
+  (Diddy Kong Racing's F3DDKR and scenery code, Pokémon Snap's render context) read every State member after it at
+  another offset than rt64 wrote it. On a desktop GPU too: Diddy Kong Racing's race presented 47-68 a second uncapped
+  from v0.109.0 on against 287-305 on v0.106.0-v0.108.0, the GPU 99% busy, and 291.8 with the definition public
+  (rt64 43ef41c). On the phone, Diddy Kong Racing on v0.108.0 against v0.109.0, interleaved, the same caps: 57.0 and
+  57.4 frames drawn a second against 49.8 and 50.3, presents 56.3 and 56.9 against 53.8 and 51.6.
+- With the layout right in both, 7844c07's slowest of the last three against it taken only where the fastest took one
+  VI (rt64 9c88af0), interleaved (9c88af0, 7844c07, 7844c07, 9c88af0), big cores at 1.04 GHz and the GPU at 403 MHz,
+  skin 37.6-40.2 °C: Diddy Kong Racing 58.3 and 58.7 presents a second against 57.0 and 54.7, 57.2-58.0 drawn in all
+  four, the game at 28-30. Pokémon Snap 48.4 and 57.5 against 46.1 and 38.0, but its attract went another way in the
+  last play (a minute at 12-17 game frames a second, then 30), and over the same stretches the other three drew alike:
+  59-60 a second where the game came at 30, 22-59 where it came at 7-20. So 9c88af0 changes little. An earlier pair of
+  the two had the layout wrong in both builds and read Pokémon Snap at 51-53 against 24-30.
+- Banjo-Tooie, both ways: from about 90 s after Start Game, its game at 28-30 of the 30 it reports and RT64 drawing
+  one frame for each, so presents about 30. RT64's workload thread took 37-78 ms to set up each game frame, more than
+  the game frame's 33, so it had no time for the frame between and skipped it: the CPU, in RT64's own work for this
+  game's frames, not the GPU (plume never waited for fewer presents in flight there).
+- Rush 2's attract, both ways: the game at 5-7 frames a second (it reports 5-7, 30 on a console), RT64 drawing 50 for
+  them, the interpolated frames 80-105 ms of the workload thread's time a game frame, each present done on the GPU
+  35 ms after it and plume waiting 41-44 ms a second for fewer than 4 in flight. Its game frames hold it, the GPU
+  besides.
 
 ## Conker's Bad Fur Day on a Galaxy S21
 
@@ -314,3 +352,37 @@ main's build (v0.107.0) served in its place, with present-stats.
 - What is left of a list is RT64's own work, as on a desktop: in that profile, without the wait, `State::fullSync`
   25% of the thread (the tiles' TMEM loads and hashes 11.5%, recording the workload 8.5%) and the microcode's vertices
   and triangles 20%.
+
+## Banjo-Tooie on a Galaxy S21
+
+Its attract after Start Game, 240 s of it (about 300 s of the page's time), Chrome 156, charging, big cores held at
+1.04-1.35 GHz (skin 33-42 °C): the page from Pages (built on v0.106.0), or that page built with prints, served in its
+place. The attract changes level about 125 s and 250 s into the page.
+
+- Before rt64 b173eb3, every one of 7 plays that reached the second level change presented nothing from there on,
+  0 a second to the play's end, while the page's thread kept its 60 animation frames and the game its 15-20 frames:
+  RT64's present thread dropped every present for a newer one. It decided as it took a present from the queue, before
+  waiting for the present's workload, and there each workload ended 89-291 ms after its present was queued (p10-p90,
+  5,634 presents) where the game's next present came 33-111 ms after it, so a newer one was always queued. Every play
+  also went to 0-4 a second for a few seconds at the first level change, as cool (big cores at 1.35 GHz, skin
+  33-34 °C) as hot. play_phone.mjs prints a trace site's first lines only, so the drops' own lines stop early in a log.
+- With rt64 b173eb3 (a present dropped only once its workload is done and the newer one's too): 7 of 7 plays kept
+  presenting after the second change, 8-22 a second (big cores at 1.04 GHz, skin 36-42 °C), and none fell under 21 at
+  the first; before the changes 53-54 a second (each play's median), as before. After the change the GPU was 0-85%
+  busy at 130 MHz, so what holds those 8-22 is the CPU's work for each workload.
+- A rarer hang, the one that ends in `Aborted(OOM)`: in 3 of the 10 plays before rt64 b173eb3 and 1 of the 11 with
+  it, the game stopped in or just after a level change (126, 151, 247 and 257 s), its watchdog's frame no longer
+  counting and presents at 0. One game thread called `osSendMesg` and `osRecvMesg` in a loop and never blocked, 92-93%
+  of its time in `QueuedMessage::send_blocked_messages` (from `dequeue_external_messages`), above the priority of the
+  game's main thread, which waited to run again and never did, while the runtime's timer thread sent it messages flat
+  out and the page's heap grew from 664 MB to 1062 MB in the 30 s after the game stopped. The game's scheduler
+  restarts two timers at each retrace (osStopTimer, then osSetTimer), and where the timer thread runs late one is
+  still pending as it does: about 10 times a second through a play, 2,048 times in its first 190 s. osSetTimer writes
+  the new timestamp as it is called, and the timer thread's set was ordered by that timestamp, so a restart that
+  swapped the two timers' order left the set out of order: its erase missed, and the timer stayed first and fired at
+  every pass with no wait, its messages held for a full queue faster than the game took them. With N64ModernRuntime
+  ba2551b and a25ea81 (the set ordered by a copy of each timestamp), 9 of 9 plays ran to their end, 55-57 presents a
+  second (each play's median), no message ever held and the heap at 735-737 MB at the end, through the same 2,048
+  restarts of a pending timer by 190 s. play_phone.mjs shows only the console lines it looks for, so a probe's print
+  that names none of RT64, plume, WebGPU, shader, error or warn doesn't reach its log.
+- The page's heap (the break of its 1536 MB) held at 575-717 MB through each play with rt64 b173eb3.
