@@ -1,8 +1,8 @@
-rt64: https://github.com/n64hub/rt64-web 9c88af0632716f2cf3fbee8198f8f3610e5cb13c
+rt64: https://github.com/n64hub/rt64-web a3471fe0b13a0555406fa73f6f1f22174b33501e
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 79dfc38..48f3a09 100644
+index 79dfc38..fabddc3 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -11,7 +11,14 @@ endif()
@@ -200,7 +200,7 @@ index 79dfc38..48f3a09 100644
 +    target_compile_definitions(rt64 PRIVATE RT64_FREE_DISCARDED_TARGETS=1)
 +endif()
 +if (RT64_UNEVEN_FRAME_RATES OR RT64_WGSL)
-+    target_compile_definitions(rt64 PRIVATE RT64_UNEVEN_FRAME_RATES=1)
++    target_compile_definitions(rt64 PUBLIC RT64_UNEVEN_FRAME_RATES=1)
 +endif()
 +
  # Add common libraries.
