@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web 75e5f85401e25a0c0d2c5c9949e4a7539479c9f1
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web bf98192c9e748d085bef566787367652eb1e103c
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
@@ -402,7 +402,7 @@ index e99229a..d732a2b 100644
  #include "RmlUi/Core/StreamMemory.h"
  #include "RmlUi/../../Source/Core/DocumentHeader.h"
 diff --git a/recompui/src/renderer/rt64_render_context.cpp b/recompui/src/renderer/rt64_render_context.cpp
-index a7954c7..61c6bdf 100644
+index a7954c7..13b3a91 100644
 --- a/recompui/src/renderer/rt64_render_context.cpp
 +++ b/recompui/src/renderer/rt64_render_context.cpp
 @@ -20,6 +20,8 @@ using namespace recompui;
@@ -414,7 +414,7 @@ index a7954c7..61c6bdf 100644
  
  static uint8_t DMEM[0x1000];
  static uint8_t IMEM[0x1000];
-@@ -227,6 +229,9 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
+@@ -227,12 +229,20 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
      appCore.window = window_handle.window;
  #elif defined(__linux__) || defined(__ANDROID__)
      appCore.window = window_handle;
@@ -424,7 +424,18 @@ index a7954c7..61c6bdf 100644
  #elif defined(__APPLE__)
      appCore.window.window = window_handle.window;
      appCore.window.view = window_handle.view;
-@@ -272,6 +277,8 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
+ #endif
+ 
+     appCore.checkInterrupts = dummy_check_interrupts;
++#if defined(__EMSCRIPTEN__)
++    // With render to RAM's late copy, the game hears the RDP is done before RT64 records and submits the list's
++    // workload, and goes on meanwhile (ultramodern::renderer::rdp_done).
++    appCore.rdpDone = ultramodern::renderer::rdp_done;
++#endif
+ 
+     appCore.HEADER = dummy_rom_header;
+     appCore.RDRAM = rdram;
+@@ -272,6 +282,8 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
  
      // Create the RT64 application.
      app = std::make_unique<RT64::Application>(appCore, appConfig);
@@ -433,7 +444,7 @@ index a7954c7..61c6bdf 100644
  
      // Set initial user config settings based on the current settings.
      auto& cur_config = ultramodern::renderer::get_graphics_config();
-@@ -313,6 +320,10 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
+@@ -313,6 +325,10 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
          return;
      }
  
@@ -444,7 +455,7 @@ index a7954c7..61c6bdf 100644
      // Set the application's fullscreen state.
      app->setFullScreen(cur_config.wm_option == ultramodern::renderer::WindowMode::Fullscreen);
  
-@@ -342,6 +353,7 @@ void renderer::RT64Context::send_dl(const OSTask* task) {
+@@ -342,6 +358,7 @@ void renderer::RT64Context::send_dl(const OSTask* task) {
      app->state->rsp->reset();
      app->interpreter->loadUCodeGBI(task->t.ucode & 0x3FFFFFF, task->t.ucode_data & 0x3FFFFFF, true);
      app->processDisplayLists(app->core.RDRAM, task->t.data_ptr & 0x3FFFFFF, 0, true);
@@ -452,7 +463,7 @@ index a7954c7..61c6bdf 100644
  }
  
  void renderer::RT64Context::send_dummy_workload(uint32_t fb_address) {
-@@ -351,6 +363,12 @@ void renderer::RT64Context::send_dummy_workload(uint32_t fb_address) {
+@@ -351,6 +368,12 @@ void renderer::RT64Context::send_dummy_workload(uint32_t fb_address) {
      // G_AC_NONE | G_ZS_PIXEL | G_RM_NOOP | G_RM_NOOP2
      app->state->rdp->setOtherMode(0x382C30, 0);
      app->state->rdp->fillRect(0, 0, 320 << 2, 240 << 2);
@@ -465,7 +476,7 @@ index a7954c7..61c6bdf 100644
      app->state->fullSync();
      app->state->listProcessEnd();
  }
-@@ -498,6 +516,14 @@ std::unique_ptr<ultramodern::renderer::RendererContext> renderer::create_render_
+@@ -498,6 +521,14 @@ std::unique_ptr<ultramodern::renderer::RendererContext> renderer::create_render_
      return std::make_unique<renderer::RT64Context>(rdram, window_handle, presentation_mode, developer_mode);
  }
  
