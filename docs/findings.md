@@ -235,6 +235,20 @@ than grows. Presents hold all through, about 350 a second in Chrome and 180-200 
 its heap (-sALLOW_MEMORY_GROWTH, in its own link options); heap_probe.js reads its length too, but Conker's soaks ran
 before it could find that page's sbrk, so its heap's curve is still unread.
 
+A page's break at boot is the peak of its boot, not what it keeps. GoldenEye's page from Pages (v0.106.0) held its
+break at 1457.9 of its 1536 MB from 4 s in, 78 MB from an abort, and a walk of dlmalloc's chunks (heap_probe.js's
+break, then each chunk's header from the heap's start; 2026-10-25 on an RTX 5080, Chrome uncapped at 3840x2000) named
+what was in it: RDRAM's 512 MB (untouched), the ROM (12 MB), the launcher's fonts (8 MB), 1-2 MB chunks (44 MB), and
+one 371 MB chunk of RGBA pixels at the top, with 440-500 MB free below it that the boot had taken and given back
+(copies of the ROM and of the same pixels). The 371 MB was RecompFrontend's copy buffer for its menus' images, made
+half again the largest image yet and kept, here the launcher's SVG background (`mm-clipped.svg` in a box 100vh + 105vw
+high, 10723x6032 at that canvas, 247 MB): its rows padded to 43008 bytes, times 1.5, are the chunk's size to the
+byte. Banjo-Kazooie's page held a 94 MB one. With RecompFrontend 4c15260 (an image uploaded 16 MB of rows at a time)
+the breaks fell to 1113.9 MB on GoldenEye and 748.3 MB on Banjo (from 841.0), the same in Firefox 158 (1114.0,
+750.3), and Chrome's GPU process to 1813 MB from 2175 on GoldenEye, the plays otherwise as Pages' (plays.jsonl, sets
+heapband-ge-5080-20261025 and heapband-banjo-5080-20261025). So a page whose heap is short is walked before its
+INITIAL_MEMORY is raised: GoldenEye's own -sINITIAL_MEMORY=2GB would have hidden a buffer every page keeps.
+
 Perfect Dark's mission targets reach 1854x960 where its passes draw 1286x660 (2.1x the pixels) through RT64's own
 code, the desktop build's included. Measured at 1256x645 on rt64-web d19fdcc with every `RenderTarget::resize` logged
 with its caller: the page's regular plan in headless Chrome, and the Windows desktop build in a 1256x645 window on an
