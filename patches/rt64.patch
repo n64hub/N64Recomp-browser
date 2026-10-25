@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 616ef74d577f77301d2b909a30a496a392027e3e
+rt64: https://github.com/n64hub/rt64-web 32aa316820f8bbb704908f3cee4db794c1ce2cf5
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -713,7 +713,7 @@ index 72faede..ed1138c 100644
 +#endif
 \ No newline at end of file
 diff --git a/src/gui/rt64_inspector.cpp b/src/gui/rt64_inspector.cpp
-index 6ceb97f..30540e1 100644
+index 6ceb97f..5a88aab 100644
 --- a/src/gui/rt64_inspector.cpp
 +++ b/src/gui/rt64_inspector.cpp
 @@ -5,6 +5,7 @@
@@ -734,14 +734,14 @@ index 6ceb97f..30540e1 100644
              if (renderPass != VK_NULL_HANDLE) {
                  vkDestroyRenderPass(device, renderPass, nullptr);
              }
-@@ -56,8 +60,339 @@ namespace RT64 {
+@@ -56,9 +60,340 @@ namespace RT64 {
              if (descriptorPool != VK_NULL_HANDLE) {
                  vkDestroyDescriptorPool(device, descriptorPool, nullptr);
              }
 +#       endif
-+        }
-+    };
-+
+         }
+     };
+ 
 +#if defined(__EMSCRIPTEN__)
 +    // A page has only WebGPU, and its device belongs to the page's main thread (plume_device_thread.h), so ImGui's own
 +    // WebGPU backend, which calls WebGPU on whatever thread renders, can't draw there. The inspector draws ImGui's lists
@@ -1068,12 +1068,13 @@ index 6ceb97f..30540e1 100644
 +                vertexOffset += drawList->VtxBuffer.Size;
 +                indexOffset += drawList->IdxBuffer.Size;
 +            }
-         }
-     };
++        }
++    };
 +#endif
- 
++
      // Inspector
  
+     Inspector::Inspector(RenderDevice *device, const RenderSwapChain *swapChain, UserConfiguration::GraphicsAPI graphicsAPI, SDL_Window *sdlWindow) {
 @@ -86,6 +421,17 @@ namespace RT64 {
  #       endif
          }
@@ -1133,17 +1134,20 @@ index 6ceb97f..30540e1 100644
  
          if (sdlWindow != nullptr) {
              ImGui_ImplSDL2_Shutdown();
-@@ -194,6 +553,9 @@ namespace RT64 {
+@@ -194,6 +553,12 @@ namespace RT64 {
  #       endif
          }
  
 +#   if defined(__EMSCRIPTEN__)
++        // From ImGui 1.92 the draw makes and updates the textures (WebGPUContext::updateTexture).
++#       if !defined(IMGUI_HAS_TEXTURES)
 +        webgpuContext->updateFontTexture();
++#       endif
 +#   else
          switch (graphicsAPI) {
          case UserConfiguration::GraphicsAPI::D3D12: {
  #       ifdef _WIN32
-@@ -211,6 +573,7 @@ namespace RT64 {
+@@ -211,6 +576,7 @@ namespace RT64 {
              assert(false && "Unknown Graphics API.");
              break;
          }
@@ -1151,7 +1155,7 @@ index 6ceb97f..30540e1 100644
  
          ImGui::NewFrame();
          Im3d::NewFrame();
-@@ -226,6 +589,10 @@ namespace RT64 {
+@@ -226,6 +592,10 @@ namespace RT64 {
          const std::lock_guard<std::mutex> frameLock(frameMutex);
          ImDrawData *drawData = ImGui::GetDrawData();
          if (drawData != nullptr) {
@@ -1162,7 +1166,7 @@ index 6ceb97f..30540e1 100644
              switch (graphicsAPI) {
              case UserConfiguration::GraphicsAPI::D3D12: {
  #       ifdef _WIN32
-@@ -238,8 +605,10 @@ namespace RT64 {
+@@ -238,8 +608,10 @@ namespace RT64 {
                  break;
              }
              case UserConfiguration::GraphicsAPI::Vulkan: {
