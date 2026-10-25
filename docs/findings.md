@@ -1199,6 +1199,19 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   were. The A/B against Pages (`ab_pages.mjs`, Chrome uncapped at 3840x2000, a play from the file menu to Joanna's
   control) read 208 presents a second for Pages' page and 331 for the build, its p99 gap 29 ms against 10, and
   Banjo-Tooie's regular plan, which makes tile copies too, 357 against 358, both at the 360 cap.
+- Perfect Dark's night vision: with the goggles on (*Area 51 - Extraction*, the third mission, the player's
+  `devicesactive` bit 0x01 set from the console), `bview_draw_nv_lens` reads the front buffer back row by row for its
+  blur and then copies each of the back buffer's 240 rows: a LoadBlock of the 320-texel row into TMEM 0 and a one-row
+  texture rectangle drawn through a tile `bview_prepare_static_rgba16` sets to 513x9 texels of line 160. RT64 checks
+  the TMEM a tile could sample for a tile copy, and for that tile it is all of TMEM, at a line of 640 texels against
+  the row's 320, so no row found its tile copy: each was hashed and uploaded from RDRAM (~250 TMEM uploads a frame),
+  the framebuffer written back to RAM for them, two syncs a list. The game dropped from 60 to 30 the moment the goggles
+  came on, on an RTX 5080 too, and Chrome's GPU process grew 15-30 MB a second. With a row loaded whole at the tile's
+  own TMEM address sampling that row's tile copy (rt64 9b87e67, `FramebufferManager::checkRowTileCopy`), headless
+  Chrome capped at 240 Hz presented 225 a second (195-240) with the goggles on and the game at its 60, the GPU process
+  growing 3.3 MB a second against 15.6, the goggles' green scanlines as before and no WebGPU errors (RTX 5080, another
+  session's GPU process beside it). Two syncs a list are left: a 32x32 CI4 draw at TMEM 0-33 overlaps what is left of
+  the last row's region once a later load has discarded part of it, and RT64 syncs for a region it no longer knows.
 
 ## A page's thread in Chrome, throttled
 
