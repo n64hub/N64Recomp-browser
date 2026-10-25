@@ -298,7 +298,7 @@ render to RAM off, the fixed heap, the shader list and how it is recorded by the
 N64ModernRuntime (their `snap64` branches), the one game fork whose rt64 isn't upstream's: ~8,000 lines of the port's
 in RT64 (each object's identity for interpolation, its frame pacing and presentation, Photo Detail's framebuffer
 readback, the Snap Station's overlay, primitive-depth sprites). `apply.cmake` patches them, but for the files where
-both change the same lines (`patches/web/files.txt`, 23 of rt64's and 6 of the runtime's), whose web change is its
+both change the same lines (`patches/web/files.txt`, 24 of rt64's and 6 of the runtime's), whose web change is its
 `patches/web/<project>.patch`, merged by hand. Its `tools/build_web.sh` then takes what N64Recomp-browser has changed in
 those files since that merge (`apply.cmake --since`, README), and stops only where that meets the port's own lines:
 that is merged into its patch by hand. CI's `snap-patches` job runs its `tools/build_web.sh --patches` (that step, no
@@ -307,7 +307,9 @@ that isn't yet, is red in the PR that makes it and is merged into `patches/web` 
 the build had left out with nothing said. Two of that merge's choices: in `rt64_vi.cpp` frames of uneven VIs
 interpolate as the web has them (rt64 179adb8, 7844c07) and the port's last measured rate is what's left, in place of
 0; in `RasterPS.hlsl` a decal pipeline with `DECAL_DEPTH_BOUNDS` writes the web's bound as its depth (rt64 0560318), and
-every other the port's depth. HAL's object manager runs each object on a thread that stops itself, which the libultra
+every other the port's depth. In `rt64_gbi_rdp.cpp`'s full sync the port's focus dot draws first, as the frame's last
+draws, and then the web's check whether the list ends there (rt64 1c9e639). HAL's object manager runs each object on a
+thread that stops itself, which the libultra
 thread stop ignored a start of (N64ModernRuntime-web 6515ea8). Render to RAM keeps the exact copy: the game scores a
 photo from the frame it has just drawn and finds the viewfinder's focus dot in it, and a play shows no kept writes. It
 opens widescreen, RT64's Expand in a course as the desktop's Widescreen setting draws it (off on the desktop):
