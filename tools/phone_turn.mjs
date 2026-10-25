@@ -273,7 +273,10 @@ if (checkOnly || queue.length) {
 
 async function playTurn() {
   const shell = (...command) => execFileSync(adb, [...(serial ? ['-s', serial] : []), ...command], { encoding: 'utf8', maxBuffer: 1 << 26 });
-  const quiet = (...command) => { try { return shell(...command); } catch { return ''; } };
+  // One whose failure and stderr don't matter (monkey's echo of its arguments, dumpsys's broken pipe under grep -m1).
+  const quiet = (...command) => {
+    try { return execFileSync(adb, [...(serial ? ['-s', serial] : []), ...command], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return ''; }
+  };
   const devtools = (p, method = 'GET') => fetch(`http://127.0.0.1:${port}${p}`, { method });
   const origin = `http://localhost:${proxyPort}`;
   // The protocol over a tab's own socket: one command, then closed.
