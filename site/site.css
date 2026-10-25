@@ -109,6 +109,9 @@ header .tagline { color: var(--text); font-size: 18px; }
 #manage-saves .note { color: var(--dim); }
 
 main { max-width: 1200px; margin: 0 auto; padding: 12px 24px 32px; }
+/* A page of text (privacy.html). */
+main.text > * { max-width: 680px; }
+main.text h2 { margin: 8px 0 4px; }
 /* How it is made, under the games. The source link stays whole, on the next line when it doesn't fit. */
 footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; color: var(--dim); font-size: 13px; }
 footer p { margin: 0; padding-top: 14px; border-top: 1px solid var(--line); }

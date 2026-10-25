@@ -273,7 +273,8 @@ there the header says so in red instead and a tile starts nothing. With its OAut
 hub offers sign-in with Google, which keeps the player's saves in their own Google Drive (`frontend/save_sync.js` says
 how). Where this browser and the Drive hold a game's saves differently, a sign-in ends in a popup that asks which to
 keep. The top bar has the sign-in at its right, and once signed in the player's name, whose menu has Manage
-saves (each game's saves in the Drive and the earlier ones it kept, to restore) and Sign out. It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
+saves (each game's saves in the Drive and the earlier ones it kept, to restore) and Sign out; the footer links its
+privacy policy, `site/privacy.html`. It is the top of the hub, the n64hub org's GitHub Pages site (n64hub/n64hub.github.io), whose folders
 are every game's page, so they are one origin; `tools/publish_site.sh` publishes it (its header says how) after
 a change to `site/` merges, and a change to the Games table needs no publish. Its top also serves every game's page
 its on-screen controller on a phone, `site/touch_pad.js` (the header says why there), which it puts into the frame a

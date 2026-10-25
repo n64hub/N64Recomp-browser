@@ -282,7 +282,8 @@ document.getElementById('firefox-note').hidden = !firefox || noGames || !builtIn
 // OAuth client, a Google Cloud project's client of the Web application type, with this page's address (https://n64hub.com/,
 // and http://localhost:8742/ to try it locally) as an authorized redirect URI and the origins as JavaScript origins, the
 // Google Drive API enabled and drive.appdata among its Data Access scopes: empty, the hub offers no sign-in. While its
-// consent screen is in Testing, only its test users can sign in.
+// consent screen is in Testing, only its test users can sign in. Published, its Branding page names the home page, the
+// privacy policy (privacy.html) and n64hub.com as an authorized domain, and no logo: one needs Google to verify the brand.
 // Sign-in goes to Google and back here, not in a popup: a popup's answer reaches the page that opened it through
 // window.opener, which Cross-Origin-Opener-Policy: same-origin (coi_serviceworker.js) cuts. Google sends the token
 // back in the address's fragment with the state it was given, the same-origin address to return to.
