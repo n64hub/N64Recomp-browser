@@ -484,7 +484,7 @@ rt64 737169e           a load taller than TMEM skips the rows the later ones ove
 rt64 15e8e91           the flat, multisampled dual-source RasterPS gets VERTEX_FLAT_COLOR: 85a6ad5's line for it was
                        garbled, and CMake passed dxc the pieces, so it was the smooth one; nothing includes it (a page
                        draws without MSAA), so no binary changes
-rt64 49ac263           with render to RAM's late copy and a frontend's Application::Core::rdpDone, a list that ends at
+rt64 1c9e639           with render to RAM's late copy and a frontend's Application::Core::rdpDone, a list that ends at
                        its full sync tells the game its RDP is done once its draws are interpreted and its tiles
                        loaded, before RT64 records and submits its last batch, that batch's framebuffers kept whole
                        for it to read; a pending copy still lands before the next list's RDP is done, at its start,

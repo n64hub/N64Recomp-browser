@@ -1574,6 +1574,13 @@ The measurements behind rules CLAUDE.md and the other docs state without them.
 
 What CLAUDE.md's Ruled out rests on.
 
+- wasm SIMD for RT64's TMEM loads and CI4 hashes, the 11.5% of a phone's display list thread that fullSync's tiles
+  took in Conker (docs/phones.md, Conker's Bad Fur Day on a Galaxy S21): two TMEM words in one i8x16 shuffle and a CI4
+  texture's palette indices by i8x16 swizzle lookups, the same bytes and hashes in a test of random loads, made the
+  loads up to 9 times as fast alone in V8 and the hashes 1.1-1.5 times, and no page faster: on a phone at 1.04 GHz
+  Conker's attract drew 25.8 and 23.3 game frames a second against 25.7 and 24.9 without it, and on a desktop GPU
+  Conker presented 136-177 a second against 169-189 and GoldenEye 155 against 152-155 (interleaved, a busy host, sets
+  `cbfd-simd-ab` and `ge-simd-ab` in plays.jsonl).
 - The most common of a game's last three or five frames' VIs as RT64_UNEVEN_FRAME_RATES's guess at a frame's length,
   in place of the fastest of three: late at both ends of a run of 3-VI frames, at no run's length does it judder less.
   At a lag of 1 the most common of three holds min(L, 2) display frames and cuts 2 frames after a run of 2 or more,
