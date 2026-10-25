@@ -397,6 +397,12 @@ e4c932f                of Time keeps no stored ROM, hands the runtime the player
 N64ModernRuntime       Module.gameStarted called on the page's thread as the game's entrypoint starts, past the
 4746426                launcher: the shell's on-screen controller for phones shows from there, plugged in as a
                        gamepad after SDL has started (SDL opens only a pad that connects later)
+N64ModernRuntime       on a page the timer thread orders its timers by a copy of each one's timestamp, taken as it is
+ba2551b,               added, not by the OSTimer's own, which osSetTimer rewrites on the game's thread: a timer
+a25ea81                restarted while still pending moved inside the set, its erase missed, and it fired at every
+                       pass with no wait, so Banjo-Tooie's page on a phone hung at a level change and ended in
+                       Aborted(OOM) (docs/phones.md); a25ea81 keeps the timers in a TimerSet with a std::set's calls,
+                       so the loop stays each pinned runtime's own (ba2551b's copy of it didn't compile on ca568b6)
 rt64 dd2fd23,          a triangle covers its scissor only where it crosses the camera plane, on every build: one wholly
 baa3753                behind it draws nothing, and one wholly in front has its box from its vertices held to 8192
                        pixels. a8bfc93 made a pass of triangles behind the camera or off one side a write of its whole
@@ -447,6 +453,12 @@ rt64 9c88af0           7844c07's slowest of the last three only where the fastes
                        frames of 2 and 3 VIs or more is timed at the fastest again, as RT64 skipped the third frame it
                        set each; on a phone Pokémon Snap's attract presented 51-53 a second against 24-30, Diddy Kong
                        Racing drew 58.3 frames a second against 53.7
+rt64 b173eb3,          on the web a present is dropped for a newer one only once its own workload is done and the
+rt64 01d734b           newer one's is too, not as it is taken from the queue: where workloads end after the game's
+                       next present comes, every present found a newer one queued and was dropped, and Banjo-Tooie's
+                       page on a phone showed nothing from its attract's second level change on, its game still
+                       running (docs/phones.md); 01d734b moves the function it adds out of the lines Jet Force
+                       Gemini's own RT64 patch changes
 RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
                        times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
                        heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's
