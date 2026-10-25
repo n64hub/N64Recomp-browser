@@ -461,5 +461,11 @@ rt64 01d734b           newer one's is too, not as it is taken from the queue: wh
                        Gemini's own RT64 patch changes
 RecompFrontend 4c15260 on a page the menus upload an image 16 MB of rows at a time: the copy buffer, kept at 1.5
                        times the largest image yet with plume's copy of it in the heap, held 371 MB of GoldenEye's
-                       heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's
+                       heap for its launcher's SVG background (10723x6032 at 3840x2000), 94 MB of Banjo-Kazooie's,
+                       whose heap's break fell to 748.3 MB from 841.0
+rt64 9086c93           frame matching pairs a hash's calls by what each adds (its range of matrices, its tiles, its
+                       look at), not every call with every one of the previous frame's: a group of alike calls cost
+                       its square, and in Banjo-Tooie's levels (up to 398 calls of one hash, 167,000 pairs of calls a
+                       frame) the matching took 18-23 ms of the workload thread's game frame on a phone; the sets it
+                       fills are the same, in 14,715 scenes compared
 ```
