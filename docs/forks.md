@@ -427,4 +427,8 @@ rt64 63703df           a TMEM hash takes a CI4 texture's palette indices from 16
                        the same bytes and hashes (2,000,000 random tiles compared), on every build; Rush 2049's race
                        hashes about 65,000 textures a second, 97% CI, and on a phone a CI4 hash took 0.9-1.1 us
                        against 1.5-2.6
+rt64 32aa316           with ImGui 1.92 or later (IMGUI_HAS_TEXTURES) the page's inspector makes, updates and destroys
+                       each texture ImGui asks for (ImGuiBackendFlags_RendererHasTextures), each draw binding its own,
+                       in place of 8b9dce2's one font atlas, which compared an ImTextureRef with an ImTextureID: Jet
+                       Force Gemini's rt64, on ImGui 1.93, didn't build for a page
 ```
