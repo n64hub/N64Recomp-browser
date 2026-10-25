@@ -345,8 +345,8 @@ function syncStart() {
 }
 
 // The saves this browser holds, in every game's database on this origin (frontend/persistent_home.js, each named
-// '/home/web_user <its page's folder>'): saves, path -> { data, time, played }, and folders, program id -> its page's
-// folder.
+// '/home/web_user <its page's folder>'): saves, path -> { data, time, played, page } (page its page's folder), and
+// folders, program id -> its page's folder.
 async function localSaves() {
   const home = '/home/web_user/', ask = (request) => new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -366,7 +366,8 @@ async function localSaves() {
       const entry = await ask(files().get(key));
       const time = new Date(entry?.timestamp).getTime();
       if (entry?.contents && SaveSync.isSave(path, entry.contents.byteLength) && !(local.get(path)?.time >= time)) {
-        local.set(path, { data: entry.contents, time, played: SaveSync.played(name.slice(home.length)) });
+        const page = name.slice(home.length);
+        local.set(path, { data: entry.contents, time, played: SaveSync.played(page), page });
         folders.set(SaveSync.game(path), name.slice(home.length));
       }
     }
@@ -375,45 +376,59 @@ async function localSaves() {
   return { saves: local, folders };
 }
 
-// A game's name by its program id, from the folder its saves are in.
-const gameOf = (id, folders) => games.find((g) => sameOriginFolder(g.page) === folders.get(id));
+// A game by its program id, from its page's folder: where its saves are in this browser (folders, localSaves()), or
+// else the one its saves in the Drive name (files, SaveSync.listing()'s).
+const gameOf = (id, folders, files = []) => {
+  const folder = folders.get(id) ?? files.find((f) => SaveSync.game(f.path) === id && f.page)?.page;
+  return games.find((g) => sameOriginFolder(g.page) === folder);
+};
+// A game's heading in a popup: its art, where it has one, and its name.
+const gameHeading = (game, id) => el('h3', {},
+  ...(game && ART[game.repoName] ? [el('img', { src: `img/${game.repoName}.webp`, alt: '' })] : []), game?.name ?? id);
 // Seconds played, in words.
 const playTime = (s) => s < 60 ? 'under a minute' : s < 3600 ? Math.round(s / 60) + ' min'
   : (s / 3600).toFixed(1).replace(/\.0$/, '') + ' h';
 const savedAt = (time) => new Date(time).toLocaleString(undefined,
   { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-// Under the sign-in line, while signed in: the copies the Drive kept of replaced saves, each of which can be made its
-// game's save again.
-async function showSaves() {
-  const box = document.getElementById('saves');
-  if (!SaveSync.token()) {
-    box.hidden = true;
+// Manage saves, from the account menu: each game's saves in the Drive, and under them the earlier saves it kept, any of
+// which can be made the game's save again.
+async function manageSaves() {
+  const dialog = document.getElementById('manage-saves'), list = dialog.querySelector('.choices');
+  if (!dialog.open) dialog.showModal();
+  list.replaceChildren(el('p', { className: 'note' }, 'Reading your Google Drive…'));
+  let folders, saves, copies;
+  try {
+    [{ folders }, { saves, copies }] = await Promise.all([localSaves(), SaveSync.listing()]);
+  } catch (error) {
+    console.error('Save sync: could not list the saves in the Drive: ' + error.message);
+    list.replaceChildren(el('p', { className: 'note' }, `Your Google Drive couldn't be read (${error.message}).`));
     return;
   }
-  const [{ folders }, copies] = await Promise.all([localSaves(), SaveSync.copies()]);
-  const gameName = (id) => gameOf(id, folders)?.name ?? id;
-  const act = (text, run) => {
-    const b = el('button', { type: 'button', textContent: text });
+  const files = [...saves, ...copies], name = (id) => gameOf(id, folders, files)?.name ?? id;
+  const about = (f) => [f.path.replace(/^.*\/saves\//, ''), 'saved ' + savedAt(f.time) + (f.from ? ' in ' + f.from : ''),
+    f.played !== undefined && 'played ' + playTime(f.played)].filter(Boolean).join(', ');
+  const restore = (copy) => {
+    const b = el('button', { type: 'button', textContent: 'Use this one' });
     b.addEventListener('click', async () => {
-      for (const other of box.querySelectorAll('button')) other.disabled = true;
+      for (const other of list.querySelectorAll('button')) other.disabled = true;
       try {
-        await run();
+        await SaveSync.restore(copy);
       } catch (error) {
-        console.error('Save sync: ' + error.message);
+        console.error('Save sync: could not restore: ' + error.message);
       }
-      showSaves();
+      manageSaves();
     });
     return b;
   };
-  const copy = (c) => el('p', {}, [gameName(SaveSync.game(c.path)), c.path.replace(/^.*\/saves\//, ''),
-    'saved ' + savedAt(c.time) + (c.from ? ' in ' + c.from : ''),
-    c.played !== undefined && 'played ' + playTime(c.played)].filter(Boolean).join(', ') + ' ',
-    act('Use this one', () => SaveSync.restore(c)));
-  const kept = copies.length
-    ? [el('details', {}, el('summary', {}, `Earlier saves in your Drive (${copies.length})`), ...copies.map(copy))] : [];
-  box.replaceChildren(...kept);
-  box.hidden = !box.childElementCount;
+  const ids = [...new Set(files.map((f) => SaveSync.game(f.path)))].sort((a, b) => name(a).localeCompare(name(b)));
+  list.replaceChildren(...(ids.length ? ids.map((id) => {
+    const mine = (f) => SaveSync.game(f.path) === id, earlier = copies.filter(mine);
+    return el('section', {}, gameHeading(gameOf(id, folders, files), id),
+      ...saves.filter(mine).map((f) => el('p', { className: 'save' }, about(f))),
+      ...(earlier.length ? [el('p', { className: 'earlier' }, 'Earlier saves'),
+        ...earlier.map((c) => el('p', { className: 'save' }, about(c) + ' ', restore(c)))] : []));
+  }) : [el('p', { className: 'note' }, 'Your Google Drive has no saves yet. A game you play here puts its saves there.')]));
 }
 
 // A sign-in's last step (frontend/save_sync.js): this browser's saves are compared with the Drive's, those of a game the
@@ -421,7 +436,7 @@ async function showSaves() {
 // recommended. It closes only by a choice or by Cancel, which signs out, and the token is stored only once the player
 // has chosen, so a tab closed before that leaves them signed out.
 async function finishSignIn() {
-  const line = document.getElementById('sync'), pending = signingIn;
+  const pending = signingIn;
   const revoke = () => fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(pending.token),
     { method: 'POST' }).catch(() => {});
   const signedIn = async (local, keep = []) => {
@@ -438,14 +453,12 @@ async function finishSignIn() {
     console.error('Save sync: could not compare the saves: ' + error.message);
     revoke();
     signingIn = null;
-    showSync();
-    line.prepend(`Your Google Drive couldn't be reached (${error.message}), so you aren't signed in. `);
+    showAccount(`Your Google Drive couldn't be reached (${error.message}), so you aren't signed in.`);
     return;
   }
   if (!conflicts.size) {
     await signedIn(local);
-    showSync();
-    showSaves();
+    showAccount();
     return;
   }
 
@@ -466,9 +479,7 @@ async function finishSignIn() {
       el('span', { className: 'about' }, ...about.flatMap((s) => [el('br'), s]).slice(1)));
   };
   const sections = [...conflicts].map(([id, { mine, theirs }]) => {
-    const game = gameOf(id, folders);
-    const art = game && ART[game.repoName] && el('img', { src: `img/${game.repoName}.webp`, alt: '' });
-    return el('section', {}, el('h3', {}, ...(art ? [art] : []), name(id)),
+    return el('section', {}, gameHeading(gameOf(id, folders), id),
       el('div', { className: 'options' }, option(id, false, theirs), option(id, true, mine)));
   });
   const uploaded = [...only].map(name).sort(), many = uploaded.length > 1;
@@ -484,8 +495,7 @@ async function finishSignIn() {
     SaveSync.store(null);
     signingIn = null;
     dialog.close();
-    showSync();
-    showSaves();
+    showAccount();
   };
   cancel.onclick = signOut;
   dialog.oncancel = (event) => event.preventDefault();  // Escape
@@ -504,46 +514,78 @@ async function finishSignIn() {
     }
     chosen = true;
     dialog.close();
-    showSync();
-    showSaves();
+    showAccount();
   };
   busy(false);
   dialog.showModal();
 }
 
-function showSync() {
-  const line = document.getElementById('sync');
+// The account, at the top bar's right (frontend/save_sync.js): Sign in with Google, or the player's name, which opens a
+// menu with Manage saves and Sign out. A note beside it says why a sign-in didn't finish.
+let askingUser = false;
+function showAccount(note) {
+  const box = document.getElementById('account');
   if (!GOOGLE_CLIENT_ID) return;
-  if (signingIn) {
-    line.replaceChildren('Checking your saves against your Google Drive…');
-    line.hidden = false;
-    return;
-  }
-  const record = SaveSync.stored(), signedIn = !!record?.token;
-  const button = (text, click) => {
-    const b = el('button', { type: 'button', textContent: text });
+  box.hidden = false;
+  const button = (text, click, props) => {
+    const b = el('button', { type: 'button', textContent: text, ...props });
     b.addEventListener('click', click);
     return b;
   };
-  const signInButton = button(signedIn ? 'Sign in again' : 'Sign in with Google', () => signIn(hub, false));
-  const signOut = button('Sign out', () => {
-    if (record.token) fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(record.token), { method: 'POST' })
-      .catch(() => {});
-    SaveSync.store(null);
-    showSync();
-    showSaves();
+  const record = SaveSync.stored(), valid = SaveSync.token();
+  if (signingIn || !record?.token) {
+    box.replaceChildren(...(note ? [el('span', { className: 'note' }, note)] : []), signingIn
+      ? el('span', { className: 'note' }, 'Checking your saves…')
+      : button('Sign in with Google', () => signIn(hub, false), { className: 'primary' }));
+    return;
+  }
+  // The player's name, asked for once a sign-in has a token.
+  if (valid && !record.user && !askingUser) {
+    askingUser = true;
+    SaveSync.user().then((user) => {
+      SaveSync.store({ ...SaveSync.stored(), user });
+      showAccount();
+    }).catch((error) => console.error('Save sync: could not read the account\'s name: ' + error.message))
+      .finally(() => { askingUser = false; });
+  }
+  const name = record.user?.name || 'Signed in';
+  const menu = el('div', { className: 'menu', role: 'menu', hidden: true },
+    el('p', {}, el('strong', {}, name), ...(record.user?.email ? [el('br'), record.user.email] : []),
+      ...(valid ? [] : [el('br'), 'Your saves sync again once you sign in again.'])),
+    valid ? button('Manage saves', () => { menu.hidden = true; manageSaves(); }, { role: 'menuitem' })
+      : button('Sign in again', () => signIn(hub, false), { role: 'menuitem' }),
+    button('Sign out', () => {
+      fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(record.token), { method: 'POST' })
+        .catch(() => {});
+      SaveSync.store(null);
+      document.getElementById('manage-saves').close();
+      showAccount();
+    }, { role: 'menuitem' }));
+  const who = el('button', { type: 'button', className: 'who', title: name, ariaHasPopup: 'menu', ariaExpanded: 'false' },
+    el('span', { className: 'avatar', ariaHidden: 'true' }, name[0].toUpperCase()), el('span', { className: 'name' }, name));
+  who.addEventListener('click', () => {
+    menu.hidden = !menu.hidden;
+    who.ariaExpanded = String(!menu.hidden);
   });
-  line.replaceChildren(...(!signedIn ? [signInButton, ' to keep your saves in your Google Drive and play on with them anywhere.']
-    : SaveSync.token() ? ['Your saves are kept in your Google Drive. ', signOut]
-    : ['Your saves sync with your Google Drive while you are signed in. ', signInButton, ' ', signOut]));
-  line.hidden = false;
+  box.replaceChildren(who, menu);
 }
+// The account's menu closes at a click elsewhere, or Escape.
+addEventListener('click', (event) => {
+  const box = document.getElementById('account'), menu = box.querySelector('.menu');
+  if (menu && !box.contains(event.target)) menu.hidden = true;
+});
+addEventListener('keydown', (event) => {
+  const menu = document.querySelector('#account .menu');
+  if (event.key === 'Escape' && menu) menu.hidden = true;
+});
+document.querySelector('#manage-saves .foot button').addEventListener('click',
+  () => document.getElementById('manage-saves').close());
 
 async function main() {
-  showSync();
+  showAccount();
   // A sign-in is finished once the games are known, which the popup names.
-  const listSaves = () => GOOGLE_CLIENT_ID && (signingIn ? finishSignIn() : showSaves())
-    .catch((error) => console.error('Save sync: could not list the saves in the Drive: ' + error.message));
+  const listSaves = () => GOOGLE_CLIENT_ID && signingIn && finishSignIn()
+    .catch((error) => console.error('Save sync: could not finish the sign-in: ' + error.message));
   const grid = document.getElementById('grid');
   try {
     const response = await fetch(README, { cache: 'no-cache' });

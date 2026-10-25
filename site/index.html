@@ -15,8 +15,13 @@
 <script src="coi_serviceworker.js"></script>
 </head>
 <body>
+<!-- The name, and the account at the right: sign-in for saves kept in the player's Google Drive, shown once the hub has an
+     OAuth client (site.js). -->
+<nav class="topbar">
+  <h1><a href="./"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>N64 Hub</a></h1>
+  <div id="account" hidden></div>
+</nav>
 <header>
-  <h1><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>N64 Hub</h1>
   <p class="tagline">N64 games in the browser, recompiled to run natively on WebGPU.</p>
   <p>Built on <a href="https://github.com/N64Recomp/N64Recomp">N64Recomp</a>. Most of the recomps are other people's,
     brought to the browser here; each game says whose. It is not endorsed by N64Recomp's or the recomps' authors.
@@ -27,10 +32,6 @@
   <!-- Shown in Firefox on a phone or tablet instead (site.js): no game plays there, so its tiles start nothing. -->
   <p id="phone-firefox-note" class="warning stop" hidden><strong>Firefox on a phone can't play these games.</strong>
     Its WebGPU doesn't run them, so they won't start here. Open this page in Chrome to play.</p>
-  <!-- Sign-in for saves kept in the player's Google Drive, shown once the hub has an OAuth client (site.js). -->
-  <p id="sync" hidden></p>
-  <!-- Under it, while signed in: earlier saves to restore. -->
-  <div id="saves" hidden></div>
 </header>
 <main>
   <div id="grid" class="grid" aria-live="polite"><p class="note">Loading the games…</p></div>
@@ -48,7 +49,7 @@
   <button id="player-turn" type="button">Tap to play in landscape.</button>
 </div>
 <!-- At a sign-in where this browser and the Drive hold a game's saves differently: whose to keep (site.js). -->
-<dialog id="save-choice">
+<dialog id="save-choice" class="sheet">
   <h2>Which saves should we keep?</h2>
   <p class="lead"></p>
   <div class="choices"></div>
@@ -57,6 +58,14 @@
       back to them later.</small>
     <span><button type="button">Cancel and sign out</button> <button type="button" class="primary">Keep these</button></span>
   </div>
+</dialog>
+<!-- Manage saves, from the account's menu: each game's saves in the Drive and the earlier ones it kept (site.js). -->
+<dialog id="manage-saves" class="sheet">
+  <h2>Your saves in Google Drive</h2>
+  <p class="lead">Each game's save, and the earlier saves your Drive kept when one was replaced. Close a game wherever it
+    runs before you use an earlier save, or its next save takes over again.</p>
+  <div class="choices"></div>
+  <div class="foot"><span></span><button type="button">Close</button></div>
 </dialog>
 <script src="save_sync.js"></script>
 <script src="site.js"></script>

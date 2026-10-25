@@ -26,8 +26,9 @@
 //
 // To choose by, each side says how long its game was played: a page counts the seconds it is shown, in localStorage
 // (save-play-time, by the page's folder, as persistent_home.js names its database), and a save going up takes its
-// page's count and the browser it came from (appProperties played and from), which a page taking the Drive's saves
-// takes in turn. A save written before the count began, or by another client, says nothing of it.
+// page's count, the browser it came from and its page's folder (appProperties played, from and page: the hub names a
+// game by its page), and a page taking the Drive's saves takes its count in turn. A save written before the count
+// began, or by another client, says nothing of them.
 //
 // A page pulls before main() runs, after persistent_home.js has read HOME in: the runtime reads a save once, when the
 // game starts, so one written later would be overwritten by the game's next save. A pull that takes more than 8 s is
@@ -70,9 +71,9 @@ const SaveSync = (() => {
   const system = [[/Android/, 'Android'], [/iPhone|iPad/, 'iOS'], [/CrOS/, 'ChromeOS'], [/Windows/, 'Windows'],
     [/Mac OS X/, 'macOS'], [/Linux/, 'Linux']].find(([re]) => re.test(ua))?.[1];
   const from = browser + (system ? ' on ' + system : '');
-  // A save's file's properties in the Drive.
-  const props = (hash, seconds, by = from) => ({ sha256: hash, ...(seconds !== undefined && { played: String(seconds) }),
-    from: by });
+  // A save's file's properties in the Drive: its hash, and what f (a save here, or the Drive's) says of it.
+  const props = (hash, f, by = from) => ({ sha256: hash, ...(f.played !== undefined && { played: String(f.played) }),
+    ...(f.page && { page: f.page }), ...(by && { from: by }) });
 
   // A path under HOME that is a save.
   const isSave = (path, size) => /^\.config\/[^/]+\/saves\/.+/.test(path) && !/\.(temp|bak)$/.test(path) &&
@@ -106,7 +107,7 @@ const SaveSync = (() => {
         if (!files.has(f.name) || files.get(f.name).time < time) {
           const p = f.appProperties ?? {};
           files.set(f.name, { id: f.id, hash: p.sha256, time, played: p.played === undefined ? undefined : Number(p.played),
-            from: p.from });
+            from: p.from, page: p.page });
         }
       }
       page = body.nextPageToken;
@@ -131,7 +132,8 @@ const SaveSync = (() => {
     const record = stored();
     if (record) store({ ...record, synced: { ...record.synced, [path]: hash } });
   };
-  // Syncs one browser's saves: local is path -> { data, time, played } (time in ms, played its game's seconds). With
+  // Syncs one browser's saves: local is path -> { data, time, played, page } (time in ms, played its game's seconds,
+  // page its page's folder). With
   // pull, the Drive's that win are returned (path -> { data, played }) for the caller to write; without it (the push while a game runs, the hub's sign-in) they
   // are left for the next start. Throws on a failed request: what synced before it stays recorded.
   const sync = async (local, { pull, signal } = {}) => {
@@ -158,7 +160,7 @@ const SaveSync = (() => {
         done.down++;
       } else if (!theirs || last === theirs.hash) {
         // Only this browser's changed.
-        await put(auth, path, mine.data, props(hash, mine.played), theirs?.id, signal);
+        await put(auth, path, mine.data, props(hash, mine), theirs?.id, signal);
         agreed(path, hash);
         done.up++;
       } else if (!pull) {
@@ -167,13 +169,13 @@ const SaveSync = (() => {
       } else if (last !== undefined && mine.time >= theirs.time) {
         // Both changed, and this browser's is newer: the Drive's is kept beside it.
         const data = await download(auth, theirs.id, signal);
-        await put(auth, copyName(path, theirs.time), data, props(theirs.hash, theirs.played, theirs.from), null, signal);
-        await put(auth, path, mine.data, props(hash, mine.played), theirs.id, signal);
+        await put(auth, copyName(path, theirs.time), data, props(theirs.hash, theirs, theirs.from), null, signal);
+        await put(auth, path, mine.data, props(hash, mine), theirs.id, signal);
         agreed(path, hash);
         done.up++, done.conflicts++;
       } else {
         // The Drive's is newer, or this browser never synced the file: this browser's is kept beside it.
-        await put(auth, copyName(path, mine.time), mine.data, props(hash, mine.played), null, signal);
+        await put(auth, copyName(path, mine.time), mine.data, props(hash, mine), null, signal);
         await took(path, theirs, await download(auth, theirs.id, signal));
         done.down++, done.conflicts++;
       }
@@ -221,23 +223,31 @@ const SaveSync = (() => {
       if (theirs?.hash !== hash) {
         if (theirs) {
           await put(auth, copyName(path, theirs.time), await download(auth, theirs.id),
-                    props(theirs.hash, theirs.played, theirs.from));
+                    props(theirs.hash, theirs, theirs.from));
         }
-        await put(auth, path, mine.data, props(hash, mine.played), theirs?.id);
+        await put(auth, path, mine.data, props(hash, mine), theirs?.id);
       }
       agreed(path, hash);
     }
   };
-  // The copies kept in the Drive when a save was replaced, newest first: { id, path (the save's), time (the copy's),
-  // played, from }.
-  const copies = async () => {
-    const auth = token(), found = [];
-    if (!auth) return found;
+  // What the Drive holds: saves, each game's save files, and copies, those kept when a save was replaced, newest
+  // first. Each { id, path (the save's), time (the copy's, of the save it was), played, from, page }.
+  const listing = async () => {
+    const auth = token(), saves = [], copies = [];
+    if (!auth) throw new Error('signed out');
     for (const [name, f] of await list(auth)) {
       const m = /^(.*)\.conflict-(.+)$/.exec(name);
-      if (m) found.push({ id: f.id, path: m[1], time: Date.parse(m[2]), played: f.played, from: f.from });
+      if (m) copies.push({ ...f, path: m[1], time: Date.parse(m[2]) });
+      else if (isSave(name, 0)) saves.push({ ...f, path: name });
     }
-    return found.sort((a, b) => b.time - a.time);
+    return { saves, copies: copies.sort((a, b) => b.time - a.time) };
+  };
+  // The player, as the Drive names them (its about call takes the drive.appdata scope): { name, email }.
+  const user = async (auth = token()) => {
+    const response = await request('https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress)',
+      { token: auth });
+    const { displayName, emailAddress } = (await response.json()).user;
+    return { name: displayName, email: emailAddress };
   };
   // A copy made the save again. The save it replaces is kept as a copy in turn, and every browser takes the Drive's at
   // its game's next start: one that agreed with the replaced save as one only the Drive changed, one changed since as two
@@ -248,13 +258,13 @@ const SaveSync = (() => {
     const theirs = (await list(auth)).get(copy.path), data = await download(auth, copy.id);
     if (theirs) {
       await put(auth, copyName(copy.path, theirs.time), await download(auth, theirs.id),
-                props(theirs.hash, theirs.played, theirs.from));
+                props(theirs.hash, theirs, theirs.from));
     }
-    await put(auth, copy.path, data, props(await hex(data), copy.played, copy.from), theirs?.id);
+    await put(auth, copy.path, data, props(await hex(data), copy, copy.from), theirs?.id);
     await request(drive + '/' + copy.id, { token: auth, method: 'DELETE' });
   };
 
-  return { key, stored, store, token, isSave, game, played, setPlayed, sync, compare, settle, copies, restore };
+  return { key, stored, store, token, isSave, game, played, setPlayed, sync, compare, settle, listing, user, restore };
 })();
 
 // A game's page: HOME is the program's file system (persistent_home.js), read in before main() runs.
@@ -284,7 +294,8 @@ if (typeof document !== 'undefined' && typeof Module !== 'undefined') {
       return found;
     };
     const read = (found) => new Map([...found].filter(([path, f]) => SaveSync.isSave(path, f.size))
-      .map(([path, f]) => [path, { data: FS.readFile(f.path), time: f.time, played: SaveSync.played(folder) }]));
+      .map(([path, f]) => [path, { data: FS.readFile(f.path), time: f.time, played: SaveSync.played(folder),
+      page: folder }]));
 
     // While the game runs: a save it wrote goes up, once there is a token (a page in the hub's frame may get one later).
     // Only a look that finds a file whose time changed asks the Drive anything; a failed push is tried at the next one.
