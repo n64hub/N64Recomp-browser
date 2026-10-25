@@ -304,6 +304,10 @@ thread stop ignored a start of (N64ModernRuntime-web 6515ea8). Render to RAM kee
 photo from the frame it has just drawn and finds the viewfinder's focus dot in it, and a play shows no kept writes. It
 opens widescreen, RT64's Expand in a course as the desktop's Widescreen setting draws it (off on the desktop):
 the setting is on with Emscripten, and a page's settings saved before, whose Off no player chose, are turned on once.
+The fork widens the forest film the title opens with too, which the port leaves 4:3: it runs from the title's own
+code, not a course's, so its routine is wrapped and the picture is wide while it runs (its `src/overlay_hook.cpp`).
+The title, Oak's lab and the other 2D screens stay pillarboxed, since their art ends at 320, and the film's first
+shot has a dark strip past the 4:3 edge at the left, where its sky ends (its docs/KNOWN-ISSUES.md).
 Its list is 199 shaders, the boot and 9 sections (the menus, a section a course, the report screens), recorded by
 code but for three Firefox plays missed: `web/survey.cpp` starts a course from the main menu and `web/shader_survey.js`
 rides it to its end, taking photos and throwing the items. Its docs/WEB.md and the headers of `tools/build_web.sh`,
