@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 737169e68ea5ca369776ca10e81333eb9a6b6f8d
+rt64: https://github.com/n64hub/rt64-web 3c6a1ccfcfdf2eea5ed1ca33c33b0919447e197d
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1587,20 +1587,19 @@ index 60b0fa4..11b7dbe 100644
          FlushReason flushReason;
  
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
-index 87392d0..2b55545 100644
+index 87392d0..5000ab7 100644
 --- a/src/hle/rt64_game_frame.cpp
 +++ b/src/hle/rt64_game_frame.cpp
-@@ -2,6 +2,9 @@
+@@ -2,6 +2,8 @@
  // RT64
  //
  
 +#include <algorithm>
-+#include <tuple>
 +
  #include "common/rt64_math.h"
  
  #include "rt64_game_frame.h"
-@@ -168,6 +171,55 @@ namespace RT64 {
+@@ -168,6 +170,55 @@ namespace RT64 {
          return (lhs.first < rhs.first) || ((lhs.first == rhs.first) && lhs.second < rhs.second);
      }
  
@@ -1656,7 +1655,7 @@ index 87392d0..2b55545 100644
      struct MatchCandidate {
          uint32_t curIndex = 0;
          uint32_t prevIndex = 0;
-@@ -403,8 +455,10 @@ namespace RT64 {
+@@ -403,8 +454,10 @@ namespace RT64 {
              return;
          }
  
@@ -1669,7 +1668,7 @@ index 87392d0..2b55545 100644
          curCallHashMap.clear();
          prevCallHashMap.clear();
  
-@@ -509,69 +563,159 @@ namespace RT64 {
+@@ -509,69 +562,163 @@ namespace RT64 {
              buildCallHashMap(p, prevWorkload, prevProj, prevCallHashMap);
          }
  
@@ -1733,7 +1732,11 @@ index 87392d0..2b55545 100644
 +            uint32_t maxWorldMatrix;
 +
 +            bool operator<(const CallMatrices &o) const {
-+                return std::tie(workloadIndex, minWorldMatrix, maxWorldMatrix) < std::tie(o.workloadIndex, o.minWorldMatrix, o.maxWorldMatrix);
++                if (workloadIndex != o.workloadIndex) {
++                    return workloadIndex < o.workloadIndex;
++                }
++
++                return (minWorldMatrix != o.minWorldMatrix) ? (minWorldMatrix < o.minWorldMatrix) : (maxWorldMatrix < o.maxWorldMatrix);
 +            }
 +
 +            bool operator==(const CallMatrices &o) const {
@@ -1875,7 +1878,7 @@ index 87392d0..2b55545 100644
          }
  
          // Compute all the differences between transforms and insert them into a vector that will be sorted according to the differences.
-@@ -669,14 +813,48 @@ namespace RT64 {
+@@ -669,14 +816,48 @@ namespace RT64 {
              const bool wrappedUlt = (curTile.cmt == G_TX_WRAP) && (modulo(integerUlt, curTile.maskt * 4) == modulo(expectedUlt, curTile.maskt * 4));
              const bool wrappedLrs = (curTile.cms == G_TX_WRAP) && (modulo(integerLrs, curTile.masks * 4) == modulo(expectedLrs, curTile.masks * 4));
              const bool wrappedLrt = (curTile.cmt == G_TX_WRAP) && (modulo(integerLrt, curTile.maskt * 4) == modulo(expectedLrt, curTile.maskt * 4));
@@ -1928,7 +1931,7 @@ index 87392d0..2b55545 100644
              curTileMap.mapped = true;
              firstCurWorkloadMap.prevTilesMapped[indices.second] = true;
              tileInterpolationUsed = tileInterpolationUsed || tileScrolled;
-@@ -784,7 +962,7 @@ namespace RT64 {
+@@ -784,7 +965,7 @@ namespace RT64 {
          }
      }
      
@@ -1937,7 +1940,7 @@ index 87392d0..2b55545 100644
          for (uint32_t c = 0; c < proj.gameCallCount; c++) {
              const GameCall &call = proj.gameCalls[c];
              uint32_t matrixIdHash = 0;
-@@ -802,7 +980,7 @@ namespace RT64 {
+@@ -802,7 +983,7 @@ namespace RT64 {
                  doTileMatching = doTileMatching || (group.tileInterpolation == G_EX_COMPONENT_AUTO);
              }
  

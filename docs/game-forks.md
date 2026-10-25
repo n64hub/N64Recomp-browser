@@ -156,8 +156,10 @@ patch), the microcode labels it ignores, render to RAM off and why, the shader l
 `n64hub/BanjoTooieRecompiled-web` is Banjo-Tooie: Recompiled. The game writes thprof creating its threads
 (N64ModernRuntime 2e6aa0a). Upstream ships the Suplexmentary Comic NC font in `assets/`, and the page loads it. Its list
 is 284 descriptions in 11 sections. The word at 0x800459C8 counts 30 a second in every world, not frames
-drawn. The desktop build draws every world but Terrydactyland and Hailfire Peaks at 30. Upstream prints diagnostics of
-its own (`[entry-probe]`, `[task1]`, ~100 lines a second), left as they are. It draws ~1,700 batches a frame in
+drawn. The desktop build draws every world but Terrydactyland and Hailfire Peaks at 30. Upstream prints temporary
+diagnostics of its own (`[tooie] step`, `[probe]`, `[sys-first]`, `[entry-probe]`, `[task1]` once a frame, 17,000
+lines in a 2-minute play), which the fork takes out with the hooks that print them: its page's console holds the
+page's own lines, the game's errors and the traces an environment variable turns on. It draws ~1,700 batches a frame in
 Jinjo Village, 3-7 times Rush 2049's, and RT64 makes each one WebGPU calls on the page's thread, so with Chrome's CPU
 throttled 6 times it is the slowest page there, its own draw count and not the web support (docs/findings.md, A page's
 thread in Chrome, throttled). Its BUILDING.md and the headers of
@@ -275,7 +277,9 @@ the runtime read the ROM 1 KB at a time, until v0.82.0. N64ModernRuntime's `mesg
 the web's held messages (66539ab): DKR-R's own `runtime-deferred-events.patch` does the same, a blocked external
 message kept in a list of its own until a receive frees its queue, and is staged over that file at configure time.
 rt64-web 0a9fcb6 keeps the web's lines off those DKR-R's and Jet Force Gemini's patches change, as 03b9dcc and d5121c9
-do for Conker's. A first run plays DKR-R's Modern profile, the only one that interpolates (Accurate, the desktop's
+do for Conker's, and 3c6a1cc off those where they and Snap64's add their includes. rt64 9086c93's frame matching by
+each hash's group of calls replaces the loop DKR-R's `patches/rt64/0007` changes, so `patches/web` takes the web's
+loop with 0007's look at condition where each side's calls are collected (DKR-R-web 2bd6689). A first run plays DKR-R's Modern profile, the only one that interpolates (Accurate, the desktop's
 default, holds RT64 at Original and 30), widescreen as Modern is by default (a first run's settings would give it the
 runtime's starting 4:3), and a profile the player saves from DKR-R's overlay is kept: the overlay opens on a page
 (Escape, F1, a controller's Back) through rt64-web's inspector on plume (8b9dce2), without online play, its restart
