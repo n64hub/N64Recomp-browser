@@ -487,6 +487,35 @@ jobs:
             echo "$(basename "$patch") applies"
           done
 
+  # F-Zero X's own changes over the patches (f-zero-x-recomp, its main), as Super Mario 64's above: its
+  # runtime-patches/apply.cmake applies the patches, then its runtime-patches/<project>-<n>-*.patch (RT64 drawing the
+  # game's own microcode, F3DFLX2), to its upstream submodules, and they change files the patches change too (RT64's
+  # display list commands, RSP and frame matching). Red on a PR means one stopped applying: it is made again over the
+  # new patches in the game's repo, in that PR's work.
+  fzx-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: f-zero-x-recomp's apply over them
+        run: |
+          fzx="$RUNNER_TEMP/fzx"
+          git clone -q --depth 1 https://github.com/n64hub/f-zero-x-recomp "$fzx"
+          git -C "$fzx" log -1 --format='f-zero-x-recomp %h %s'
+          for patch in $(ls "$fzx"/runtime-patches/*.patch | sort); do
+            project=$(basename "$patch" | sed 's/-[0-9]*-.*//')
+            if [ ! -e "$fzx/lib/$project/.git" ]; then
+              git -C "$fzx" -c protocol.version=2 submodule update -q --init --depth 1 "lib/$project"
+              cmake -P patches/apply.cmake "$project" "$fzx/lib/$project"
+            fi
+            git -C "$fzx/lib/$project" apply --whitespace=nowarn "$patch"
+            echo "$(basename "$patch") applies"
+          done
+
   # Every library a page is made of, built with Emscripten (tests/build/CMakeLists.txt): from the forks, and from
   # Banjo-Kazooie's own upstream commits with the patches in.
   emscripten:
@@ -569,7 +598,7 @@ jobs:
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, snap-patches,
-      rush2-patches, snowboarding-patches, bt-patches, wr-patches, sm64-patches, emscripten]
+      rush2-patches, snowboarding-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')

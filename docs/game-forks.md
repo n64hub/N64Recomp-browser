@@ -146,7 +146,7 @@ sections and how they are recorded, Firefox's fixes.
 
 `n64hub/wave-race-64-recomp-web` is Wave Race 64: Recompiled. Fast3D draws as it does natively, with no rt64-web
 change. Its water renderer's 16 shaders are included as WGSL blobs. Its water patch is the web-patched tree's diff, so
-an rt64-web change beside its lines (rt64 179adb8, 5249040, d19fdcc) stops `git apply` and the patch is made again (applied with fuzz,
+an rt64-web change beside its lines (rt64 179adb8, 5249040, d19fdcc, b173eb3) stops `git apply` and the patch is made again (applied with fuzz,
 then diffed). CI's `wr-patches` job runs its `tools/web_patch.sh` on each PR, so such a change is red there, not at the
 page's next build. Its list is in 13 sections, the menus passed with page_driver's `pressUntil` and the gas held with
 its `down`/`up`. Its docs/BUILDING.md (The web page) and the
@@ -405,6 +405,24 @@ those of `tools/play_plan_full.json` among them: a play of the whole game (every
 ending and the credits) in about 56 minutes, for what the regular plans never reach. Its README, CLAUDE.md and
 docs/web.md have the rest.
 
+`n64hub/f-zero-x-recomp` is F-Zero X (USA), not a fork but this project's own recomp, as Rush 2049's, Perfect Dark's
+and Super Mario 64's are (GPL-3.0), from the inspectredc/fzerox decompilation's symbols, with RecompFrontend's launcher
+and menus. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on
+(`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser` pins, and then by its own
+`runtime-patches/` (RT64 drawing the game's own microcode, F3DFLX2, as F3DEX2 plus its alpha light, which gives the
+machines their paint and shading), which change files the patches change too, so CI's `fzx-patches` job applies them
+over the patches on each PR. Its patches (MIPS C against the decompilation's headers) split each camera's combined
+projection and view for RT64's interpolation and tag the racers by who they are, with RT64 blending a camera's eye
+on the line between its two places (`RT64_INTERPOLATE_CAMERA_EYE`, on for its desktop build too), and widen the race's
+sky to the window's shape. Its race HUD is placed from the picture's edges by N64Recomp text hooks at the start of
+each function that draws a part of it, which write RT64's `gEXSetRectAlign` and an edge-aligned scissor into the
+game's display list: none of its 227-line HUD function is copied. Its `tools/build_web.sh` runs a Docker image of its
+own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 75 shaders: the
+boot (the launcher, the title and the main menu, 5) and a section for each of the 24 courses of the four cups, 53-63
+each and most of them in every one, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json`, which writes
+the course at machine select where the race reads it and has the computer drive player 1's machine, as its play plans
+do. Its README, CLAUDE.md and docs/web.md have the rest.
+
 ## The games' own frame rates
 
 A page presents at the display's rate whatever its game runs at (CLAUDE.md, Rules). The game's own rate, set by the
@@ -413,9 +431,9 @@ once a VI; its controller reads held it to 30 on a fast CPU, which its `patches/
 Racing 30 (DKR-R's Accurate profile, the desktop's default, holds RT64 at Original; the page plays Modern), Jet Force
 Gemini 30 dropping to 20 when a frame runs long, or 60 (its Game Frame Rate, 60 on a page: 54-59 at the display's 60
 and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), and the
-cartridge's for the other ten: Super Mario 64 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
+cartridge's for the other eleven: F-Zero X 60 in a one-player race, Super Mario 64 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
 (Terrydactyland 12, Hailfire Peaks 10), Wave Race 64 20 in races, Star Fox 64 30 (20 where a scene sets 3 VIs a
-frame), GoldenEye's and Conker's variable. None of the ten has an option to run faster.
+frame), GoldenEye's and Conker's variable. None of the eleven has an option to run faster.
 
 A game fork may take a change that runs its game faster when that makes the page play better. Weigh it: logic at 60
 gives lower input lag, motion the game computes rather than RT64 interpolates, and what interpolation misses (some
