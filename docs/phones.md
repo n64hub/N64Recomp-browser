@@ -128,6 +128,10 @@ while game frames fall. Telling them apart:
   render to RAM's late copy landing at the next list's start, which was a quarter of Conker's display list thread
   (Conker's Bad Fur Day on a Galaxy S21); and work that grows as the square of a game's calls, such as RT64's frame
   matching before rt64 9086c93, 18-23 ms of Banjo-Tooie's game frames (Banjo-Tooie on a Galaxy S21).
+- A thread a profile shows 100% busy in its own function, with nothing called below it, can be waiting: a wait inlined
+  into its loop is put down to the loop (docs/findings.md). `timer_thread` reads so on every game's page, and a build
+  that counted its loop's passes printed none in 75 s of 1080° Snowboarding's demo, so the thread sat in one wait all
+  through (1080° Snowboarding on a Galaxy S21).
 - Presents short of the display with neither the game's frames nor the GPU behind are RT64's interpolated frames:
   with present-stats, frames drawn a second under twice the game frames of a game interpolated at 30 is RT64
   skipping a game frame's later frames, which it does when its workload thread runs past each frame's share of the
@@ -309,7 +313,8 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   60.2 of its 60), then 50.6 (44.9-52.5) over its demo on Crystal Lake, the game at 16-22 frames a second (17.6 the
   median) where it reports 20, RT64 drawing 47-53 for them. plume waited 7-38 ms a second for fewer presents in
   flight and spun 150-320 ms a second to a present's slot, each present done on the GPU 18 ms after it, the GPU
-  65-97% busy, mostly at 130 MHz: its game frames hold it, not its GPU, as Conker's do.
+  65-97% busy, mostly at 130 MHz: its game frames hold it, not its GPU, as Conker's do, and render to RAM's exact
+  copy held them (1080° Snowboarding on a Galaxy S21).
 - Its on-screen controller (`site/touch_pad.js`), tapped from the protocol into a run: START at the title and A eight
   times took the game from the language screen a first run shows, through the main menu, to Match Race's board
   select (its console's `mgrproc.uso`, then `genproc.uso` and the riders, which the attract never loads). There, hot
@@ -516,3 +521,34 @@ linked with `--profiling-funcs`, served in place of Pages', and builds changed o
 - Nothing in the game reads a frame back: its menus, a race, its pause menu and QUIT draw the same without the copy
   (shots of each, the extended plan on a desktop GPU), and with the late copy its CPU never wrote to a framebuffer
   whose copy was pending. So the page turns it off (rush2recompiled-web's `src/main.cpp`), as Rush 2049's does.
+
+## 1080° Snowboarding on a Galaxy S21
+
+Its attract after Start Game, the demo on Crystal Lake from 40 s on, Chrome 156, hot all through: big and middle cores
+capped at 1.04 GHz, the GPU at 403 MHz, the battery at 38-40 °C. The game picks its own rate from how its frames go,
+so the rate it reports moves with them.
+
+- The page from Pages on v0.123.0, which keeps render to RAM's exact copy, so neither the RDP-done-early late copy nor
+  rt64's frame matching fix reaches it: 16.5 game frames a second (14.7-20.4 over its 5 s windows), the game asking
+  for 15-20, presents 50.4.
+- A profile (main's build linked with `--profiling-funcs`, 20 s of the demo): the display list thread 27% busy and 31%
+  of its time in render to RAM's exact copy, `Framebuffer::copyNativeToRAM` mapping the copy's buffer at each list's
+  full sync, which waits for the GPU to finish the frame; RT64's workload thread 19% busy, the audio microcode's 24%,
+  the game's threads about 10% and the page's 50%. `timer_thread` read 100%, a wait (What holds a page back): Rush
+  2049's and Rush 2's profiles show it so too.
+- The game reads no frame it drew back on the CPU: with render to RAM off its title, menus, a race and its pause draw
+  as with the copy (Chrome, a desktop GPU). The copy a list late is not for it: it frees its framebuffers' memory to
+  load a level, and over the regular plan the late copy reported three CPU writes to a framebuffer with a copy
+  pending, where a word of the new data equal to the old would get the frame's pixels.
+- Render to RAM off against Pages, interleaved (off, Pages, Pages, off), the same caps: the game at 26.1 and 26.6
+  frames a second (21.7-28.5), asking for 30 nearly all through, against 15.8 and 15.0 (13.7-20.6) asking for 15-30;
+  presents 49.4 and 52.4 against 49.6 and 50.6, plume waiting a median 118 and 19 ms a second for fewer presents in
+  flight against 30 and 43, the GPU busier with the frames it now gets. So the page turns render to RAM off
+  (docs/game-forks.md).
+- RT64 checks RDRAM for what the CPU wrote over a framebuffer only after a list that copied its frames there, so with
+  render to RAM off a framebuffer whose memory the game reused for a level stayed, and the textures it loaded there
+  were read from its old frame. On a desktop GPU in Chrome at 3840x2000, uncapped, interleaved with Pages: 244 and
+  244 presents a second against 257 and 257 without the check, 254 and 261 against 261 and 259 with it. The game
+  fork's rt64 patch keeps the check with render to RAM off. On the phone, warm (big cores capped at 1.56-1.79 GHz,
+  battery 29-34 °C), one play each in turn: the game at 30.2 frames a second (28.6-30.2) with the check, 29.7
+  (27.5-30.2) without, presents 59.9 and 58.6.

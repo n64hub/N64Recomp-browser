@@ -363,13 +363,15 @@ N64Recomp-browser has changed in them since is merged in by `apply.cmake --since
 `snowboarding-patches` job runs its `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. Its rt64 is
 newer than the web's: its texture decoder is shared with the CPU (`src/shared`, which calls TMEM's sizes
 `TMEM_RDP_*`), and with `RT64_UNEVEN_FRAME_RATES` the web's rate for uneven frames is used in `rt64_vi.cpp`, the
-game's otherwise. The page leaves out RetroAchievements, which needs a server, and MSAA, and keeps every other
-option at the desktop's defaults. Render to RAM is off: played without it, every screen its plans reach (the intro,
-the title, the menus, a Match Race and its pause) draws as with the exact copy. Its list is 54 shaders: the boot (the
-launcher, the intro, the title and its demo, the menus, 43) and 4 sections (Crystal Lake's Match Race, Time Attack on
-Crystal Peak and Golden Forest, Training), recorded by `tools/shader_plan.json`, which knows where the game is by its
-loaded modules (`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and
-`web/rt64_shaders.txt` have the rest.
+game's otherwise. The page leaves out RetroAchievements, which needs a server, and MSAA, turns render to RAM off,
+since the game reads no frame back and the exact copy held a phone's game frames to 15-16 a second against 26 (the
+copy a list late would land on the level data it loads into its framebuffers' memory: docs/phones.md), with RT64
+still checking RDRAM for what the CPU wrote over a framebuffer as it does after a copy (its rt64 patch), and keeps
+every other option at the desktop's defaults. Its list is 55 shaders: the boot (the launcher, the intro, the title and
+its demo, the menus, 44) and 4 sections (Crystal Lake's Match Race, Time Attack on Crystal Peak and Golden Forest,
+Training), recorded by `tools/shader_plan.json`, which knows where the game is by its loaded modules
+(`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the
+rest.
 
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
