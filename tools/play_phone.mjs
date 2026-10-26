@@ -261,7 +261,9 @@ const waitFor = (pattern, ms) => new Promise((ok, fail) => {
 // A profile of the page and every worker in it, attached to as the protocol's flat sessions. A wasm thread waiting shows
 // as samples of its wait (Atomics.wait under _do_futex_wait, a condition variable), so those are taken out of its busy
 // share along with the idle ones. (program) is the browser's own work on the thread, outside script: the page's WebGPU
-// calls, for one.
+// calls, for one. A worker that ends while it is profiled (a game that starts and ends a thread for each of its objects)
+// answers no Profiler.stop, so each stop waits 10 s at most, and a worker detached meanwhile is left out; every worker
+// is detached afterwards, so a later profile step attaches to each one again.
 const waits = /^\(idle\)$|futex_wait|_timedwait|cond_wait|condition_variable::wait|^__timedwait_cp$/;
 const profile = async (secs, prefix) => {
   const sessions = new Map();
@@ -271,9 +273,10 @@ const profile = async (secs, prefix) => {
     await send('Profiler.start', {}, sessionId);
   };
   const attached = (m) => {
+    if (m.method === 'Target.detachedFromTarget') { sessions.delete(m.params.sessionId); return; }
     if (m.method !== 'Target.attachedToTarget') return;
     const { sessionId, targetInfo } = m.params;
-    sessions.set(sessionId, targetInfo);
+    sessions.set(sessionId, { ...targetInfo, parent: m.sessionId });
     send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, sessionId);
     if (targetInfo.type === 'worker' || targetInfo.type === 'iframe') start(sessionId);
     send('Runtime.runIfWaitingForDebugger', {}, sessionId);
@@ -282,10 +285,12 @@ const profile = async (secs, prefix) => {
   await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
   await start(undefined);
   await new Promise((ok) => setTimeout(ok, secs * 1000));
-  listeners.splice(listeners.indexOf(attached), 1);
   let n = 0;
   for (const sessionId of [undefined, ...sessions.keys()]) {
-    const p = (await send('Profiler.stop', {}, sessionId)).result?.profile;
+    const info = sessions.get(sessionId);
+    if (sessionId && !info) continue;
+    const stopped = await Promise.race([send('Profiler.stop', {}, sessionId), new Promise((ok) => setTimeout(ok, 10000))]);
+    const p = stopped?.result?.profile;
     if (!p) continue;
     fs.writeFileSync(`${prefix}.${n}.cpuprofile`, JSON.stringify(p));
     const byId = new Map(p.nodes.map((node) => [node.id, node]));
@@ -298,12 +303,14 @@ const profile = async (secs, prefix) => {
       if (waits.test(name)) waiting += dt;
       else self.set(name, (self.get(name) ?? 0) + dt);
     });
-    const what = sessionId ? sessions.get(sessionId).type : 'page';
+    const what = info?.type ?? 'page';
     const top = [...self].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, t]) => `${(100 * t / total).toFixed(1)}% ${name.slice(0, 70)}`);
     console.log(`${at().toFixed(1).padStart(6)}  profile ${n} (${what}): busy ${(100 * (total - waiting) / total).toFixed(0)}%: ${top.join(' · ')}`);
     n++;
   }
+  listeners.splice(listeners.indexOf(attached), 1);
   await send('Target.setAutoAttach', { autoAttach: false, waitForDebuggerOnStart: false, flatten: true });
+  for (const [sessionId, { parent }] of [...sessions].reverse()) send('Target.detachFromTarget', { sessionId }, parent);
 };
 
 const finish = (exitCode) => {
