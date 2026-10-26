@@ -314,10 +314,11 @@ every other the port's depth. In `rt64_gbi_rdp.cpp`'s full sync the port's focus
 draws, and then the web's check whether the list ends there (rt64 1c9e639). HAL's object manager runs each object on a
 thread that stops itself, which the libultra
 thread stop ignored a start of (N64ModernRuntime-web 6515ea8). Render to RAM keeps the exact copy but in the title's
-film: a course's focus dot is found in the frame just drawn, and Oak's check, the album and the report score a photo
-from the buffer it was just rendered into, outside a course; nothing reads the film's frames, so while its routine runs
-the copy lands a list late (renderToRAMLate), which on a phone spares the film's list its wait for the GPU (docs/phones.md,
-Pokémon Snap on a Galaxy S21). A play shows no kept writes. It
+film and attract demo: a course's focus dot is found in the frame just drawn, and Oak's check, the album and the
+report score a photo from the buffer it was just rendered into, outside a course. Nothing scores the film's frames or
+the demo's (a course played from its recorded script, whose focus dot comes a frame late), so while the film's routine
+runs or the demo plays the copy lands a list late (renderToRAMLate), which on a phone spares their lists the wait for
+the GPU (docs/phones.md, Pokémon Snap on a Galaxy S21). A play shows no kept writes. It
 opens widescreen, RT64's Expand in a course as the desktop's Widescreen setting draws it (off on the desktop):
 the setting is on with Emscripten, and a page's settings saved before, whose Off no player chose, are turned on once.
 The fork widens the forest film the title opens with too, which the port leaves 4:3: it runs from the title's own
