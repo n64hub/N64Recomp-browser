@@ -3,7 +3,7 @@
 # otherwise wrote by hand around publish_pages.sh, ab_pages.mjs and play_pages.sh.
 #
 #   bash tools/retest.sh <rush-2049-recomp checkout> <tag> <dir> [<game>...] [--ab <game>...] [--cpu-throttle <rate>]
-#       [--queue <command>]
+#       [--queue <command>] [--note <text>]
 #
 # <game>s are publish_pages.sh's names (all of them without), --ab the games that stand for the rest in Chrome's A/B
 # (none without: a tag that can't move speed gets only the smoke plays). <dir> holds the run: the builds
@@ -18,8 +18,10 @@
 #   games come first, so their verdict is in before any pin moves: one that isn't "no worse" stops every pin, and
 #   every other page then gets the A/B too, for the work it is filed with. A page whose smoke play is clean, with the
 #   A/B gate open, then moves its fork's pin onto the tag (a commit on its main, the built main with only
-#   N64Recomp-browser moved, pushed as a fast-forward), is published as played (publish_pages.sh --played, which boots
-#   it from Pages in headless Chrome) and played from Pages in Firefox (play_pages.sh). Rush 2049, Perfect Dark and
+#   N64Recomp-browser moved, pushed as a fast-forward) and is published as played (publish_pages.sh --played, which
+#   boots it from Pages in headless Chrome). An --ab game, and one whose repo changed more than its pin since the main
+#   Pages served, is then played from Pages in Firefox (play_pages.sh); the rest are not (docs/publishing.md, The
+#   retest). Rush 2049, Perfect Dark and
 #   Super Mario 64 move by a PR on their own repos (CLAUDE.md, The pins): for each, the run pushes the pin commit as
 #   branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
 #   build has run), `publish_pages.sh <checkout> <game> --played <dir>/keep` and `play_pages.sh <checkout> firefox
@@ -28,18 +30,20 @@
 # uncapped). --queue <command> takes each build and play's turn in the machine's GPU queue (CLAUDE.md, Playing a page):
 # it is run as `<command> <shared|whole> <minutes> <command line...>`, a build and a smoke play, a boot and a play from
 # Pages a shared turn, an A/B's play a whole one, the minutes the turn's limit. Without it each runs at once.
+# --note <text> goes into every play's note in plays.jsonl after "retest <tag>": the host, and what else ran beside it.
 # At the end it prints each game's outcome: same (no new bytes: its Played cell takes the tag), published, PR (an own
 # recomp's, to merge and publish), held (the gate is shut, its plays done), or what failed, with the step's log.
 # It needs what publish_pages.sh, ab_pages.mjs and play_pages.sh need (BUILD_HOST, ROMS, gh, push access to the forks)
 # and NODE, a node that runs the .mjs tools.
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-args=() ab=() throttle=0 queue=""
+args=() ab=() throttle=0 queue="" note=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
     --ab) shift; while [[ $# -gt 0 && $1 != --* ]]; do ab+=("$1"); shift; done; continue ;;
     --cpu-throttle) throttle="$2"; shift ;;
     --queue) queue="$2"; shift ;;
+    --note) note="$2"; shift ;;
     *) args+=("$1") ;;
     esac
     shift
@@ -99,9 +103,13 @@ move_pin() {
         return
     fi
     git -C "$clone" push -f origin "$commit:refs/heads/$branch" || return 1
+    local body="Moves the N64Recomp-browser pin to $tag, the tag N64Recomp-browser's retest builds every page on: what it"
+    body+=" brings is \`git log <the old pin>..$tag\` there. Only the pin changes. The page built from this commit played"
+    body+=" clean in Firefox (N64Recomp-browser's plays.jsonl); once this merges, \`publish_pages.sh --played\` publishes"
+    body+=" the files that were played."
     gh pr view "$branch" -R "$repo" --json url --jq .url 2> /dev/null ||
-        gh pr create -R "$repo" --base main --head "$branch" --title "lib/N64Recomp-browser at $tag (${tag_sha:0:7})" --body \
-            "Moves the N64Recomp-browser pin to $tag, the tag N64Recomp-browser's retest builds every page on: what it brings is \`git log <the old pin>..$tag\` there. Only the pin changes. The page built from this commit played clean in Firefox (N64Recomp-browser's plays.jsonl); once this merges, \`publish_pages.sh --played\` publishes the files that were played."
+        gh pr create -R "$repo" --base main --head "$branch" --title "lib/N64Recomp-browser at $tag (${tag_sha:0:7})" \
+            --body "$body"
 }
 
 builds() {
@@ -137,9 +145,13 @@ for g in "${order[@]}"; do
     served="$(gh api "repos/$hub/commits/gh-pages" --jq .commit.message | sed -n "s|^$folder/: built from main \([0-9a-f]*\)$|\1|p")"
     served_pin="$(git -C "$clone" ls-tree -r "${served:-none}" 2> /dev/null |
         awk '$2 == "commit" && $4 ~ /(^|\/)N64Recomp-browser$/ { print $3; exit }')"
-    pages_build="Pages, $(git -C "$here/.." describe --tags --exact-match "$served_pin" 2> /dev/null || echo "main ${served:0:7}")"
+    pages_build="$(git -C "$here/.." describe --tags --exact-match "$served_pin" 2> /dev/null || echo "main ${served:0:7}")"
+    # Its own changes since the main Pages served, besides the pin: its shell, patches or plan, played from Pages too.
+    own_changes=no
+    git -C "$clone" diff --quiet "${served:-none}" "$was" -- . ':!lib/N64Recomp-browser' ':!tools/N64Recomp-browser' \
+        2> /dev/null || own_changes=yes
     abp=(env NODE="$node" "$node" "$here/ab_pages.mjs" "$g" "$hub_url$folder/" "$build" "$(rom_of "$g")" "$plan"
-        --pages-build "$pages_build" --build "$tag" --record "$here/../plays.jsonl" --note "retest $tag")
+        --pages-build "$pages_build" --build "$tag" --record "$here/../plays.jsonl" --note "retest $tag${note:+; $note}")
     if [[ " ${ab[*]} " == *" $g "* || $gate == shut ]]; then
         step "$g" ab "${abp[@]}" --cpu-throttle "$throttle" --out "$run/ab/$g" -- $(qwords whole 8)
         [[ $(cat "$run/$g.ab") == 0 ]] || gate=shut
@@ -151,8 +163,12 @@ for g in "${order[@]}"; do
     if [[ $own == *" $g "* ]]; then outcome "$g" "PR $(tail -1 "$run/$g.pin.log")"; continue; fi
     step "$g" publish bash "$here/publish_pages.sh" "$rush" "$g" --played "$run/keep" -- $(qwords shared 5) ||
         { outcome "$g" "publish failed: $run/$g.publish.log"; continue; }
-    step "$g" firefox bash "$here/play_pages.sh" "$rush" firefox "$g" -- $(qwords shared 8) &&
-        outcome "$g" "published" || outcome "$g" "published; its Firefox play from Pages failed: $run/$g.firefox.log"
+    if [[ " ${ab[*]} " != *" $g "* && $own_changes == no ]]; then
+        outcome "$g" "published (its pin alone changed: no Firefox play from Pages)"
+    else
+        step "$g" firefox bash "$here/play_pages.sh" "$rush" firefox "$g" --note "retest $tag${note:+; $note}" -- $(qwords shared 8) &&
+            outcome "$g" "published" || outcome "$g" "published; its Firefox play from Pages failed: $run/$g.firefox.log"
+    fi
 done
 wait $builder
 echo
