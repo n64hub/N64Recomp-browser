@@ -165,7 +165,9 @@ Firefox and publishes each, and updates their rows, in the same work. A bug only
 the retest publishes it, its fix is critical.
 
 **Publishing** is the deploy; no CI job does it. A retest or critical fix publishes the pages it moves, and a change to
-one game's own repo publishes that game's page right after it lands, unasked. Every page is played before it is
+one game's own repo publishes that game's page right after it lands, unasked. So does a change to the games page
+(`site/`, `frontend/save_sync.js`, `frontend/coi_serviceworker.js`): the work that merges it runs `tools/publish_site.sh`
+from main at once and checks n64hub.com serves it, since until then the merge reaches nobody. Every page is played before it is
 published and booted from Pages after, so Pages holds only played pages. A page found behind main
 (the hub's last gh-pages commit names the main each game's folder was built from) is played and published by whoever finds it. How:
 docs/publishing.md.
