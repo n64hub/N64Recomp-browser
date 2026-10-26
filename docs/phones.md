@@ -475,14 +475,23 @@ forest film, which runs at 60 game frames a second, then a course's demo at 30, 
   RT64's workload thread was 20% busy. The port's report gives each frame 70-210 ms, 0-12 ms of it its wait for the
   renderer, and the game's thread spends most of each update parked while it hands the CPU to the threads the port
   runs one for each of the game's objects: 90-180 handoffs a frame, 0.6 ms each, where a desktop takes 0.03.
-- The page keeps render to RAM's exact copy, since the game scores a photo from the frame it has just drawn
-  (docs/game-forks.md). The late copy in its place (a build changed only there), interleaved (late, exact, exact,
+- The late copy everywhere in place of the exact copy (a build changed only there), interleaved (late, exact, exact,
   late), the film and the demo's start (40-150 s after Start Game), hot (big cores at 0.83 GHz, the GPU at 312-403
   MHz, battery 44-45 °C): the game at 10.7 and 14.8 frames a second (medians) against 6.9 and 6.0, presents 43.9 and
   42.6 against 36.9 and 39.5, plume waiting 200-750 ms a second for fewer presents in flight in all four.
 - So it is the game fork's own: its exact copy, its port's wait for each list and its thread for each object, under a
   scene the phone's GPU takes most of a present to draw. Nothing in the shared support holds it: render to RAM's wait
   is what the exact copy is for, and the late copy is already there for a game that can take it.
+- The page now takes the late copy in the film and the attract demo only, where nothing is scored (docs/game-forks.md),
+  and the exact copy everywhere else. Played against Pages' page, the same main without it, the attract after Start
+  Game, big cores at 1.04 GHz, the GPU at 403 MHz, battery 39-40 °C, the game frames a second (medians, interleaved):
+  in the film (27-80 s) 29.4 and 29.8 with the late copy there against Pages' 14.9 and 14.3, at the rate the game
+  reports (30); in the Beach demo (124-170 s) 17.2 and 17.5 with the late copy there too against 10.1-11.0 for a
+  build with it in the film only, and Pages' 10.9 and 11.1; presents 56.1-57.8 a second against 51.3 and 51.9. The
+  demo is still under its rate: its scene and the port's handoffs are what is left.
+- On a desktop GPU (Chrome, uncapped at 3840x2000, interleaved whole turns) the film's first minute (14-76 s) runs
+  under the 60 the game reports too, the late copy there drawing 31.2 and 31.3 game frames a second (medians) against
+  Pages' 21.1 and 22.0; its last 30 s at 60 and the demo at 30 are the same in both, and presents 293-300 a second.
 
 ## Rush 2 on a Galaxy S21
 
