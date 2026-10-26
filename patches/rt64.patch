@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web f99c2e4cb9d25744b829e444be4b14ab0dcf20ba
+rt64: https://github.com/n64hub/rt64-web 40ec5c246da7f0babb97ef89f72f4a27bb656b7b
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2675,7 +2675,7 @@ index e08b02c..7b7d896 100644
          void threadAdvanceBarrier();
          void threadLoop();
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index a10c11a..b5ed243 100644
+index a10c11a..911e684 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -388,6 +388,19 @@ namespace RT64 {
@@ -2724,16 +2724,16 @@ index a10c11a..b5ed243 100644
          const float Fixed16ToFloat = 1.0f / 65535.0f;
          hlslpp::float2 &primDepth = primDepthStack[primDepthStackSize - 1];
          primDepth.x = (z & 0x7FFFU) * Fixed15ToFloat;
-@@ -1182,6 +1199,9 @@ namespace RT64 {
-         // tolerance of one pixel from the scissor coordinates.
-         const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
-         const bool fixRectLR = state->ext.enhancementConfig->rect.fixRectLR;
+@@ -1174,6 +1191,9 @@ namespace RT64 {
+         uly += extAlignment.topOffset;
+         lrx += extAlignment.rightOffset;
+         lry += extAlignment.bottomOffset;
 +#   if defined(__EMSCRIPTEN__)
 +        const int32_t gameLry = lry;
 +#   endif
-         if (!scissorRect.isNull() && fixRectLR) {
-             if ((abs(scissorRect.lrx - lrx) <= 4) && (ulx < scissorRect.lrx)) {
-                 lrx = scissorRect.lrx;
+ 
+         // There's a very common error in many games where rectangles are incorrectly configured with one
+         // less pixel than what's required to fill out the screen because other rectangle methods under
 @@ -1311,6 +1331,28 @@ namespace RT64 {
              updateCallTexcoords(u1, v1);
              updateCallTexcoords(u2, v2);
