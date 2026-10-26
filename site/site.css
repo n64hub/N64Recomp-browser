@@ -119,10 +119,14 @@ main.text h2 { margin: 8px 0 4px; }
 .news time { flex: none; width: 52px; color: var(--dim); font-variant-numeric: tabular-nums; }
 main.text .news li { padding: 6px 0; border-bottom: 1px solid var(--line); }
 .news-box {
-  margin: 0 0 20px; padding: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  margin: 0 0 14px; padding: 8px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  font-size: 14px;
 }
-.news-box h2 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
-.news-box > a { display: inline-block; margin-top: 6px; font-size: 14px; }
+.news-box .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 2px; }
+.news-box h2 { margin: 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.news-box .head a { font-size: 13px; }
+.news-box .news li { padding: 1px 0; }
+.news-box .news time { width: 46px; }
 /* How it is made, under the games. The source link stays whole, on the next line when it doesn't fit. */
 footer { max-width: 1440px; margin: 0 auto; padding: 0 24px 32px; color: var(--dim); font-size: 13px; }
 footer p { margin: 0; padding-top: 14px; border-top: 1px solid var(--line); }

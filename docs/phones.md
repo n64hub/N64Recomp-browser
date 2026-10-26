@@ -303,6 +303,18 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   them, the interpolated frames 80-105 ms of the workload thread's time a game frame, each present done on the GPU
   35 ms after it and plume waiting 41-44 ms a second for fewer than 4 in flight. Its game frames hold it, the GPU
   besides.
+- 1080° Snowboarding, the page from Pages (v0.120.0), its attract after Start Game with no input, big cores capped at
+  1.35 GHz, the GPU not capped, skin 36 °C at its end: 60 presents a second over the intro and the title (the game at
+  60.2 of its 60), then 50.6 (44.9-52.5) over its demo on Crystal Lake, the game at 16-22 frames a second (17.6 the
+  median) where it reports 20, RT64 drawing 47-53 for them. plume waited 7-38 ms a second for fewer presents in
+  flight and spun 150-320 ms a second to a present's slot, each present done on the GPU 18 ms after it, the GPU
+  65-97% busy, mostly at 130 MHz: its game frames hold it, not its GPU, as Conker's do.
+- Its on-screen controller (`site/touch_pad.js`), tapped from the protocol into a run: START at the title and A eight
+  times took the game from the language screen a first run shows, through the main menu, to Match Race's board
+  select (its console's `mgrproc.uso`, then `genproc.uso` and the riders, which the attract never loads). There, hot
+  (big cores at 1.04 GHz, the GPU at 403 MHz, skin 39-39.4 °C): 44 presents a second (37-53), the game at 16-18,
+  plume waiting 65-135 ms a second for fewer presents in flight, the GPU 91-97% busy at its cap, so a capped GPU
+  holds back some of it too.
 
 ## Conker's Bad Fur Day on a Galaxy S21
 
