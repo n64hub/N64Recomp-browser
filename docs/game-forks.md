@@ -313,8 +313,12 @@ interpolate as the web has them (rt64 179adb8, 7844c07) and the port's last meas
 every other the port's depth. In `rt64_gbi_rdp.cpp`'s full sync the port's focus dot draws first, as the frame's last
 draws, and then the web's check whether the list ends there (rt64 1c9e639). HAL's object manager runs each object on a
 thread that stops itself, which the libultra
-thread stop ignored a start of (N64ModernRuntime-web 6515ea8). Render to RAM keeps the exact copy: the game scores a
-photo from the frame it has just drawn and finds the viewfinder's focus dot in it, and a play shows no kept writes. It
+thread stop ignored a start of (N64ModernRuntime-web 6515ea8). Render to RAM keeps the exact copy but in the title's
+film and attract demo: a course's focus dot is found in the frame just drawn, and Oak's check, the album and the
+report score a photo from the buffer it was just rendered into, outside a course. Nothing scores the film's frames or
+the demo's (a course played from its recorded script, whose focus dot comes a frame late), so while the film's routine
+runs or the demo plays the copy lands a list late (renderToRAMLate), which on a phone spares their lists the wait for
+the GPU (docs/phones.md, Pokémon Snap on a Galaxy S21). A play shows no kept writes. It
 opens widescreen, RT64's Expand in a course as the desktop's Widescreen setting draws it (off on the desktop):
 the setting is on with Emscripten, and a page's settings saved before, whose Off no player chose, are turned on once.
 The fork widens the forest film the title opens with too, which the port leaves 4:3: it runs from the title's own
@@ -342,7 +346,8 @@ texture cache binds a generated-mipmap texture with no view as the decoder's sto
 plume 827a073 binds as that level, as D3D12 does (before it every race drew black, 10,208 WebGPU errors in one play).
 The page leaves out online play, for
 `src/online/online_web.cpp`, an offline machine to the game, the texture upscaler, which starts a program, and N64:
-Recompiled code mods. Its list is 82 shaders: the boot (the launcher, the title and the menus, 37) and 9 sections (the
+Recompiled code mods. Render to RAM is off: nothing in the game reads a frame back, and on a phone the exact copy
+held its demos to half the game frames (docs/phones.md, Rush 2 on a Galaxy S21). Its list is 82 shaders: the boot (the launcher, the title and the menus, 37) and 9 sections (the
 title's demos, a race on each of the 7 tracks, a stunt course), recorded by `web/shader_plan.json`, which drives the
 menus by the front end's screen and the track select's entry in RDRAM. Its docs/BUILDING.md (The web page) and the
 header of `tools/build_web.sh` has the rest.

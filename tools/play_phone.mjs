@@ -24,8 +24,9 @@
 // --preload adds a script to every frame as play_page.mjs's does (tools/pass_probe.js: its "passes:" lines are
 // printed with the rest). --steps plays the page from a JSON array of steps, one after another, while it is sampled: ["wait", ms]; ["until",
 // "<regex>", ms] waits for a console line; ["tapText", "<text>", "<selector>", "<inner>"] scrolls the top document's
-// innermost element of the selector (default "*") whose text has <text>, or its first <inner> element, into view and
-// touches its middle (a touch from the
+// innermost element of the selector (default "*") whose text or aria-label has <text> (a games page tile splits a name
+// at its colon, "Rush 2" above "Extreme Racing USA", and keeps it whole in its aria-label), or its first <inner>
+// element, into view and touches its middle (a touch from the
 // protocol is a user gesture, so fullscreen and the orientation lock work as from a finger); ["tap", x, y] touches
 // the top document at CSS pixels; ["key", code, key, keyCode, ms] holds a key down for ms (150 if left out), which goes
 // to the frame that has the focus, the game's once it was touched; ["planTap", x, y] touches where a play plan's x, y
@@ -349,7 +350,7 @@ try {
     }
     else if (kind === 'tapText') {
       const spot = await evaluate(`(async () => {
-        const el = [...document.querySelectorAll(${JSON.stringify(a[1] ?? '*')})].reverse().find((e) => e.textContent.includes(${JSON.stringify(a[0])}) && e.getBoundingClientRect().width > 0);
+        const el = [...document.querySelectorAll(${JSON.stringify(a[1] ?? '*')})].reverse().find((e) => (e.textContent.includes(${JSON.stringify(a[0])}) || e.ariaLabel?.includes(${JSON.stringify(a[0])})) && e.getBoundingClientRect().width > 0);
         const target = el && (${JSON.stringify(a[2] ?? null)} ? el.querySelector(${JSON.stringify(a[2] ?? null)}) : el);
         if (!target) return null;
         target.scrollIntoView({ block: 'center' });
