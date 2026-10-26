@@ -350,7 +350,10 @@ function syncStart() {
 // The saves this browser holds, in every game's database on this origin (frontend/persistent_home.js, each named
 // '/home/web_user <its page's folder>'): saves, path -> { data, time, played, page } (page its page's folder), and
 // folders, program id -> its page's folder. A database holds a game's saves only where it is that game's page
-// (SaveSync.owns()): a page built before that took the Drive's saves of every game.
+// (SaveSync.owns()): a page built before that took the Drive's saves of every game. One that owns several games (another
+// game's page was once played at its folder and left its settings, ROM and saves there) is the page of the one whose
+// folder changed last: a page's start reads every folder in at the time it starts, and only its own game writes to its
+// folder after that.
 async function localSaves() {
   const home = '/home/web_user/', ask = (request) => new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -365,10 +368,14 @@ async function localSaves() {
     if (!db?.objectStoreNames.contains('FILE_DATA')) { db?.close(); continue; }
     const files = () => db.transaction('FILE_DATA').objectStore('FILE_DATA');
     const keys = (await ask(files().getAllKeys())).map(String).filter((key) => key.startsWith(home));
-    const owned = SaveSync.owns(keys.map((key) => key.slice(home.length)));
+    let owner, newest = -Infinity;
+    for (const id of SaveSync.owns(keys.map((key) => key.slice(home.length)))) {
+      const time = new Date((await ask(files().get(home + '.config/' + id)))?.timestamp).getTime();
+      if (owner === undefined || time > newest) owner = id, newest = time;
+    }
     for (const key of keys) {
       const path = key.slice(home.length);
-      if (!SaveSync.isSave(path, 0) || !owned.has(SaveSync.game(path))) continue;
+      if (!SaveSync.isSave(path, 0) || SaveSync.game(path) !== owner) continue;
       const entry = await ask(files().get(key));
       const time = new Date(entry?.timestamp).getTime();
       if (entry?.contents && SaveSync.isSave(path, entry.contents.byteLength) && !(local.get(path)?.time >= time)) {
@@ -393,9 +400,12 @@ function uploadSaves() {
 }
 
 // A game by its program id, from its page's folder: where its saves are in this browser (folders, localSaves()), or
-// else the one its saves in the Drive name (files, SaveSync.listing()'s).
+// else the one its saves in the Drive name (files, SaveSync.listing()'s), but for a page this browser holds another
+// game's saves in (a page built before SaveSync.owns() put every game's saves in the Drive as its own).
 const gameOf = (id, folders, files = []) => {
-  const folder = folders.get(id) ?? files.find((f) => SaveSync.game(f.path) === id && f.page)?.page;
+  const others = new Set([...folders].filter(([other]) => other !== id).map(([, folder]) => folder));
+  const folder = folders.get(id) ??
+    files.find((f) => SaveSync.game(f.path) === id && f.page && !others.has(f.page))?.page;
   return games.find((g) => sameOriginFolder(g.page) === folder);
 };
 // A game's heading in a popup: its art, where it has one, and its name.
@@ -596,8 +606,20 @@ addEventListener('keydown', (event) => {
   const menu = document.querySelector('#account .menu');
   if (event.key === 'Escape' && menu) menu.hidden = true;
 });
-document.querySelector('#manage-saves .foot button').addEventListener('click',
-  () => document.getElementById('manage-saves').close());
+// Manage saves closes by its button, Escape, or a click outside it that started outside it too (a drag from its text
+// that ends outside leaves it open).
+{
+  const dialog = document.getElementById('manage-saves');
+  const outside = (event) => {
+    const r = dialog.getBoundingClientRect();
+    return event.target === dialog &&
+      (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom);
+  };
+  let pressed = false;
+  dialog.addEventListener('pointerdown', (event) => { pressed = outside(event); });
+  dialog.addEventListener('click', (event) => { if (pressed && outside(event)) dialog.close(); });
+  dialog.querySelector('.foot button').addEventListener('click', () => dialog.close());
+}
 
 async function main() {
   showAccount();
