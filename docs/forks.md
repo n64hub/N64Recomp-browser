@@ -505,6 +505,13 @@ rt64 9b87e67           with Emscripten, a tile that finds no tile copy samples t
                        texcoords that leave the row sample TMEM again: Perfect Dark's night vision copies each row
                        through a 513x9 tile of line 160, and drew each from RDRAM, at 30 (docs/findings.md, Perfect
                        Dark's night vision)
+rt64 dd45bdc           with Emscripten, a sync asked for by TMEM past what a call's texcoords sample from its tile's
+                       address is left out (fullSync()): Perfect Dark's HUD glyphs, 7 words through a 32x32 CI4 tile
+                       that reaches the rest of the goggles' last row, synced once after each of their passes
+rt64 f99c2e4,          with Emscripten, a framebuffer row's tile copy is judged by the game's own rectangle, not the
+rt64 40ec5c2           one Fix LR with Scissor stretched a pixel to the scissor: Perfect Dark's night vision's second
+                       to last row sampled TMEM and synced once a frame (docs/findings.md, Perfect Dark's night
+                       vision); 40ec5c2 moves its line off Pokémon Snap's own rt64 change to the file
 rt64 2c4230e,         RT64_INTERPOLATE_CAMERA_EYE: a camera's eye is lerped on the line between its two places and
 rt64 df06c6b,         each interpolated view's translation put back from it, its lerped axes kept; lerping the view's
 rt64 2f08ac9          translation, the eye in the view's own axes, took a camera far from the origin that turns off
