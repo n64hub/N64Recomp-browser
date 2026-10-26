@@ -430,7 +430,9 @@ enlarged to the whole picture after each of those screens draws, the framebuffer
 few rows at a time, which RT64 takes from what it drew. A screen transition, which the game draws in that frame too, is
 drawn before the frame is enlarged and so is enlarged with it, and the frame it copies for its background is taken
 un-enlarged from the framebuffer in RAM, which holds the whole enlarged frame since RT64 draws what it copies to RAM at
-the game's own 4:3; a race's fade is a rectangle as wide as its scissor, which RT64 stretches to the window, since
+the game's own 4:3; a race's fade, and the black each screen's first three frames are cleared to (three or four
+players' quarters draw nothing beside them), are each a rectangle as wide as its scissor, which RT64 stretches to the
+window, since
 extended origins sit at a 16:9 picture's edges (HUD Placement). A second depth clear over the whole race picture cost a
 quarter of the presents at 4K and set off a crash in render to RAM's read buffers, so the race keeps the game's own.
 Render to RAM's copy is a list late: the game's CPU reads a frame only for a screen transition's background
