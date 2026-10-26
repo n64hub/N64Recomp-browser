@@ -403,6 +403,34 @@ jobs:
           ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
           bash "$game/tools/build_web.sh" --patches
 
+  # The patches over Banjo-Tooie's web fork's own (BanjoTooieRecompiled-web, its main): its tools/build_web.sh applies
+  # its patches/*.patch to rt64, N64ModernRuntime and N64Recomp first (tools/setup_deps.py), then these on top but for
+  # the files it leaves to its own, so a change here to the lines its own patches touch stops its page building. Its
+  # --patches does that step without a ROM, with this checkout as its lib/N64Recomp-browser. Red on a PR that keeps
+  # main's patches means BanjoTooieRecompiled-web's main stopped applying them; red on one that changes them means the
+  # change meets the port's own lines, which are moved apart (in the fork's patches/ or the change) in that PR's work.
+  bt-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: BanjoTooieRecompiled-web's and these apply
+        run: |
+          bt="$RUNNER_TEMP/bt"
+          git clone -q --depth 1 https://github.com/n64hub/BanjoTooieRecompiled-web "$bt"
+          git -C "$bt" log -1 --format='BanjoTooieRecompiled-web %h %s'
+          git -C "$bt" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 4 \
+            lib/N64Recomp lib/N64ModernRuntime lib/rt64 lib/RecompFrontend
+          git -C "$bt/lib/rt64" -c protocol.version=2 submodule update -q --init --depth 1 src/contrib/plume src/contrib/hlslpp
+          git -C "$bt/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 N64Recomp
+          rmdir "$bt/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$bt/lib/N64Recomp-browser"
+          bash "$bt/tools/build_web.sh" --patches
+
   # Super Mario 64's own changes over the patches (super-mario-64-recomp, its main): its CMakeLists.txt applies its
   # runtime-patches/<project>-<n>-*.patch to its upstream submodules after patches/apply.cmake, and they change files
   # the patches change too (RecompFrontend's renderer). Each project a patch is for is patched here as there, and the
@@ -514,7 +542,7 @@ jobs:
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, snap-patches,
-      rush2-patches, snowboarding-patches, sm64-patches, emscripten]
+      rush2-patches, snowboarding-patches, bt-patches, sm64-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
