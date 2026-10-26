@@ -5,7 +5,7 @@ Web support for N64 static recompilations built on [N64Recomp](https://github.co
 and [RT64](https://github.com/rt64/rt64): the game, its menus and RT64 built with Emscripten into one page that draws
 through WebGPU. It is game-agnostic. A recomp keeps its own submodules at the commits it pins and adds this repo
 beside them, and its web build patches their checkouts (Using it in a recomp). It was written for San Francisco Rush
-2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's and F-Zero X's are, and fifteen more
+2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's and F-Zero X's are, and sixteen more
 recomps build a page with it (Games).
 
 > Written almost entirely by AI (Claude), like the recomp it came from.
