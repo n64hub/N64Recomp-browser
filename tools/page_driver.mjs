@@ -70,6 +70,10 @@
 // page.stop(reason) ends a run where it is: the step it is in is left (a clock wait included, which on a game that has
 // stopped waits out its whole 5 times and 30 s), no step after it starts, and run() throws reason, as a step that failed
 // does. A run started after it throws at once.
+//
+// A debugging connection that closes fails what was waiting on it with what became of the browser: its exit code, or that
+// it still runs, and the crash dumps it left (watchBrowser, below). In Chrome a crash of the page's renderer stops the run
+// with its dump.
 import crypto from 'crypto';
 import fs from 'fs';
 import http from 'http';
@@ -388,7 +392,7 @@ const closeBrowser = async (proc, ask, ms, line) => {
 // crash closes it with 1006 and exits with an exception code (0x80000003) and a dump; and the browser stopped from
 // outside (taskkill) closes it the same way and exits with 1, with no dump. gone(ms) waits up to ms for the exit, puts
 // the stderr's last lines in the log and says what it found; dumps() says where the dumps written since it last looked
-// went, or ''.
+// went, or '', which close() puts in the log too (a GPU process's crash the browser lived through).
 const watchBrowser = (proc, name, profile, dumpDir, line) => {
   const dir = path.join(profile, dumpDir), kept = `${profile}-crashes`;
   const list = () => { try { return fs.readdirSync(dir).filter((f) => f.endsWith('.dmp')); } catch { return []; } };
