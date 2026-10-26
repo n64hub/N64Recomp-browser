@@ -313,6 +313,33 @@ played 4 of 4 clean through Defection on that host (3840x2000 uncapped, 4-14% bu
 turn running): 0 WebGPU errors, 0 exceptions, every command answered. Its list had the 3 shaders by then, so none was
 built in line with the device there.
 
+## A browser that goes
+
+A play that ends with "the debugging connection closed (code 1006, read ECONNRESET)" lost the browser's own process,
+not its tab. Each way headless Chrome 155 can go was caused on purpose on an idle host with an RTX 5080, on a page with
+nothing in it:
+
+- the tab's renderer crashing (`chrome://crash`): the connection stays open, `Inspector.targetCrashed` comes, the
+  browser runs on, and Crashpad writes a dump in the profile's `Crashpad/reports`;
+- the GPU process crashing (CDP's `Browser.crashGpuProcess`): the connection stays open, the browser runs on, a dump;
+- the browser crashing (`Browser.crash`): the connection closes with 1006 and ECONNRESET, the browser exits with
+  0x80000003, and there is a dump;
+- the browser stopped from outside (`taskkill /F`): the connection closes the same way, the browser exits with 1,
+  and there is no dump. Firefox stopped the same way closes its BiDi connection the same way and exits with 1.
+
+Windows' Application log has no event for any of them: Crashpad takes Chrome's crash before Windows' error reporting
+sees it. So page_driver.mjs now says what became of the browser in the failure itself (`watchBrowser`): its exit code,
+or that it was still running 5 s after the close (the browser dropping the connection itself), and its crash dumps,
+copied to `<profile>-crashes` beside the fresh profile play_page deletes, with its stderr's last lines in the log. A
+tab's crash ends the run at once as "the page's renderer crashed", which before waited for the next evaluate's timeout.
+
+Of the runs in plays.jsonl that ended with the connection closed, Banjo-Kazooie's Firefox soak (2026-10-20, 687 s in)
+came before page_driver.mjs had a WebSocket client of its own, so it was Node's masks (A page that stops answering).
+Super Mario 64's Firefox play (2026-10-22) closed with 1000, a close frame Firefox sent, before its play began. Star
+Fox 64's Chrome soak from Pages (2026-10-21) and F-Zero X's Chrome play from Pages at 3840x2000 uncapped (2026-10-26,
+11 s into its race after a clean boot, not recorded) closed with 1006, each played clean when run again, before the
+browser's exit was kept: whether the browser crashed or was stopped is not known for them, and the next one says.
+
 ## Two pages at once
 
 With two Firefox windows each playing a page, one window's animation frames came in bursts (a quarter of the intervals
