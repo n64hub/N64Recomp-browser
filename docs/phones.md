@@ -302,8 +302,8 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   on a Galaxy S21).
 - Rush 2's attract, both ways: the game at 5-7 frames a second (it reports 5-7, 30 on a console), RT64 drawing 50 for
   them, the interpolated frames 80-105 ms of the workload thread's time a game frame, each present done on the GPU
-  35 ms after it and plume waiting 41-44 ms a second for fewer than 4 in flight. Its game frames hold it, the GPU
-  besides.
+  35 ms after it and plume waiting 41-44 ms a second for fewer than 4 in flight. Its game frames hold it, and they
+  waited for render to RAM's exact copy, which its page now goes without (Rush 2 on a Galaxy S21).
 - 1080° Snowboarding, the page from Pages (v0.120.0), its attract after Start Game with no input, big cores capped at
   1.35 GHz, the GPU not capped, skin 36 °C at its end: 60 presents a second over the intro and the title (the game at
   60.2 of its 60), then 50.6 (44.9-52.5) over its demo on Crystal Lake, the game at 16-22 frames a second (17.6 the
@@ -483,3 +483,27 @@ forest film, which runs at 60 game frames a second, then a course's demo at 30, 
 - So it is the game fork's own: its exact copy, its port's wait for each list and its thread for each object, under a
   scene the phone's GPU takes most of a present to draw. Nothing in the shared support holds it: render to RAM's wait
   is what the exact copy is for, and the late copy is already there for a game that can take it.
+
+## Rush 2 on a Galaxy S21
+
+Its attract after Start Game, Chrome 156, the title's demos one after another: rush2recompiled-web's main on v0.109.0,
+linked with `--profiling-funcs`, served in place of Pages', and builds changed only in render to RAM.
+
+- On a desktop GPU the attract keeps the console's pace: the game at 30 frames a second and RT64 drawing 60 for them.
+  So the phone's 5-7 are the phone's.
+- The port's own Variable frame rate (its `rr_option`, which has RT64 hold each frame while the game's next is due)
+  against Display, seeded into its `graphics.json` before the game reads it, hot (big cores at 0.83 GHz): the game at
+  2-5 frames a second both ways, so the hold doesn't slow it.
+- What a game frame waits for (a profile, 20 s of the demos): the game's thread 91% in `osRecvMesg`, for its display
+  list's completion. RT64's display list thread 89% in `send_dl`, 73% of it the list's full syncs and 31% in render
+  to RAM's `Framebuffer::copyNativeToRAM` mapping the copy's buffer, which waits for the GPU to finish the frame
+  behind the presents already in flight. RT64's workload thread 48% busy: the 80-105 ms of interpolated frames a game
+  frame are the time between game frames that RT64 fills, not its work. Every prebuilt shader built, and none missed.
+- Render to RAM's exact copy, its late copy and none, builds changed only there, interleaved (exact, late, off, off,
+  late, exact), the game frames a second from 38 s after Start Game (median of 1 s samples, their range), big cores
+  at 1.04 GHz, the GPU at 403 MHz, battery 40-41 °C: exact 7.3 (4.8-19.6) and 8.7 (5.3-25.6), late 11.9 (5.6-28.5)
+  and 10.9 (5.9-29.9), off 15.7 (8.7-30.2) and 15.9 (10.4-30.2). Presents 52.0 and 51.4, 51.7 and 48.3, 55.9 and
+  54.1. Without the copy the first demo holds the console's 30 for about 15 s.
+- Nothing in the game reads a frame back: its menus, a race, its pause menu and QUIT draw the same without the copy
+  (shots of each, the extended plan on a desktop GPU), and with the late copy its CPU never wrote to a framebuffer
+  whose copy was pending. So the page turns it off (rush2recompiled-web's `src/main.cpp`), as Rush 2049's does.
