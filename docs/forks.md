@@ -517,4 +517,11 @@ rt64 df06c6b,         each interpolated view's translation put back from it, its
 rt64 2f08ac9          translation, the eye in the view's own axes, took a camera far from the origin that turns off
                        that line (F-Zero X's, 12,000 units out, up to 25 units) and what is near it swung; df06c6b and
                        2f08ac9 move its lines off those Conker's and Pokémon Snap's own rt64 changes to the file
+rt64 110f851           with Emscripten, render to RAM's copy from RAM with no previous buffer unbinds its read set's
+                       gCurInput, which kept a buffer a later copy's bigger one may have freed since: plume's WebGPU
+                       set builds its bind group from every binding, so it would read the freed buffer
+plume 6109ba1,         a descriptor set's binding of a buffer destroyed since is left out of its bind group, as an
+rt64 1b46172           unset one is, and logged the first 8 times: reading the freed buffer's handle threw ('reading
+                       size' in wgpuBufferGetSize) on the device thread and the page never presented again, as F-Zero
+                       X's did at 4K in Chrome on a fast desktop GPU with its race's depth buffer copied at two sizes
 ```

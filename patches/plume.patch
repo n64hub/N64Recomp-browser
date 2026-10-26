@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web a501afabc462c7104223398d9f0212415a7b4933
+plume: https://github.com/n64hub/plume-web 6109ba1df4f266b351ad9fadc667e6c5b2df7c58
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2978,10 +2978,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..c1bd748
+index 0000000..29ac6a2
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3534 @@
+@@ -0,0 +1,3552 @@
 +//
 +// plume
 +//
@@ -3420,6 +3420,7 @@ index 0000000..c1bd748
 +
 +        buffer = wgpuDeviceCreateBuffer(device->device, &bufferDesc);
 +        handleSerial = newHandleSerial();
++        device->liveBufferSerials.insert(handleSerial);
 +        if ((desc.heapType == RenderHeapType::UPLOAD) || (desc.heapType == RenderHeapType::GPU_UPLOAD) || (desc.heapType == RenderHeapType::READBACK)) {
 +            shadow.resize(bufferDesc.size, 0);
 +        }
@@ -3431,6 +3432,7 @@ index 0000000..c1bd748
 +    }
 +
 +    WebGPUBuffer::~WebGPUBuffer() {
++        device->liveBufferSerials.erase(handleSerial);
 +        if (mapped) {
 +            auto &mappedBuffers = device->mappedBuffers;
 +            mappedBuffers.erase(std::remove(mappedBuffers.begin(), mappedBuffers.end(), this), mappedBuffers.end());
@@ -3893,6 +3895,7 @@ index 0000000..c1bd748
 +
 +        Binding &binding = bindings[descriptorIndex];
 +        binding.buffer = static_cast<const WebGPUBuffer *>(buffer);
++        binding.bufferSerial = (buffer != nullptr) ? binding.buffer->handleSerial : 0;
 +        binding.bufferOffset = 0;
 +        if (bufferStructuredView != nullptr) {
 +            binding.bufferOffset = uint64_t(bufferStructuredView->firstElement) * bufferStructuredView->structureByteStride;
@@ -3960,6 +3963,21 @@ index 0000000..c1bd748
 +            case RenderDescriptorRangeType::READ_WRITE_STRUCTURED_BUFFER:
 +            case RenderDescriptorRangeType::READ_WRITE_BYTE_ADDRESS_BUFFER: {
 +                if (binding.buffer == nullptr) {
++                    continue;
++                }
++
++                // A set keeps pointing at a buffer the caller destroyed until it binds another there, and reading the
++                // destroyed one's handle would throw on the device thread and stop it for good. So the binding is left
++                // out, as an unset one is (a shader that reads it fails validation), and said, the first few times.
++                if (device->liveBufferSerials.count(binding.bufferSerial) == 0) {
++                    if (device->destroyedBufferBindings++ < 8) {
++                        std::string setBindings;
++                        for (const Binding &other : bindings) {
++                            setBindings += " " + std::to_string(other.binding);
++                        }
++                        fprintf(stderr, "plume WebGPU: a descriptor set binds a destroyed buffer at binding %u (its bindings:%s), left out\n", binding.binding, setBindings.c_str());
++                    }
++
 +                    continue;
 +                }
 +
@@ -6518,10 +6536,10 @@ index 0000000..c1bd748
 +};
 diff --git a/plume_webgpu.h b/plume_webgpu.h
 new file mode 100644
-index 0000000..d820eaa
+index 0000000..bdc13f0
 --- /dev/null
 +++ b/plume_webgpu.h
-@@ -0,0 +1,724 @@
+@@ -0,0 +1,731 @@
 +//
 +// plume
 +//
@@ -6655,6 +6673,7 @@ index 0000000..d820eaa
 +#include <map>
 +#include <set>
 +#include <unordered_map>
++#include <unordered_set>
 +
 +#include <webgpu/webgpu.h>
 +
@@ -6765,6 +6784,7 @@ index 0000000..d820eaa
 +            RenderDescriptorRangeType type = RenderDescriptorRangeType::UNKNOWN;
 +            uint32_t binding = 0;
 +            const WebGPUBuffer *buffer = nullptr;
++            uint64_t bufferSerial = 0;
 +            uint64_t bufferOffset = 0;
 +            uint64_t bufferSize = 0;
 +            const WebGPUTexture *texture = nullptr;
@@ -7182,6 +7202,11 @@ index 0000000..d820eaa
 +        bool depth32FloatStencil8 = false;
 +        WGPUBindGroupLayout emptyLayout = nullptr;
 +        WGPUBindGroup emptyBindGroup = nullptr;
++        // The handleSerial of every buffer not destroyed yet, so a descriptor set can tell a buffer it still binds
++        // was destroyed since (WebGPUDescriptorSet::update()), and how many times one was. Buffers are made, destroyed
++        // and bound on the device's one thread (plume_device_thread.h), so neither takes a lock.
++        std::unordered_set<uint64_t> liveBufferSerials;
++        uint32_t destroyedBufferBindings = 0;
 +        WGPUBindGroupLayoutEntry pushConstantsEntry = {};
 +        WGPUBindGroupLayout pushConstantsLayout = nullptr;
 +        std::unordered_map<std::string, WGPUBindGroupLayout> bindGroupLayouts;
