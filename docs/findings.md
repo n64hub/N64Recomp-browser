@@ -1253,7 +1253,8 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   at 28-30 on that busy GPU, as with them off. Chrome uncapped at 3840x2000 on that GPU, interleaved (plays.jsonl):
   Pages' v0.123.0 ran the game at 10-14 frames a second with the goggles on, the build at 24-29, both at 57-60 before
   them; presents 155 and 121 a second for Pages, 136 and 132 for the build, which the other program's share of the
-  GPU decides.
+  GPU decides. Banjo-Tooie's regular plan read 192 a second for Pages and 203 for the build, and the build played
+  clean in Firefox with the goggles on.
 
 ## A page's thread in Chrome, throttled
 
