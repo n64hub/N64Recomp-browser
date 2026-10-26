@@ -363,11 +363,15 @@ N64Recomp-browser has changed in them since is merged in by `apply.cmake --since
 `snowboarding-patches` job runs its `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. Its rt64 is
 newer than the web's: its texture decoder is shared with the CPU (`src/shared`, which calls TMEM's sizes
 `TMEM_RDP_*`), and with `RT64_UNEVEN_FRAME_RATES` the web's rate for uneven frames is used in `rt64_vi.cpp`, the
-game's otherwise. The page leaves out RetroAchievements, which needs a server, and MSAA, and keeps every other
-option at the desktop's defaults. Its list is 54 shaders: the boot (the launcher, the intro, the title and its demo,
-the menus, 43) and 4 sections (Crystal Lake's Match Race, Time Attack on Crystal Peak and Golden Forest, Training),
-recorded by `tools/shader_plan.json`, which knows where the game is by its loaded modules (`tools/game_state.js`). Its
-BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the rest.
+game's otherwise. The page leaves out RetroAchievements, which needs a server, and MSAA, turns render to RAM off,
+since the game reads no frame back and the exact copy held a phone's game frames to 15-16 a second against 26 (the
+copy a list late would land on the level data it loads into its framebuffers' memory: docs/phones.md), with RT64
+still checking RDRAM for what the CPU wrote over a framebuffer as it does after a copy (its rt64 patch), and keeps
+every other option at the desktop's defaults. Its list is 55 shaders: the boot (the launcher, the intro, the title and
+its demo, the menus, 44) and 4 sections (Crystal Lake's Match Race, Time Attack on Crystal Peak and Golden Forest,
+Training), recorded by `tools/shader_plan.json`, which knows where the game is by its loaded modules
+(`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the
+rest.
 
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
@@ -418,15 +422,23 @@ and menus. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at the 
 machines their paint and shading), which change files the patches change too, so CI's `fzx-patches` job applies them
 over the patches on each PR. Its patches (MIPS C against the decompilation's headers) split each camera's combined
 projection and view for RT64's interpolation and tag the racers by who they are, with RT64 blending a camera's eye
-on the line between its two places (`RT64_INTERPOLATE_CAMERA_EYE`, on for its desktop build too), and widen the race's
-sky to the window's shape. Its race HUD is placed from the picture's edges by N64Recomp text hooks at the start of
-each function that draws a part of it, which write RT64's `gEXSetRectAlign` and an edge-aligned scissor into the
-game's display list: none of its 227-line HUD function is copied. Its `tools/build_web.sh` runs a Docker image of its
-own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 75 shaders: the
-boot (the launcher, the title and the main menu, 5) and a section for each of the 24 courses of the four cups, 53-63
-each and most of them in every one, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json`, which writes
-the course at machine select where the race reads it and has the computer drive player 1's machine, as its play plans
-do. Its README, CLAUDE.md and docs/web.md have the rest.
+on the line between its two places (`RT64_INTERPOLATE_CAMERA_EYE`, on for its desktop build too), widen the race's
+sky to the window's shape, and open a race's views of one or two players to the picture's edges: the game's scissor
+keeps them in from 4:3's (the black border a console shows too), which RT64 keeps as far in from the window's, so
+its `Camera_Draw` sets them with `gEXSetScissor` from the edges; its menus' frame, 12, 8, 308, 232, is enlarged to the
+whole picture after each menu draws, the framebuffer drawn back over itself as a texture a few rows at a time, which
+RT64 takes from what it drew. A second depth clear over the whole race picture cost a quarter of the presents at 4K and
+set off a crash in render to RAM's read buffers, so the race keeps the game's own. Render to RAM's copy is a list
+late: the game's CPU reads a frame only for a screen transition's background (`Transition_SetBackgroundBuffer`, right
+after the frame's list is done), and the buffer then holds its frame from a list or two before, the same picture. Its
+race HUD is placed from the picture's edges by N64Recomp text hooks at the start of each function that draws a part of
+it, which write RT64's `gEXSetRectAlign` and an edge-aligned scissor into the game's display list: none of its
+227-line HUD function is copied. Its `tools/build_web.sh` runs a Docker image of its own, so `publish_pages.sh` runs
+it on the build host and not in rush-2049-recomp's image. Its list is 77 shaders: the boot (the launcher, the title
+and the main menu, 7) and a section for each of the 24 courses of the four cups, 53-63 each and most of them in every
+one, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json`, which writes the course at machine select
+where the race reads it and has the computer drive player 1's machine, as its play plans do. Its README, CLAUDE.md and
+docs/web.md have the rest.
 
 ## The games' own frame rates
 
