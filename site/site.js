@@ -31,9 +31,13 @@ function parseGames(markdown) {
     const link = (cell) => (cell.match(/\]\((.*?)\)/) || [])[1];
     const col = (re) => cells[header.findIndex((h) => re.test(h))] ?? '';
     const repo = col(/^Repo$/);
+    const repoName = repo.replace(/^\[(.*?)\].*$/, '$1');
+    const page = localPage(link(col(/^Page$/)));
     games.push({
-      name: col(/^Game$/), recomp: col(/^Recomp$/), repoName: repo.replace(/^\[(.*?)\].*$/, '$1'), repo: link(repo),
-      page: localPage(link(col(/^Page$/))),
+      name: col(/^Game$/), recomp: col(/^Recomp$/), repoName, repo: link(repo), page,
+      // Its name in this page's address (#<id>, below): its page's folder (f-zero-x), or its repo's name for a page
+      // at the top of a site.
+      id: new URL(page, location.href).pathname.split('/').filter(Boolean).pop() ?? repoName,
     });
   }
   return games;
@@ -123,9 +127,9 @@ const player = document.getElementById('player');
 const frame = document.getElementById('player-frame');
 let games = [];
 
-// History: opening a game from the grid adds one entry (#<repo>), and Back or ✕ goes back to the grid. The frame is
-// only ever navigated with location.replace, since a frame's own navigations join the page's history, and Back then
-// stepped through the games played before.
+// History: opening a game from the grid adds one entry (#<id>, the game's folder: #f-zero-x), and Back or ✕ goes back
+// to the grid. The frame is only ever navigated with location.replace, since a frame's own navigations join the page's
+// history, and Back then stepped through the games played before.
 function showFrame(url) {
   frame.contentWindow.location.replace(url);
 }
@@ -183,15 +187,15 @@ async function openGame(game, push = true) {
     location.assign(game.page);
     return;
   }
-  // A token with less than a quarter of an hour left is renewed first, and the game opens on the way back (#<repo>).
+  // A token with less than a quarter of an hour left is renewed first, and the game opens on the way back (#<id>).
   const record = SaveSync.stored();
   if (GOOGLE_CLIENT_ID && record?.token && record.expires < Date.now() + 15 * 60000 && !triedLately()) {
-    signIn(hub + '#' + encodeURIComponent(game.repoName), true);
+    signIn(hub + '#' + encodeURIComponent(game.id), true);
     return;
   }
   if (push) {
     landscape();
-    history.pushState({ game: game.repoName }, '', '#' + encodeURIComponent(game.repoName));
+    history.pushState({ game: game.id }, '', '#' + encodeURIComponent(game.id));
   }
   frame.title = game.name;
   player.hidden = false;
@@ -219,15 +223,21 @@ function hideGame() {
 function closeGame() {
   if (history.state?.game) {
     history.back();  // popstate hides it
-  } else {  // opened from a link to #<repo>: nothing of ours to go back to
+  } else {  // opened from a link to #<id>: nothing of ours to go back to
     hideGame();
     history.replaceState(null, '', location.pathname + location.search);
   }
 }
 
+// The game the address names: by its id, or by its repo's name, as links from before ids did (#f-zero-x-recomp), whose
+// address then names it by its id.
 function gameFromHash() {
   const wanted = decodeURIComponent(location.hash.slice(1));
-  return games.find((g) => g.repoName === wanted);
+  const game = games.find((g) => g.id === wanted);
+  if (game) return game;
+  const named = games.find((g) => g.repoName === wanted);
+  if (named) history.replaceState(history.state, '', '#' + encodeURIComponent(named.id));
+  return named;
 }
 
 window.addEventListener('popstate', () => {
