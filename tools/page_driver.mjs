@@ -210,8 +210,9 @@ const webSocket = (url) => new Promise((resolve, reject) => {
 // send(method, params, sessionId) goes to one of CDP's attached targets (a worker). send(method, params, sessionId, ms)
 // gives up after ms. A call that gets no answer throws an error with unanswered set: one given up on, and every one
 // outstanding or sent once the socket has closed (the browser gone). Without that, one call a page never answered (its
-// thread blocked) or a browser killed mid-play held its tool for good.
-const connect = async (url, onEvent) => {
+// thread blocked) or a browser killed mid-play held its tool for good. explain(), given, says after the close what became
+// of the browser (watchBrowser's gone, below), and its answer ends the error's message.
+const connect = async (url, onEvent, explain = null) => {
   const ws = await webSocket(url);
   let id = 0, closed = null;
   const pending = new Map();
@@ -222,10 +223,11 @@ const connect = async (url, onEvent) => {
     else { pending.get(m.id)?.resolve(m); pending.delete(m.id); }
   };
   // The close says by its code and reason which end closed and why (1006: the socket dropped with no close frame), the
-  // socket's error beside it.
-  ws.onclose = (code, reason, error) => {
+  // socket's error beside it, and what explain() found.
+  ws.onclose = async (code, reason, error) => {
+    const why = await (async () => explain?.())().catch(() => '');
     closed ??= unanswered(`the debugging connection closed (code ${code}${reason ? `, "${reason}"` : ''}` +
-      `${error ? `, ${error}` : ''})`);
+      `${error ? `, ${error}` : ''})${why ? `: ${why}` : ''}`);
     for (const call of pending.values()) call.reject(closed);
     pending.clear();
   };
@@ -378,6 +380,42 @@ const closeBrowser = async (proc, ask, ms, line) => {
   }
 };
 
+// What a browser leaves when it goes, which a debugging connection that closed (1006, ECONNRESET) doesn't say: whether
+// it is still running or how it exited, the last lines of its stderr, and the crash dumps its crash reporter wrote in the
+// profile (dumpDir: Chrome's Crashpad/reports, Firefox's minidumps), copied to <profile>-crashes since play_page deletes
+// a fresh profile at its end. In headless Chrome on Windows (docs/findings.md, A browser that goes) a crash of the tab's
+// renderer or of the GPU process leaves the connection open and the browser running, each with a dump; the browser's own
+// crash closes it with 1006 and exits with an exception code (0x80000003) and a dump; and the browser stopped from
+// outside (taskkill) closes it the same way and exits with 1, with no dump. gone(ms) waits up to ms for the exit, puts
+// the stderr's last lines in the log and says what it found; dumps() says where the dumps written since it last looked
+// went, or ''.
+const watchBrowser = (proc, name, profile, dumpDir, line) => {
+  const dir = path.join(profile, dumpDir), kept = `${profile}-crashes`;
+  const list = () => { try { return fs.readdirSync(dir).filter((f) => f.endsWith('.dmp')); } catch { return []; } };
+  const seen = new Set(list());
+  const tail = [];
+  proc.stderr.setEncoding('utf8');
+  proc.stderr.on('data', (text) => { tail.push(...text.split(/\r?\n/).filter(Boolean)); tail.splice(0, tail.length - 10); });
+  let exit = null;
+  const exited = new Promise((resolve) => proc.once('exit', (code, signal) => {
+    exit = signal ?? (code > 0xffff ? `0x${code.toString(16)}` : String(code));
+    resolve();
+  }));
+  const dumps = () => {
+    const found = list().filter((f) => !seen.has(f));
+    if (!found.length) return '';
+    fs.mkdirSync(kept, { recursive: true });
+    for (const f of found) { seen.add(f); try { fs.copyFileSync(path.join(dir, f), path.join(kept, f)); } catch {} }
+    return `${found.length} crash dump${found.length > 1 ? 's' : ''}, kept in ${kept}`;
+  };
+  const gone = async (ms) => {
+    await Promise.race([exited, sleep(ms)]);
+    if (tail.length) line(`page_driver: ${name}'s stderr ended:\n  ${tail.join('\n  ')}`);
+    return `${name} ${exit === null ? `was still running ${ms / 1000} s later` : `exited with code ${exit}`}, ${dumps() || 'no crash dump'}`;
+  };
+  return { gone, dumps };
+};
+
 export const open = async (browser, { profile, port, size = [1256, 645], executable, rom, planDir = '.', preload = '',
   headed = false, onScreen = false, uncapped = false, cpuThrottle = 0, scale = 1, firefoxPrefs = {}, chromeFlags = [], affinity = 0, fallbackAdapter = false,
   onLine = () => {}, log = console.log }) => {
@@ -396,7 +434,8 @@ export const open = async (browser, { profile, port, size = [1256, 645], executa
   for (const host of ['127.0.0.1', '::1']) {
     if (await listening(host, port)) throw new Error(`debugging port ${port} is taken on ${host}: give another --port`);
   }
-  if (browser === 'chrome') page = await openChrome({ profile, port, width, height, executable, rom, preload, headed, onScreen, uncapped, cpuThrottle, scale, chromeFlags, affinity, fallbackAdapter, line });
+  const stopPage = (reason) => page?.stop(reason);
+  if (browser === 'chrome') page = await openChrome({ profile, port, width, height, executable, rom, preload, headed, onScreen, uncapped, cpuThrottle, scale, chromeFlags, affinity, fallbackAdapter, line, stopPage });
   else if (browser === 'firefox') page = await openFirefox({ profile, port, width, height, executable, rom, preload, onScreen, uncapped, scale, firefoxPrefs, affinity, line });
   else throw new Error(`no browser ${browser}: chrome or firefox`);
 
@@ -517,7 +556,7 @@ const listening = (host, port) => new Promise((resolve) => {
 
 const asJson = (js) => `Promise.resolve((0, eval)(${JSON.stringify(js)})).then((v) => v === undefined ? undefined : JSON.stringify(v))`;
 
-const openChrome = async ({ profile, port, width, height, executable, rom, preload, headed, onScreen, uncapped, cpuThrottle, scale, chromeFlags = [], affinity, fallbackAdapter, line }) => {
+const openChrome = async ({ profile, port, width, height, executable, rom, preload, headed, onScreen, uncapped, cpuThrottle, scale, chromeFlags = [], affinity, fallbackAdapter, line, stopPage }) => {
   // A window off the desktop counts as hidden, and Chrome stops drawing a hidden one unless told not to (on screen,
   // another window over it would hide it too).
   const mode = headed || onScreen
@@ -533,7 +572,9 @@ const openChrome = async ({ profile, port, width, height, executable, rom, prelo
   const mute = chromeFlags.includes('--disable-audio-output') ? [] : ['--mute-audio'];
   const proc = spawnHeld(affinity, browserExecutable('chrome', executable), [...mode, ...size, '--enable-unsafe-webgpu', ...mute,
     '--no-first-run', '--autoplay-policy=no-user-gesture-required',
-    `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, ...chromeFlags, 'about:blank'], { stdio: 'ignore' });
+    `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, ...chromeFlags, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const watch = watchBrowser(proc, 'Chrome', profile, 'Crashpad/reports', line);
+  let closing = false;
   if (headed && !onScreen && process.platform === 'win32' && !await moveWindow('chrome.exe', profile, width, height)) {
     line('page_driver: Chrome window not moved');
   }
@@ -553,6 +594,16 @@ const openChrome = async ({ profile, port, width, height, executable, rom, prelo
   const target = targets.find((t) => t.type === 'page');
   let send;
   send = await connect(target.webSocketDebuggerUrl, (m) => {
+    // The tab's renderer gone: its connection stays open but nothing in the page answers again, so the run ends here
+    // rather than at its next evaluate's timeout, once Crashpad has had a moment to write the dump.
+    if (m.method === 'Inspector.targetCrashed') {
+      setTimeout(() => {
+        const reason = `the page's renderer crashed (${watch.dumps() || 'no crash dump'})`;
+        line(`page_driver: ${reason}`);
+        stopPage(reason);
+      }, 2000);
+      return;
+    }
     if (m.method === 'Target.attachedToTarget') {
       const session = m.params.sessionId;
       send('Runtime.enable', {}, session).catch(() => {});
@@ -568,7 +619,8 @@ const openChrome = async ({ profile, port, width, height, executable, rom, prelo
       line((m.sessionId ? 'exception on a worker: ' : 'exception: ') +
         (m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text));
     }
-  });
+  }, () => closing ? '' : watch.gone(5000));
+  await send('Inspector.enable');
   await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
   await send('Runtime.enable');
   await send('Page.enable');
@@ -643,7 +695,12 @@ const openChrome = async ({ profile, port, width, height, executable, rom, prelo
         await send('IO.close', { handle: tracingComplete.stream });
       },
     },
-    close: () => closeBrowser(proc, () => send('Browser.close'), 30000, line),
+    close: async () => {
+      closing = true;
+      await closeBrowser(proc, () => send('Browser.close'), 30000, line);
+      const left = watch.dumps();
+      if (left) line(`page_driver: Chrome left ${left}`);
+    },
   };
 };
 
@@ -685,13 +742,14 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
   // (docs/findings.md, Firefox slow to start).
   const proc = spawnHeld(affinity, browserExecutable('firefox', executable), ['-no-remote', '-profile', profile,
     '--remote-debugging-port', String(port), '--remote-allow-system-access', 'about:blank'],
-    { stdio: 'ignore', env: { ...process.env, MOZ_REMOTE_SETTINGS_DEVTOOLS: '1' } });
-  let send = null;
+    { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, MOZ_REMOTE_SETTINGS_DEVTOOLS: '1', MOZ_CRASHREPORTER_NO_REPORT: '1' } });
+  const watch = watchBrowser(proc, 'Firefox', profile, 'minidumps', line);
+  let send = null, closing = false;
   for (let i = 0; i < 150 && !send; i++) {
     try {
       send = await connect(`ws://127.0.0.1:${port}/session`, (m) => {
         if (m.method === 'log.entryAdded') line(m.params.type === 'javascript' ? 'exception: ' + m.params.text : m.params.text);
-      });
+      }, () => closing ? '' : watch.gone(5000));
     } catch { await sleep(200); }
   }
   if (!send) throw new Error('Firefox never answered on its debugging port');
@@ -796,6 +854,11 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
       await send('browsingContext.activate', { context });
       await send('browsingContext.close', { context: tab });
     },
-    close: () => closeBrowser(proc, () => send('browser.close'), 30000, line),
+    close: async () => {
+      closing = true;
+      await closeBrowser(proc, () => send('browser.close'), 30000, line);
+      const left = watch.dumps();
+      if (left) line(`page_driver: Firefox left ${left}`);
+    },
   };
 };
