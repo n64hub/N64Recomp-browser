@@ -10,6 +10,11 @@
 // never a file of 1 MB or more: an N64 save is 128 KB at most, and the stored ROM, which never leaves the browser, is
 // in the same folder.
 //
+// A game's page syncs its own game's saves only: those of a program id whose folder in its HOME holds something besides
+// saves/ (the settings, the ROM the player picked), which only the game's own page writes, and those the Drive says
+// came from its page. One that took every game's saves held a copy of each, newer than the game's own, and the hub
+// named every save after that page's game.
+//
 // Each file is compared three ways: what this browser holds, what the Drive holds (a SHA-256 in the file's
 // appProperties), and what the two held when they last agreed (localStorage, this browser's own). Only one side
 // changed: it goes to the other. Both did (two devices played offline): the newer one wins at the next start, and the
@@ -80,6 +85,9 @@ const SaveSync = (() => {
     !/\.conflict-/.test(path) && size < (1 << 20);
   // A save's game: its program id.
   const game = (path) => path.split('/')[1];
+  // The games a HOME is the page of, from paths under it: each program id with something outside saves/ in its folder.
+  const owns = (paths) =>
+    new Set(paths.map((path) => /^\.config\/([^/]+)\/(?!saves(?:\/|$))./.exec(path)?.[1]).filter(Boolean));
   const copyName = (path, time) => path + '.conflict-' + new Date(time).toISOString();
   const hex = async (data) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', data))]
     .map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -135,11 +143,14 @@ const SaveSync = (() => {
   // Syncs one browser's saves: local is path -> { data, time, played, page } (time in ms, played its game's seconds,
   // page its page's folder). With
   // pull, the Drive's that win are returned (path -> { data, played }) for the caller to write; without it (the push while a game runs, the hub's sign-in) they
-  // are left for the next start. Throws on a failed request: what synced before it stays recorded.
-  const sync = async (local, { pull, signal } = {}) => {
+  // are left for the next start. A game's page passes its folder (page) and the games its HOME owns (games, owns()), and
+  // syncs only theirs and those the Drive says came from it. Throws on a failed request: what synced before it stays
+  // recorded.
+  const sync = async (local, { pull, signal, page, games } = {}) => {
     const auth = token();
     if (!auth) return null;
     const remote = await list(auth, signal);
+    const ours = page && new Set([...games, ...[...remote].filter(([, f]) => f.page === page).map(([path]) => game(path))]);
     const synced = stored()?.synced || {}, pulled = new Map(), done = { up: 0, down: 0, conflicts: 0 };
     // A file pulled is recorded by what it holds, not the hash its properties say: one written to the Drive by another
     // client has none.
@@ -148,7 +159,7 @@ const SaveSync = (() => {
       agreed(path, await hex(data));
     };
     for (const path of new Set([...local.keys(), ...remote.keys()])) {
-      if (!isSave(path, local.get(path)?.data.byteLength ?? 0)) continue;
+      if (!isSave(path, local.get(path)?.data.byteLength ?? 0) || (ours && !ours.has(game(path)))) continue;
       const mine = local.get(path), theirs = remote.get(path), last = synced[path];
       const hash = mine && await hex(mine.data);
       if (hash && hash === theirs?.hash) {
@@ -264,7 +275,7 @@ const SaveSync = (() => {
     await request(drive + '/' + copy.id, { token: auth, method: 'DELETE' });
   };
 
-  return { key, stored, store, token, isSave, game, played, setPlayed, sync, compare, settle, listing, user, restore };
+  return { key, stored, store, token, isSave, game, owns, played, setPlayed, sync, compare, settle, listing, user, restore };
 })();
 
 // A game's page: HOME is the program's file system (persistent_home.js), read in before main() runs.
@@ -293,6 +304,17 @@ if (typeof document !== 'undefined' && typeof Module !== 'undefined') {
       for (const id of ids) if (id !== '.' && id !== '..') walk(home + '/.config/' + id + '/saves');
       return found;
     };
+    // The games this HOME is the page of (SaveSync.owns()).
+    const games = () => {
+      const paths = [], names = (dir) => {
+        try { return FS.readdir(dir).filter((name) => name !== '.' && name !== '..'); } catch { return []; }
+      };
+      for (const id of names(home + '/.config')) {
+        for (const name of names(home + '/.config/' + id)) paths.push('.config/' + id + '/' + name);
+      }
+      return SaveSync.owns(paths);
+    };
+    const mine = () => ({ page: folder, games: games() });
     const read = (found) => new Map([...found].filter(([path, f]) => SaveSync.isSave(path, f.size))
       .map(([path, f]) => [path, { data: FS.readFile(f.path), time: f.time, played: SaveSync.played(folder),
       page: folder }]));
@@ -308,7 +330,7 @@ if (typeof document !== 'undefined' && typeof Module !== 'undefined') {
         if (!changed.length) return;
         pushing = true;
         try {
-          await SaveSync.sync(read(found));
+          await SaveSync.sync(read(found), mine());
           for (const [path, f] of changed) seen.set(path, f.time);
         } catch (error) {
           console.error('Save sync: could not upload: ' + error.message);
@@ -326,7 +348,7 @@ if (typeof document !== 'undefined' && typeof Module !== 'undefined') {
     const abort = new AbortController(), timeout = setTimeout(() => abort.abort(), 8000);
     Module.homeRead.then(async (ok) => {
       if (!ok) return;
-      const pulled = await SaveSync.sync(read(saves()), { pull: true, signal: abort.signal });
+      const pulled = await SaveSync.sync(read(saves()), { pull: true, signal: abort.signal, ...mine() });
       if (abort.signal.aborted) return;
       for (const [path, { data, played }] of pulled) {
         const full = home + '/' + path;

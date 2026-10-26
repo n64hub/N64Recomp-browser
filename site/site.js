@@ -349,7 +349,8 @@ function syncStart() {
 
 // The saves this browser holds, in every game's database on this origin (frontend/persistent_home.js, each named
 // '/home/web_user <its page's folder>'): saves, path -> { data, time, played, page } (page its page's folder), and
-// folders, program id -> its page's folder.
+// folders, program id -> its page's folder. A database holds a game's saves only where it is that game's page
+// (SaveSync.owns()): a page built before that took the Drive's saves of every game.
 async function localSaves() {
   const home = '/home/web_user/', ask = (request) => new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -363,9 +364,11 @@ async function localSaves() {
     const db = await ask(open).catch(() => null);
     if (!db?.objectStoreNames.contains('FILE_DATA')) { db?.close(); continue; }
     const files = () => db.transaction('FILE_DATA').objectStore('FILE_DATA');
-    for (const key of await ask(files().getAllKeys())) {
-      const path = String(key).slice(home.length);
-      if (!String(key).startsWith(home) || !SaveSync.isSave(path, 0)) continue;
+    const keys = (await ask(files().getAllKeys())).map(String).filter((key) => key.startsWith(home));
+    const owned = SaveSync.owns(keys.map((key) => key.slice(home.length)));
+    for (const key of keys) {
+      const path = key.slice(home.length);
+      if (!SaveSync.isSave(path, 0) || !owned.has(SaveSync.game(path))) continue;
       const entry = await ask(files().get(key));
       const time = new Date(entry?.timestamp).getTime();
       if (entry?.contents && SaveSync.isSave(path, entry.contents.byteLength) && !(local.get(path)?.time >= time)) {
@@ -397,7 +400,8 @@ const gameOf = (id, folders, files = []) => {
 };
 // A game's heading in a popup: its art, where it has one, and its name.
 const gameHeading = (game, id) => el('h3', {},
-  ...(game && ART[game.repoName] ? [el('img', { src: `img/${game.repoName}.webp`, alt: '' })] : []), game?.name ?? id);
+  ...(game && ART[game.repoName] ? [el('img', { src: `img/${game.repoName}.webp`, alt: '', className: ART[game.repoName] })]
+    : []), game?.name ?? id);
 // Seconds played, in words.
 const playTime = (s) => s < 60 ? 'under a minute' : s < 3600 ? Math.round(s / 60) + ' min'
   : (s / 3600).toFixed(1).replace(/\.0$/, '') + ' h';
