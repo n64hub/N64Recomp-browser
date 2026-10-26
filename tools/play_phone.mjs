@@ -262,32 +262,44 @@ const waitFor = (pattern, ms) => new Promise((ok, fail) => {
 // A profile of the page and every worker in it, attached to as the protocol's flat sessions. A wasm thread waiting shows
 // as samples of its wait (Atomics.wait under _do_futex_wait, a condition variable), so those are taken out of its busy
 // share along with the idle ones. (program) is the browser's own work on the thread, outside script: the page's WebGPU
-// calls, for one.
+// calls, for one. The workers stay attached from the first profile step on, a new one profiled from when it starts, so a
+// later step profiles the same sessions. Every worker is stopped at once, each given 10 s to answer: a game that starts
+// and ends a thread for each of its objects has workers that end mid-profile and never answer, and stopped one by one
+// they took 10 s each, minutes in all.
 const waits = /^\(idle\)$|futex_wait|_timedwait|cond_wait|condition_variable::wait|^__timedwait_cp$/;
+const sessions = new Map();
+let profiling = false;
+const startProfiler = async (sessionId) => {
+  await send('Profiler.enable', {}, sessionId);
+  await send('Profiler.setSamplingInterval', { interval: 500 }, sessionId);
+  await send('Profiler.start', {}, sessionId);
+};
+const attached = (m) => {
+  if (m.method === 'Target.detachedFromTarget') { sessions.delete(m.params.sessionId); return; }
+  if (m.method !== 'Target.attachedToTarget') return;
+  const { sessionId, targetInfo } = m.params;
+  sessions.set(sessionId, targetInfo);
+  send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, sessionId);
+  if (profiling && (targetInfo.type === 'worker' || targetInfo.type === 'iframe')) startProfiler(sessionId);
+  send('Runtime.runIfWaitingForDebugger', {}, sessionId);
+};
 const profile = async (secs, prefix) => {
-  const sessions = new Map();
-  const start = async (sessionId) => {
-    await send('Profiler.enable', {}, sessionId);
-    await send('Profiler.setSamplingInterval', { interval: 500 }, sessionId);
-    await send('Profiler.start', {}, sessionId);
-  };
-  const attached = (m) => {
-    if (m.method !== 'Target.attachedToTarget') return;
-    const { sessionId, targetInfo } = m.params;
-    sessions.set(sessionId, targetInfo);
-    send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, sessionId);
-    if (targetInfo.type === 'worker' || targetInfo.type === 'iframe') start(sessionId);
-    send('Runtime.runIfWaitingForDebugger', {}, sessionId);
-  };
-  listeners.push(attached);
-  await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
-  await start(undefined);
+  profiling = true;
+  const already = [...sessions].filter(([, info]) => info.type === 'worker' || info.type === 'iframe');
+  if (!listeners.includes(attached)) {
+    listeners.push(attached);
+    await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
+  }
+  await Promise.all([startProfiler(undefined), ...already.map(([sessionId]) => startProfiler(sessionId))]);
   await new Promise((ok) => setTimeout(ok, secs * 1000));
-  listeners.splice(listeners.indexOf(attached), 1);
+  profiling = false;
+  const threads = [[undefined, { type: 'page' }], ...sessions];
+  const stopped = await Promise.all(threads.map(([sessionId]) =>
+    Promise.race([send('Profiler.stop', {}, sessionId), new Promise((ok) => setTimeout(ok, 10000))])));
   let n = 0;
-  for (const sessionId of [undefined, ...sessions.keys()]) {
-    const p = (await send('Profiler.stop', {}, sessionId)).result?.profile;
-    if (!p) continue;
+  threads.forEach(([, info], i) => {
+    const p = stopped[i]?.result?.profile;
+    if (!p) return;
     fs.writeFileSync(`${prefix}.${n}.cpuprofile`, JSON.stringify(p));
     const byId = new Map(p.nodes.map((node) => [node.id, node]));
     const self = new Map();
@@ -299,12 +311,10 @@ const profile = async (secs, prefix) => {
       if (waits.test(name)) waiting += dt;
       else self.set(name, (self.get(name) ?? 0) + dt);
     });
-    const what = sessionId ? sessions.get(sessionId).type : 'page';
     const top = [...self].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, t]) => `${(100 * t / total).toFixed(1)}% ${name.slice(0, 70)}`);
-    console.log(`${at().toFixed(1).padStart(6)}  profile ${n} (${what}): busy ${(100 * (total - waiting) / total).toFixed(0)}%: ${top.join(' · ')}`);
+    console.log(`${at().toFixed(1).padStart(6)}  profile ${n} (${info.type}): busy ${(100 * (total - waiting) / total).toFixed(0)}%: ${top.join(' · ')}`);
     n++;
-  }
-  await send('Target.setAutoAttach', { autoAttach: false, waitForDebuggerOnStart: false, flatten: true });
+  });
 };
 
 const finish = (exitCode) => {

@@ -292,8 +292,9 @@ The page from Pages, the same phone and night, big cores capped at 1.35 GHz, ski
   skin 37.6-40.2 °C: Diddy Kong Racing 58.3 and 58.7 presents a second against 57.0 and 54.7, 57.2-58.0 drawn in all
   four, the game at 28-30. Pokémon Snap 48.4 and 57.5 against 46.1 and 38.0, but its attract went another way in the
   last play (a minute at 12-17 game frames a second, then 30), and over the same stretches the other three drew alike:
-  59-60 a second where the game came at 30, 22-59 where it came at 7-20. So 9c88af0 changes little. An earlier pair of
-  the two had the layout wrong in both builds and read Pokémon Snap at 51-53 against 24-30.
+  59-60 a second where the game came at 30, 22-59 where it came at 7-20 (its title film: Pokémon Snap on a Galaxy
+  S21). So 9c88af0 changes little. An earlier pair of the two had the layout wrong in both builds and read Pokémon Snap
+  at 51-53 against 24-30.
 - Banjo-Tooie, both ways: from about 90 s after Start Game, its game at 28-30 of the 30 it reports and RT64 drawing
   one frame for each, so presents about 30. RT64's workload thread took 37-78 ms to set up each game frame, more than
   the game frame's 33, so it had no time for the frame between and skipped it: the CPU, in RT64's own work for this
@@ -451,3 +452,34 @@ place. The attract changes level about 125 s and 250 s into the page.
   27.8-28.1. plume waited 67-82 ms a second for fewer presents in flight with it, against 38-63 without, the GPU up
   to 95% busy at its 403 MHz: what is left there is partly the GPU's. On v0.115.0 the level presented 46-48 a second,
   not the 29-31 of builds on v0.109.0 and v0.113.0 (the profile's), whatever else changed between.
+
+## Pokémon Snap on a Galaxy S21
+
+Its attract after Start Game, Chrome 156: Snap64Recomp-web's main on v0.123.0, linked with `--profiling-funcs` and
+its port's own slow-frame report on (`SNAP_STATS`), served in place of Pages'. The attract opens with the title's
+forest film, which runs at 60 game frames a second, then a course's demo at 30, and goes round again.
+
+- On a desktop GPU the game keeps its pace all through: the film 60.0 game frames a second, the rate it reports, from
+  15 s to 106 s after Start Game, and the demo 30.0.
+- On the phone, the film at 7-18 game frames a second (it reports 7-20), RT64 drawing 40-53 for them, and the demo
+  at 26-30 (big cores at 1.04 GHz, the GPU at 403 MHz, battery 37 °C). The film's scene is three passes a present of
+  65-90 draws each at 1032x480 (Auto's twice the game's 240 lines for a 360-line canvas, wide), 7-11 ms of the Mali's
+  time a present and 13-22 ms with the rest, where the demo's whole present takes about 10: each present done on the
+  GPU 20-70 ms after it, and plume waiting up to 308 ms a second for fewer than 4 in flight, where the demo waits for
+  none. On a desktop GPU the film's present costs 0.44 ms against the demo's 0.30, so the film is the heavier scene
+  there too.
+- What a film frame waits for (a profile, 15 s of the film): the display list thread 89% in the port's `send_dl`, 48%
+  of it in render to RAM's `Framebuffer::copyNativeToRAM` mapping the copy's buffer, which waits for the GPU to finish
+  the frame behind the presents already in flight, and 26% in the port's own wait for RT64 to take each list
+  (`WorkloadQueue::waitForWorkloadId`); its own work under a fifth. Every other thread waited 98-99% of the time, and
+  RT64's workload thread was 20% busy. The port's report gives each frame 70-210 ms, 0-12 ms of it its wait for the
+  renderer, and the game's thread spends most of each update parked while it hands the CPU to the threads the port
+  runs one for each of the game's objects: 90-180 handoffs a frame, 0.6 ms each, where a desktop takes 0.03.
+- The page keeps render to RAM's exact copy, since the game scores a photo from the frame it has just drawn
+  (docs/game-forks.md). The late copy in its place (a build changed only there), interleaved (late, exact, exact,
+  late), the film and the demo's start (40-150 s after Start Game), hot (big cores at 0.83 GHz, the GPU at 312-403
+  MHz, battery 44-45 °C): the game at 10.7 and 14.8 frames a second (medians) against 6.9 and 6.0, presents 43.9 and
+  42.6 against 36.9 and 39.5, plume waiting 200-750 ms a second for fewer presents in flight in all four.
+- So it is the game fork's own: its exact copy, its port's wait for each list and its thread for each object, under a
+  scene the phone's GPU takes most of a present to draw. Nothing in the shared support holds it: render to RAM's wait
+  is what the exact copy is for, and the late copy is already there for a game that can take it.
