@@ -12,7 +12,7 @@
 #    (~/.cache/n64recomp-pages) with no files checked out.
 # 2. Builds the page there by the fork's BUILDING.md steps (Rush 2049's: remote_build.sh build), in that image, or on
 #    the host itself for a repo whose scripts run images of their own (Perfect Dark's: the decomp's, then the web's;
-#    Super Mario 64's: the web's).
+#    Super Mario 64's and F-Zero X's: the web's).
 # 3. Hashes the files the page serves (.html, .js, .wasm, .data, coi_serviceworker.js) as git does and compares them
 #    with the blobs in its folder of the hub's gh-pages (below). A commit builds the same bytes in any copy
 #    (frontend/build_speed.cmake, once the game's N64Recomp-browser pin has it: before, a ccache hit could carry another
@@ -128,6 +128,7 @@ rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush
 1080   n64hub/1080-Snowboarding-recomp-web   1080SnowboardingRecompiled build-web 1080-snowboarding
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
+fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-zero-x
 "
 selected=("${args[@]:1}")
 [[ ${#selected[@]} -gt 0 ]] || selected=($(awk 'NF { print $1 }' <<< "$games"))
@@ -378,7 +379,14 @@ build_sm64() {
     cmp -s ../rom.z64 roms/sm64.us.z64 || cp ../rom.z64 roms/sm64.us.z64
     bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
-on_host=" pd sm64 "
+# Its tools/build_web.sh recompiles from roms/fzerox.us.z64 (the syms/ are in git) and builds the page, in its own
+# image.
+build_fzx() {
+    mkdir -p roms
+    cmp -s ../rom.z64 roms/fzerox.us.z64 || cp ../rom.z64 roms/fzerox.us.z64
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
+on_host=" pd sm64 fzx "
 
 # --- Here ---
 

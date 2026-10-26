@@ -5,18 +5,18 @@ Web support for N64 static recompilations built on [N64Recomp](https://github.co
 and [RT64](https://github.com/rt64/rt64): the game, its menus and RT64 built with Emscripten into one page that draws
 through WebGPU. It is game-agnostic. A recomp keeps its own submodules at the commits it pins and adds this repo
 beside them, and its web build patches their checkouts (Using it in a recomp). It was written for San Francisco Rush
-2049: Recompiled, this project's own recomp as Perfect Dark's and Super Mario 64's are, and fifteen more recomps build a
-page with it (Games).
+2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's and F-Zero X's are, and fifteen more
+recomps build a page with it (Games).
 
 > Written almost entirely by AI (Claude), like the recomp it came from.
 
 ## Games
 
 Each game's repo builds its page with this repo; a page holds no ROM, the player loads their own. Rush 2049, Perfect
-Dark and Super Mario 64 aside, the games are here to build out and test the web support on more than one game: what one
-of them or one browser turns up is fixed in this repo or the forks unless it really is that game's own, so every game
-and both browsers get it. Those three are this project's own recomps, and each also has releases of its desktop build
-for Windows and Linux on its repo's Releases page.
+Dark, Super Mario 64 and F-Zero X aside, the games are here to build out and test the web support on more than one
+game: what one of them or one browser turns up is fixed in this repo or the forks unless it really is that game's own,
+so every game and both browsers get it. Those four are this project's own recomps; the first three also have releases
+of their desktop build for Windows and Linux on their repo's Releases page.
 
 | Game | Recomp | Repo | Page | Intel UHD, Chrome | Intel UHD, Firefox | Played |
 |---|---|---|---|---|---|---|
