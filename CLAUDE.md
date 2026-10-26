@@ -183,6 +183,9 @@ of this in the same work, as docs/playing.md says:
 - Plays it in Chrome and Firefox, always both (Chrome for the numbers, Firefox for what only it turns up: a race in
   the game's loads, an OOM), its build before it is published and from Pages after: launcher, Load ROM, the shader
   wait, menus (look at them, a `shot` step), a level or race, sound, the frame rate, WebGPU errors in the console.
+  In a retest Firefox plays from Pages only the A/B's games and each page whose repo changed more than its pin since
+  the main Pages served: the others' bytes played clean in Firefox from the build, and their serving is the hub's,
+  which those plays and every page's boot from Pages in headless Chrome check (docs/publishing.md, The retest).
 - Records every run, failed ones too, in `plays.jsonl` (`play_page.mjs --record`), committed with the row and nowhere
   else.
 - Writes the cell as a number, from a laptop run or else the stand-in (`*`), never "smooth" and never against an
