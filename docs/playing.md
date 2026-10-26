@@ -266,7 +266,7 @@ the game's page is on another origin; never a new tab; on a phone, fullscreen in
 upright: when the phone leaves landscape, at the ROM picker or Back, the game is covered until a tap locks it again),
 and under it its credit, a link to the game's repo ("Web port") and the
 recomp it is based on (the Recomp cell); the art names the game, so no line does. The header says what the page is
-and whose the recomps are, and a line under the games that it is written with AI, with the link to this repo. It
+and whose the recomps are, What's new under it the first three entries of `site/news.html`, which it links, and a line under the games that it is written with AI, with the link to this repo. It
 shows no frame rates: every game plays smoothly but in Firefox on a laptop's built-in graphics, so only there does
 the header warn (`site.js`); a retest that finds otherwise changes that warning. Firefox on a phone plays no game, so
 there the header says so in red instead and a tile starts nothing. With its OAuth client (`GOOGLE_CLIENT_ID` in `site.js`, which says how the client is set up) the
@@ -281,6 +281,8 @@ its on-screen controller on a phone, `site/touch_pad.js` (the header says why th
 game plays in, so that publish is what takes the controller and a change to it to every game. Served locally by `tools/serve_site.mjs`. Keep
 it current in the same work as what changes it:
 
+- A new feature or game on the hub (not a fix or a speedup) gets its entry at the top of `site/news.html`, a date and
+  one sentence, in the work that lands it, and a publish (`site.js` reads the entries from the published page).
 - It reads the table from main's README.md each visit (served locally, the checkout's), finding the columns by header
   (Game, Recomp, Repo, Page): a column renamed or a cell written another way needs
   `site.js`'s parse to follow.
