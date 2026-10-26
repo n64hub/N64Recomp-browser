@@ -428,14 +428,17 @@ keeps them in from 4:3's (the black border a console shows too), which RT64 keep
 its `Camera_Draw` sets them with `gEXSetScissor` from the edges; its menus' frame, 12, 8, 308, 232, is enlarged to the
 whole picture after each menu draws, the framebuffer drawn back over itself as a texture a few rows at a time, which
 RT64 takes from what it drew. A second depth clear over the whole race picture cost a quarter of the presents at 4K and
-set off a crash in render to RAM's read buffers, so the race keeps the game's own. Its race HUD is placed from the
-picture's edges by N64Recomp text hooks at the start of each function that draws a part of it, which write RT64's
-`gEXSetRectAlign` and an edge-aligned scissor into the game's display list: none of its 227-line HUD function is
-copied. Its `tools/build_web.sh` runs a Docker image of its own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 77 shaders: the
-boot (the launcher, the title and the main menu, 7) and a section for each of the 24 courses of the four cups, 53-63
-each and most of them in every one, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json`, which writes
-the course at machine select where the race reads it and has the computer drive player 1's machine, as its play plans
-do. Its README, CLAUDE.md and docs/web.md have the rest.
+set off a crash in render to RAM's read buffers, so the race keeps the game's own. Render to RAM's copy is a list
+late: the game's CPU reads a frame only for a screen transition's background (`Transition_SetBackgroundBuffer`, right
+after the frame's list is done), and the buffer then holds its frame from a list or two before, the same picture. Its
+race HUD is placed from the picture's edges by N64Recomp text hooks at the start of each function that draws a part of
+it, which write RT64's `gEXSetRectAlign` and an edge-aligned scissor into the game's display list: none of its
+227-line HUD function is copied. Its `tools/build_web.sh` runs a Docker image of its own, so `publish_pages.sh` runs
+it on the build host and not in rush-2049-recomp's image. Its list is 77 shaders: the boot (the launcher, the title
+and the main menu, 7) and a section for each of the 24 courses of the four cups, 53-63 each and most of them in every
+one, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json`, which writes the course at machine select
+where the race reads it and has the computer drive player 1's machine, as its play plans do. Its README, CLAUDE.md and
+docs/web.md have the rest.
 
 ## The games' own frame rates
 
