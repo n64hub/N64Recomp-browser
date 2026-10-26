@@ -112,6 +112,16 @@ main { max-width: 1440px; margin: 0 auto; padding: 12px 24px 32px; }
 /* A page of text (privacy.html). */
 main.text > * { max-width: 680px; }
 main.text h2 { margin: 8px 0 4px; }
+/* What's new: a date and a sentence a line, the first few above the grid and all of them in news.html. */
+.news { margin: 0; padding: 0; list-style: none; }
+.news li { display: flex; gap: 12px; padding: 3px 0; }
+.news time { flex: none; width: 52px; color: var(--dim); font-variant-numeric: tabular-nums; }
+main.text .news li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.news-box {
+  margin: 0 0 20px; padding: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+}
+.news-box h2 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.news-box > a { display: inline-block; margin-top: 6px; font-size: 14px; }
 /* How it is made, under the games. The source link stays whole, on the next line when it doesn't fit. */
 footer { max-width: 1440px; margin: 0 auto; padding: 0 24px 32px; color: var(--dim); font-size: 13px; }
 footer p { margin: 0; padding-top: 14px; border-top: 1px solid var(--line); }

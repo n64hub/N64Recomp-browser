@@ -620,4 +620,16 @@ async function main() {
   else uploadSaves();
 }
 
+// What's new: the first few entries of news.html's list, which holds them all, above the grid.
+async function showNews() {
+  const response = await fetch('news.html', { cache: 'no-cache' });
+  if (!response.ok) return;
+  const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+  const entries = [...page.querySelectorAll('#news li')].slice(0, 3);
+  if (!entries.length) return;
+  document.querySelector('#news .news').replaceChildren(...entries);
+  document.getElementById('news').hidden = false;
+}
+
+showNews().catch(() => {});
 if (!syncStart()) main();
