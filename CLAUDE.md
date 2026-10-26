@@ -52,8 +52,8 @@ any game.
 
 The forks (`rt64-web`, `plume-web`, `hlslpp-web`, `N64ModernRuntime-web`, `N64Recomp-web`, `RecompFrontend-web`) and
 the game forks take no PRs: a change is a commit pushed to the fork's `main` as a fast-forward, pinned by its SHA
-(`forks.txt` here, a game fork's submodule). This project's own recomps, `rush-2049-recomp`, `perfect-dark-recomp` and
-`super-mario-64-recomp`, work by PRs: moving one's `lib/N64Recomp-browser` is a PR there.
+(`forks.txt` here, a game fork's submodule). This project's own recomps, `rush-2049-recomp`, `perfect-dark-recomp`,
+`super-mario-64-recomp` and `f-zero-x-recomp`, work by PRs: moving one's `lib/N64Recomp-browser` is a PR there.
 
 Branches don't outlive their work: every one of these repos deletes a PR's branch when it merges ("Automatically
 delete head branches", on in each, a new fork included), and a branch pushed to a fork to hold work not on `main` yet
@@ -103,7 +103,8 @@ branches only: upstream's others are deleted when it is made.
   shader, the plume device thread and hlslpp's wasm SIMD backend, and checks that `patches/` match the forks and apply
   to every recomp commit in `patches/pins.txt` and over DKR-R-web's, CBFD-Recompiled-web's,
   JetForceGemini-Recomp-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
-  BanjoTooieRecompiled-web's, wave-race-64-recomp-web's and super-mario-64-recomp's own patches, and
+  BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's and f-zero-x-recomp's own
+  patches, and
   compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui. It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands. A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play,
   serve, read and publish pages runs only the `changes` job.
 
@@ -155,8 +156,8 @@ the last one at once (docs/publishing.md): it builds each game's page on the new
 changed (each once in Firefox for crashes and errors, and an A/B in Chrome against the page Pages serves on two or three
 games that stand for the rest when the tag can move speed), and only a page that boots with no WebGPU errors and plays
 no worse than Pages moves its fork onto the tag, is published and gets its row updated. One that plays worse stays on
-Pages as it was and has work filed. Rush 2049, Perfect Dark and Super Mario 64 are retested in the same work, never
-filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
+Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X are retested in the same
+work, never filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
 that left its page's bytes alone.
 
 A critical fix doesn't wait for the retest: a fix for a page on Pages that crashes, never boots, loses its WebGPU
