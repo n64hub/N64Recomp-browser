@@ -1250,7 +1250,10 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   second to last row, (0,218)-(320,219), which ends a pixel above the scissor: Fix LR with Scissor, on by default,
   stretches it to the scissor, a second row that samples past the row's tile copy, so that row came from RDRAM (rt64
   f99c2e4 judges a row's tile copy by the game's own rectangle). With both, no syncs with the goggles on, and the game
-  at 28-30 on that busy GPU, as with them off.
+  at 28-30 on that busy GPU, as with them off. Chrome uncapped at 3840x2000 on that GPU, interleaved (plays.jsonl):
+  Pages' v0.123.0 ran the game at 10-14 frames a second with the goggles on, the build at 24-29, both at 57-60 before
+  them; presents 155 and 121 a second for Pages, 136 and 132 for the build, which the other program's share of the
+  GPU decides.
 
 ## A page's thread in Chrome, throttled
 
