@@ -24,8 +24,8 @@ A run on a schedule that takes every change since the last one at once:
   N64Recomp-browser onto the tag (a commit to the fork's `main`), is published and gets its row updated. One that plays
   worse stays on Pages as it was, its fork on its last tag, and has work filed. So a fork's `main` is what its page was
   built from, and `git log <played>..<built>` here lists what a page took since it was last played.
-- Rush 2049, Perfect Dark and Super Mario 64, this project's own recomps, are retested in the same work, built,
-  played, recorded and their rows updated the same way, never filed for later; only their pins move differently, by a
+- Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X, this project's own recomps, are retested in the same work,
+  built, played, recorded and their rows updated the same way, never filed for later; only their pins move differently, by a
   PR on each one's repo that moves `lib/N64Recomp-browser` to the tag and builds the same bytes, which the retest
   merges before it publishes the page. Rush 2049's PR also runs the desktop game, and its pin moves even to a tag that
   left its page's bytes alone, since its desktop build can take something from it. A critical fix that plays every game takes it along the same way.
@@ -38,16 +38,24 @@ A run on a schedule that takes every change since the last one at once:
   once it reads no worse each game's pin moves as soon as its own smoke play is clean, and
   `tools/publish_pages.sh <rush-2049-recomp checkout> <game> --played <dir>` publishes the files that were played,
   with no second build (it checks the moved main is the built one with only the pin moved) and boots it from Pages in
-  headless Chrome, in a whole turn of its own between the next game's plays, and its row is updated. Each page
-  published is then played from Pages in Firefox by its regular plan, `tools/play_pages.sh <rush-2049-recomp checkout>
-  firefox <game>...`, which needs no build: a second machine with the ROMs can play those while the first builds and
-  plays the next games, and hand back its `plays.jsonl` lines as a branch for the run's PR. Every play,
+  headless Chrome, in a whole turn of its own between the next game's plays, and its row is updated. Then the A/B's
+  games, and each page whose repo changed more than its pin since the main Pages served (its own shell, patches or
+  plan: a page's own Content-Security-Policy that blocked the hub's favicon failed only from Pages, in Firefox), are
+  played from Pages in Firefox by their regular plans, `tools/play_pages.sh <rush-2049-recomp checkout> firefox
+  <game>...`. The rest are not, about 3 minutes a page: their bytes played clean in Firefox from the build, and how the
+  hub serves them is what those plays and the boots check. play_pages.sh needs no build: a second machine with the ROMs
+  can play those while the first builds and plays the next games, and hand back its `plays.jsonl` lines as a branch for
+  the run's PR. Every play,
   the boots included, takes its turn in the same queue, so one page plays at a time on the machine (CLAUDE.md,
   Playing a page). A game fork whose own patches have to change with its pin (one that no longer applies on the tag)
   builds that commit with `--ref <commit> --browser <tag>` and plays it before its main moves. So does one whose own
   patches carry a copy of a fix the tag now has (docs/forks.md names it beside the fork's commit): the commit that moves
   its pin drops the copy, which leaves the shared fix the only one, unless a desktop build of the fork applies its own
   patches and no web patch (Conker's build.cmd, Banjo-Tooie's): the copy stays for that build.
+- `tools/retest.sh <rush-2049-recomp checkout> <tag> <dir> --ab <game>...` runs all of the above for every game, a
+  game at a time and a play per GPU turn (`--queue`), up to the PRs on the own recomps' repos, which it opens: their
+  merges (Rush 2049's after its desktop run), publishes and Firefox plays from Pages are the run's by hand. Started
+  again with the same `<dir>` it goes on where it stopped; its header says what each step reads and writes.
 
 ## A critical fix
 
