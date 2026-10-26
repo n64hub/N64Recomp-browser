@@ -102,8 +102,8 @@ branches only: upstream's others are deleted when it is made.
 - CI (`.github/workflows/ci.yml`) builds every library of a page with Emscripten from the forks, checks every WGSL
   shader, the plume device thread and hlslpp's wasm SIMD backend, and checks that `patches/` match the forks and apply
   to every recomp commit in `patches/pins.txt` and over DKR-R-web's, CBFD-Recompiled-web's,
-  JetForceGemini-Recomp-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's and
-  super-mario-64-recomp's own patches, and
+  JetForceGemini-Recomp-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
+  BanjoTooieRecompiled-web's and super-mario-64-recomp's own patches, and
   compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui. It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands. A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play,
   serve, read and publish pages runs only the `changes` job.
 
