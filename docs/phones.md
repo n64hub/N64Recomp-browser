@@ -512,3 +512,8 @@ so the rate it reports moves with them.
   presents 49.4 and 52.4 against 49.6 and 50.6, plume waiting a median 118 and 19 ms a second for fewer presents in
   flight against 30 and 43, the GPU busier with the frames it now gets. So the page turns render to RAM off
   (docs/game-forks.md).
+- RT64 checks RDRAM for what the CPU wrote over a framebuffer only after a list that copied its frames there, so with
+  render to RAM off a framebuffer whose memory the game reused for a level stayed, and the textures it loaded there
+  were read from its old frame. On a desktop GPU in Chrome at 3840x2000, uncapped, interleaved with Pages: 244 and
+  244 presents a second against 257 and 257 without the check, 254 and 261 against 261 and 259 with it. The game
+  fork's rt64 patch keeps the check with render to RAM off.
