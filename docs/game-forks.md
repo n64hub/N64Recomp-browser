@@ -164,7 +164,9 @@ lines in a 2-minute play), which the fork takes out with the hooks that print th
 page's own lines, the game's errors and the traces an environment variable turns on. It draws ~1,700 batches a frame in
 Jinjo Village, 3-7 times Rush 2049's, and RT64 makes each one WebGPU calls on the page's thread, so with Chrome's CPU
 throttled 6 times it is the slowest page there, its own draw count and not the web support (docs/findings.md, A page's
-thread in Chrome, throttled). Its BUILDING.md and the headers of
+thread in Chrome, throttled). Its own patches go in first and the web's on top, so CI's `bt-patches` job runs its
+`tools/build_web.sh --patches` on each PR: a web change that meets their lines is red there, not at its next build.
+Its BUILDING.md and the headers of
 `tools/build_web.sh`, `tools/shader_survey.js`, `tools/make_plans.py` and `src/rt64_shaders.txt` have the rest: how its
 own patches and apply.cmake are layered and the files left out, the recompile with the web-patched N64Recomp, render to
 RAM off and the leak it showed, the shader list and its survey, the frame rates per world and the page's pacing.
