@@ -1226,7 +1226,7 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   were. The A/B against Pages (`ab_pages.mjs`, Chrome uncapped at 3840x2000, a play from the file menu to Joanna's
   control) read 208 presents a second for Pages' page and 331 for the build, its p99 gap 29 ms against 10, and
   Banjo-Tooie's regular plan, which makes tile copies too, 357 against 358, both at the 360 cap.
-- Perfect Dark's night vision: with the goggles on (*Area 51 - Extraction*, the third mission, the player's
+- Perfect Dark's night vision: with the goggles on (*dataDyne Central - Extraction*, the third mission, the player's
   `devicesactive` bit 0x01 set from the console), `bview_draw_nv_lens` reads the front buffer back row by row for its
   blur and then copies each of the back buffer's 240 rows: a LoadBlock of the 320-texel row into TMEM 0 and a one-row
   texture rectangle drawn through a tile `bview_prepare_static_rgba16` sets to 513x9 texels of line 160. RT64 checks
@@ -1241,9 +1241,16 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   316-327 and its GPU process stayed at 2.38-2.48 GB; no WebGPU errors in either. Banjo-Tooie's regular plan read
   354 a second for both, and the build played clean in Firefox with the goggles on. The goggles' rows are now drawn from
   tile copies at the page's resolution, as RT64 draws any framebuffer it finds a tile copy for, where from RDRAM they
-  were the N64's 320x240 (and the HUD's text doubled). Two syncs a list are left: a 32x32 CI4 draw at TMEM 0-33
-  overlaps what is left of the last row's region once a later load has discarded part of it, and RT64 syncs for a
-  region it no longer knows.
+  were the N64's 320x240 (and the HUD's text doubled). That left two syncs a frame, which on a GPU the page shares
+  (an RTX 5080 97% busy with another program) held the game at 15-16 frames a second with the goggles on against
+  28-30 off, and the goggles are what the mission's first minute in the dark is played with. One was the HUD's first
+  glyph after each of the goggles' passes: a glyph is 7 words of TMEM drawn through a 32x32 CI4 tile of line 1, whose
+  33 words reach the rest of the last row's region; RT64 checks what the tile could sample, not what the call's
+  texcoords do (rt64 dd45bdc leaves that sync to `fullSync()`, which knows them: 17-19). The other was the goggles'
+  second to last row, (0,218)-(320,219), which ends a pixel above the scissor: Fix LR with Scissor, on by default,
+  stretches it to the scissor, a second row that samples past the row's tile copy, so that row came from RDRAM (rt64
+  f99c2e4 judges a row's tile copy by the game's own rectangle). With both, no syncs with the goggles on, and the game
+  at 28-30 on that busy GPU, as with them off.
 
 ## A page's thread in Chrome, throttled
 
