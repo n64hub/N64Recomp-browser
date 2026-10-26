@@ -147,7 +147,8 @@ sections and how they are recorded, Firefox's fixes.
 `n64hub/wave-race-64-recomp-web` is Wave Race 64: Recompiled. Fast3D draws as it does natively, with no rt64-web
 change. Its water renderer's 16 shaders are included as WGSL blobs. Its water patch is the web-patched tree's diff, so
 an rt64-web change beside its lines (rt64 179adb8, 5249040, d19fdcc) stops `git apply` and the patch is made again (applied with fuzz,
-then diffed). Its list is in 13 sections, the menus passed with page_driver's `pressUntil` and the gas held with
+then diffed). CI's `wr-patches` job runs its `tools/web_patch.sh` on each PR, so such a change is red there, not at the
+page's next build. Its list is in 13 sections, the menus passed with page_driver's `pressUntil` and the gas held with
 its `down`/`up`. Its docs/BUILDING.md (The web page) and the
 headers of `tools/web_patch.sh`, `tools/patch_rt64_water.py`, `recomp/wr64.toml`, `tools/autopilot.js` and
 `src/rt64_shaders.txt` have the rest: how the submodules are patched (apply.cmake, the port's own scripts, the water

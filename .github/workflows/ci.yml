@@ -431,6 +431,33 @@ jobs:
           ln -s "$GITHUB_WORKSPACE" "$bt/lib/N64Recomp-browser"
           bash "$bt/tools/build_web.sh" --patches
 
+  # The patches under Wave Race 64's web fork's own (wave-race-64-recomp-web, its main): its tools/web_patch.sh applies
+  # these to its rt64, N64ModernRuntime and RecompFrontend first, then its own tools/patch_*.py scripts, the last of which
+  # (patch_rt64_water.py) applies tools/patches/rt64-water-web.patch, a diff of the web-patched rt64 tree. So any change
+  # here beside that patch's lines stops git apply, and the page stops building. Run with this checkout as its
+  # lib/N64Recomp-browser; it needs no ROM. Red on a PR means the water patch (or one of the port's scripts' anchors) is
+  # made again over the new patches in wave-race-64-recomp-web, in that PR's work.
+  wr-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: wave-race-64-recomp-web's apply over them
+        run: |
+          wr="$RUNNER_TEMP/wr"
+          git clone -q --depth 1 https://github.com/n64hub/wave-race-64-recomp-web "$wr"
+          git -C "$wr" log -1 --format='wave-race-64-recomp-web %h %s'
+          git -C "$wr" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3             lib/RT64 lib/N64ModernRuntime lib/RecompFrontend
+          git -C "$wr/lib/RT64" -c protocol.version=2 submodule update -q --init --depth 1 src/contrib/plume src/contrib/hlslpp
+          git -C "$wr/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 N64Recomp
+          rmdir "$wr/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$wr/lib/N64Recomp-browser"
+          bash "$wr/tools/web_patch.sh"
+
   # Super Mario 64's own changes over the patches (super-mario-64-recomp, its main): its CMakeLists.txt applies its
   # runtime-patches/<project>-<n>-*.patch to its upstream submodules after patches/apply.cmake, and they change files
   # the patches change too (RecompFrontend's renderer). Each project a patch is for is patched here as there, and the
@@ -542,7 +569,7 @@ jobs:
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, snap-patches,
-      rush2-patches, snowboarding-patches, bt-patches, sm64-patches, emscripten]
+      rush2-patches, snowboarding-patches, bt-patches, wr-patches, sm64-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
