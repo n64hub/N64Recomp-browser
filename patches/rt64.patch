@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web df06c6b09c06d6bae530be7d0a265c15ee1c7fbb
+rt64: https://github.com/n64hub/rt64-web 2f08ac906a955f2e39ced562399e1e9d5fcec89f
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -4935,7 +4935,7 @@ index 0000000..9984c41
 +}
 +#endif
 diff --git a/src/render/rt64_projection_processor.cpp b/src/render/rt64_projection_processor.cpp
-index e842dcc..c540375 100644
+index e842dcc..0b25d40 100644
 --- a/src/render/rt64_projection_processor.cpp
 +++ b/src/render/rt64_projection_processor.cpp
 @@ -8,6 +8,22 @@
@@ -4961,11 +4961,10 @@ index e842dcc..c540375 100644
      inline void adjustProjectionMatrix(interop::float4x4 &matrix, const float aspectRatioScale) {
          matrix[0][0] *= aspectRatioScale;
          matrix[1][0] *= aspectRatioScale;
-@@ -134,6 +150,18 @@ namespace RT64 {
-                     projMatrix = curProjTransform;
-                     prevProjTransform = curProjTransform;
-                 }
-+
+@@ -126,6 +142,18 @@ namespace RT64 {
+ 
+                 // We only interpolate the projection if the view matrix has been interpolated.
+                 const bool interpolateProjection = rigidBody->lerpTranslation || rigidBody->lerpRotation;
 +#           if RT64_INTERPOLATE_CAMERA_EYE
 +                // The view's translation is the eye in the view's own axes, so lerping it took the eye of a camera far from the
 +                // world's origin off the line between its two places as the camera turned, and what is near the camera swung
@@ -4977,9 +4976,10 @@ index e842dcc..c540375 100644
 +                    setViewEye(prevViewTransform, rigidBody->lerpTranslation ? hlslpp::lerp(prevEye, curEye, p.prevFrameWeight) : curEye);
 +                }
 +#           endif
-             }
-             else {
-                 prevViewTransform = viewMatrix;
++
+                 if (interpolateProjection) {
+                     projMatrix = lerpMatrix(adjustedPrevProj, curProjTransform, p.curFrameWeight);
+                     prevProjTransform = lerpMatrix(adjustedPrevProj, curProjTransform, p.prevFrameWeight);
 diff --git a/src/render/rt64_raster_shader.cpp b/src/render/rt64_raster_shader.cpp
 index 721a01e..e7a0578 100644
 --- a/src/render/rt64_raster_shader.cpp
