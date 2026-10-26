@@ -180,8 +180,8 @@ What changes in the game's own code (behind `__EMSCRIPTEN__`) and files:
   over its shader plan, and the page plays the same; GoldenEye's never does. A word the CPU writes with the value it
   already held looks untouched, though, and gets the frame, so it is also wrong for a game that puts code or data in
   a framebuffer's memory once the RDP is done: Jet Force Gemini's CPU reworks its shadows' render targets once the RDP
-  has drawn them, and keeps the exact copy too. Conker's, GoldenEye's, Donkey Kong 64's and Perfect Dark's pages take
-  the copy late (docs/game-forks.md).
+  has drawn them, and keeps the exact copy too. Conker's, GoldenEye's, Donkey Kong 64's, Perfect Dark's and F-Zero
+  X's pages take the copy late (docs/game-forks.md).
 - Give RT64 a list of the game's shaders, so the page builds them before the game draws with them.
   This is part of every port, not an optional extra: without it the page is unplayable on most machines. Until a
   shader is built RT64 draws with its ubershader, which costs several times as much a pixel: on a laptop's Intel
