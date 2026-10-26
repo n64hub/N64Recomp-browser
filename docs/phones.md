@@ -549,4 +549,6 @@ so the rate it reports moves with them.
   render to RAM off a framebuffer whose memory the game reused for a level stayed, and the textures it loaded there
   were read from its old frame. On a desktop GPU in Chrome at 3840x2000, uncapped, interleaved with Pages: 244 and
   244 presents a second against 257 and 257 without the check, 254 and 261 against 261 and 259 with it. The game
-  fork's rt64 patch keeps the check with render to RAM off.
+  fork's rt64 patch keeps the check with render to RAM off. On the phone, warm (big cores capped at 1.56-1.79 GHz,
+  battery 29-34 °C), one play each in turn: the game at 30.2 frames a second (28.6-30.2) with the check, 29.7
+  (27.5-30.2) without, presents 59.9 and 58.6.
