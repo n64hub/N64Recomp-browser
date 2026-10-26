@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 40ec5c246da7f0babb97ef89f72f4a27bb656b7b
+rt64: https://github.com/n64hub/rt64-web 1b4617226944b2d8f3ec5c6a4327a6621e1b1836
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -4893,7 +4893,7 @@ index f2eee70..1f87967 100644
                  interop::float2 screenOffset;
                  RenderRect scissor;
 diff --git a/src/render/rt64_native_target.cpp b/src/render/rt64_native_target.cpp
-index 6891b7b..9e3e52f 100644
+index 6891b7b..a87fbbd 100644
 --- a/src/render/rt64_native_target.cpp
 +++ b/src/render/rt64_native_target.cpp
 @@ -13,6 +13,21 @@
@@ -4928,7 +4928,21 @@ index 6891b7b..9e3e52f 100644
      }
  
      RenderFormat NativeTarget::getBufferFormat(uint8_t siz) const {
-@@ -138,7 +156,35 @@ namespace RT64 {
+@@ -133,12 +151,49 @@ namespace RT64 {
+ 
+             readBuffer.readDescSet->setBuffer(readBuffer.readDescSet->gCurInput, previousReadBuffer->nativeBuffer.get(), previousReadBuffer->nativeBufferSize, previousBufferView);
+         }
++#   if defined(__EMSCRIPTEN__)
++        // Without a previous buffer the set keeps whatever buffer gCurInput was given the last time, which a later
++        // createReadBuffer() of that slot may have freed since. Plume's WebGPU set builds its bind group from every
++        // binding at the next dispatch that uses it, so it would read the freed buffer, where a native backend wrote
++        // the descriptor once and never looks at it again. FbReadAnyFullCS doesn't read gCurInput.
++        else {
++            readBuffer.readDescSet->setBuffer(readBuffer.readDescSet->gCurInput, nullptr);
++        }
++#   endif
+ 
+         void *dstData = readBuffer.nativeUploadBuffer->map();
          memcpy(dstData, data, bufferSize);
          readBuffer.nativeUploadBuffer->unmap();
  
@@ -4965,7 +4979,7 @@ index 6891b7b..9e3e52f 100644
              // Clear the change count resource with a compute shader.
              worker->commandList->barriers(RenderBarrierStage::COMPUTE, RenderBufferBarrier(changeCountBuffer.get(), RenderBufferAccess::WRITE));
              worker->commandList->setPipeline(shaderLibrary->fbChangesClear.pipeline.get());
-@@ -200,7 +246,7 @@ namespace RT64 {
+@@ -200,7 +255,7 @@ namespace RT64 {
          worker->commandList->dispatch(dispatchX, dispatchY, 1);
          worker->commandList->barriers(RenderBarrierStage::ALL, afterBarriers, uint32_t(std::size(afterBarriers)));
  
@@ -4974,7 +4988,7 @@ index 6891b7b..9e3e52f 100644
              // Copy the modified count resource to the readback.
              RenderBufferBarrier beforeCopyBarriers[] = {
                  RenderBufferBarrier(changeCountBuffer.get(), RenderBufferAccess::READ),
-@@ -212,8 +258,7 @@ namespace RT64 {
+@@ -212,8 +267,7 @@ namespace RT64 {
          }
          
          // Read the modified count by executing and waiting.
@@ -4984,7 +4998,7 @@ index 6891b7b..9e3e52f 100644
              worker->commandList->end();
              worker->execute();
              worker->wait();
-@@ -224,7 +269,7 @@ namespace RT64 {
+@@ -224,7 +278,7 @@ namespace RT64 {
              changeReadbackBuffer->unmap();
          }
          // Consider all pixels as modified.
@@ -4993,7 +5007,7 @@ index 6891b7b..9e3e52f 100644
              modifiedCount = width * height;
          }
  
-@@ -319,6 +364,9 @@ namespace RT64 {
+@@ -319,6 +373,9 @@ namespace RT64 {
          }
  
          writeBuffer.writeDescSet->setBuffer(writeBuffer.writeDescSet->gOutput, readBuffer->nativeBuffer.get(), bufferSize, readBuffer->nativeBufferWriteView.get());
@@ -5003,7 +5017,7 @@ index 6891b7b..9e3e52f 100644
  
          if (smallerReadBuffer != nullptr) {
              RenderBufferBarrier copyBarriers[] = {
-@@ -369,4 +417,8 @@ namespace RT64 {
+@@ -369,4 +426,8 @@ namespace RT64 {
          writeBuffer.nativeReadbackBuffer->unmap();
          writeBufferHistoryIndex++;
      }
