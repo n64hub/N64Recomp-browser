@@ -265,7 +265,7 @@ const waitFor = (pattern, ms) => new Promise((ok, fail) => {
 // later step profiles the same sessions. Every worker is stopped at once, each given 10 s to answer: a game that starts
 // and ends a thread for each of its objects has workers that end mid-profile and never answer, and stopped one by one
 // they took 10 s each, minutes in all.
-const waits = /^(idle)$|futex_wait|_timedwait|cond_wait|condition_variable::wait|^__timedwait_cp$/;
+const waits = /^\(idle\)$|futex_wait|_timedwait|cond_wait|condition_variable::wait|^__timedwait_cp$/;
 const sessions = new Map();
 let profiling = false;
 const startProfiler = async (sessionId) => {
