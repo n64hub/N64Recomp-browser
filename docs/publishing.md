@@ -83,6 +83,7 @@ A test page, a game fork's branch to be played by hand before it lands, is publi
 that page, with `tools/publish_page.sh <build dir> <name> n64hub/<fork> "<branch> <sha>" --into <branch>`, at
 `https://n64hub.com/<fork>/<branch>/`, and taken off with `--drop <branch>` when the branch lands or is
 dropped. Publishing main's page keeps every folder, and a test page leaves main's page and the other folders alone
-(the script's header says how).
+(the script's header says how). A test build in copies of its own on the build host (`PAGES_COPY`) cleans them the
+same way once its work lands or is dropped (`tools/publish_pages.sh`'s header).
 
 The first visit reloads once (`coi_serviceworker.js`); right after a publish that can take a second visit.

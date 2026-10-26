@@ -36,7 +36,10 @@
 # Once the pins are moved there (a fork's main, Rush 2049's by a pull request on its repo), a run without it builds
 # the same bytes and publishes them. PAGES_COPY=<prefix> builds in copies of its own, <prefix>-<game> (Rush 2049's
 # too), for a test build of a branch beside others' builds in the usual copies; a new one starts from its usual
-# copy's git objects (seed, below), not a clone from GitHub.
+# copy's git objects (seed, below), not a clone from GitHub. Nothing else removes such a copy, and each holds 1-2 GB
+# (its .git and build dirs), so the work that made them cleans them once it lands or is dropped, a copy each:
+# `bash <rush-2049-recomp>/tools/remote_build.sh -n <prefix>-<game> clean` (it waits for a build running there); the
+# run names them at its end. A usual copy (pages-<game>, publish) is never cleaned: every run builds in it.
 # --ref <commit> builds that commit of the one game named in place of its main, as a dry run, in PAGES_COPY's copies
 # (needed: its patches can be other than main's, which a usual copy's next build of main would start from). So a game
 # fork's change that has to land with its pin (its own patch rebased onto a tag, which no longer applies at the old
@@ -536,6 +539,10 @@ if [[ -n "$browser$ref" ]]; then
         read -r _ repo name dir folder <<< "$(grep "^$g " <<< "$games")"
         echo "  $g: bash $remote_build -n $([[ $g == rush ]] && { [[ -n ${PAGES_COPY:-} ]] && echo "$PAGES_COPY-rush" || echo publish; } || echo "${PAGES_COPY:-pages}-$g") get $dir <dir>"
     done
+fi
+if [[ -n ${PAGES_COPY:-} ]]; then
+    echo "copies of this run's own, to clean once its work lands or is dropped:"
+    for g in "${selected[@]}"; do echo "  bash $remote_build -n $PAGES_COPY-$g clean"; done
 fi
 $dry_run && { echo "dry run: nothing published"; [[ ${#failed[@]} -eq 0 ]]; exit; }
 if [[ ${#published[@]} -eq 0 ]]; then
