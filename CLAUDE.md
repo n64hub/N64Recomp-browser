@@ -60,6 +60,16 @@ delete head branches", on in each, a new fork included), and a branch pushed to 
 (`web-wip`, `wip/<topic>`) is deleted by the work that lands or drops it. A fork keeps `main`, `gh-pages` and those
 branches only: upstream's others are deleted when it is made.
 
+## If the change reaches another repo, YOU make it
+
+This repo's work is all of this project's recomp work, so a change it needs in one of the project's own recomps
+(`rush-2049-recomp`, `perfect-dark-recomp`, `super-mario-64-recomp`, `f-zero-x-recomp`) is made in the same work, not
+handed on as work of its own: a PR there, from a checkout of its `main`, landed by whoever does the work like one here,
+then this repo's half, if it has one. A cause found in a recomp is fixed there, in the work that found it. A fork or a
+game fork is changed as The forks says, by a commit pushed to its `main`, never a PR. Rush 2049's own bugs, and Rush
+work of its own size, stay Rush 2049's; a small Rush change this work needs (its pin, its shader list or play plan, a
+docs line) is made in the same work like any other.
+
 ## Rules
 
 - The web support works for every N64 recomp: a change is game-agnostic and behind `__EMSCRIPTEN__`/`__wasm__` (or an
