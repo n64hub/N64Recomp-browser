@@ -48,6 +48,10 @@ A run on a schedule that takes every change since the last one at once:
   patches carry a copy of a fix the tag now has (docs/forks.md names it beside the fork's commit): the commit that moves
   its pin drops the copy, which leaves the shared fix the only one, unless a desktop build of the fork applies its own
   patches and no web patch (Conker's build.cmd, Banjo-Tooie's): the copy stays for that build.
+- `tools/retest.sh <rush-2049-recomp checkout> <tag> <dir> --ab <game>...` runs all of the above for every game, a
+  game at a time and a play per GPU turn (`--queue`), up to the PRs on the own recomps' repos, which it opens: their
+  merges (Rush 2049's after its desktop run), publishes and Firefox plays from Pages are the run's by hand. Started
+  again with the same `<dir>` it goes on where it stopped; its header says what each step reads and writes.
 
 ## A critical fix
 

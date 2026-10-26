@@ -422,7 +422,7 @@ take the web support without moving its submodules to the forks (Using it in a r
   `--record` appends the run to `plays.jsonl`, every page play kept, a JSON line each, so how each game's page plays
   can be followed day by day; `ab_pages.mjs` plays a new build and the page Pages serves interleaved in Chrome, says
   whether the build plays worse, and with `--smoke` plays the build once in Firefox for crashes and errors (the retest's
-  checks). `pass_probe.js`, a preload for it, says what a page's presents spend the GPU on: its
+  checks); `retest.sh` runs a whole retest with them, a game at a time from build to publish. `pass_probe.js`, a preload for it, says what a page's presents spend the GPU on: its
   passes, their size, their draws by shader and the GPU time of each; `webgpu_census.js`, another, counts its WebGPU calls
   and bytes a second by kind, and `gpu_growth.mjs` plays those kinds one at a time in a test page, `gpu_growth.html`,
   reading Firefox's GPU process memory around each; `memory_scan.ps1` says whose code made what that process grows.
