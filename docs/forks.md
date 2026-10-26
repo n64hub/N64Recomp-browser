@@ -524,4 +524,7 @@ plume 6109ba1,         a descriptor set's binding of a buffer destroyed since is
 rt64 1b46172           unset one is, and logged the first 8 times: reading the freed buffer's handle threw ('reading
                        size' in wgpuBufferGetSize) on the device thread and the page never presented again, as F-Zero
                        X's did at 4K in Chrome on a fast desktop GPU with its race's depth buffer copied at two sizes
+N64ModernRuntime       upstream merged in at cdf5abb, the runtime Conker pins: recomp::Configuration
+67c3139                gains argc/argv (--game, --game-mode; a page passes none), and the VI thread skips an update
+                       while no VI mode has been set, where it read a null mode
 ```
