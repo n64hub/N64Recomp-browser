@@ -38,10 +38,14 @@ A run on a schedule that takes every change since the last one at once:
   once it reads no worse each game's pin moves as soon as its own smoke play is clean, and
   `tools/publish_pages.sh <rush-2049-recomp checkout> <game> --played <dir>` publishes the files that were played,
   with no second build (it checks the moved main is the built one with only the pin moved) and boots it from Pages in
-  headless Chrome, in a whole turn of its own between the next game's plays, and its row is updated. Each page
-  published is then played from Pages in Firefox by its regular plan, `tools/play_pages.sh <rush-2049-recomp checkout>
-  firefox <game>...`, which needs no build: a second machine with the ROMs can play those while the first builds and
-  plays the next games, and hand back its `plays.jsonl` lines as a branch for the run's PR. Every play,
+  headless Chrome, in a whole turn of its own between the next game's plays, and its row is updated. Then the A/B's
+  games, and each page whose repo changed more than its pin since the main Pages served (its own shell, patches or
+  plan: a page's own Content-Security-Policy that blocked the hub's favicon failed only from Pages, in Firefox), are
+  played from Pages in Firefox by their regular plans, `tools/play_pages.sh <rush-2049-recomp checkout> firefox
+  <game>...`. The rest are not, about 3 minutes a page: their bytes played clean in Firefox from the build, and how the
+  hub serves them is what those plays and the boots check. play_pages.sh needs no build: a second machine with the ROMs
+  can play those while the first builds and plays the next games, and hand back its `plays.jsonl` lines as a branch for
+  the run's PR. Every play,
   the boots included, takes its turn in the same queue, so one page plays at a time on the machine (CLAUDE.md,
   Playing a page). A game fork whose own patches have to change with its pin (one that no longer applies on the tag)
   builds that commit with `--ref <commit> --browser <tag>` and plays it before its main moves. So does one whose own
