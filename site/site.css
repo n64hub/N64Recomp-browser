@@ -86,6 +86,7 @@ header .tagline { color: var(--text); font-size: 18px; }
 #save-choice .uploaded::before { content: "✓ "; color: #7fd19b; }
 .sheet h3 { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; font-size: 15px; }
 .sheet h3 img { width: 64px; height: 36px; border-radius: 5px; object-fit: cover; }
+.sheet h3 img.icon { object-fit: contain; }
 #save-choice .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 #save-choice .option {
   display: grid; grid-template-columns: 20px 1fr; gap: 2px 8px; padding: 10px 12px; cursor: pointer;
