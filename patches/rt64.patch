@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 2c4230ef1e9d86ea8573350f319ab0f07ef81eac
+rt64: https://github.com/n64hub/rt64-web df06c6b09c06d6bae530be7d0a265c15ee1c7fbb
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -4935,25 +4935,13 @@ index 0000000..9984c41
 +}
 +#endif
 diff --git a/src/render/rt64_projection_processor.cpp b/src/render/rt64_projection_processor.cpp
-index e842dcc..c1e7bfc 100644
+index e842dcc..c540375 100644
 --- a/src/render/rt64_projection_processor.cpp
 +++ b/src/render/rt64_projection_processor.cpp
-@@ -4,6 +4,10 @@
- 
- #include "rt64_projection_processor.h"
- 
-+#if RT64_INTERPOLATE_CAMERA_EYE
-+#   include <cmath>
-+#endif
-+
- #include "common/rt64_math.h"
+@@ -8,6 +8,22 @@
  #include "hle/rt64_workload_queue.h"
  
-@@ -14,6 +18,22 @@ namespace RT64 {
-         matrix[2][0] *= aspectRatioScale;
-         matrix[3][0] *= aspectRatioScale;
-     }
-+
+ namespace RT64 {
 +#if RT64_INTERPOLATE_CAMERA_EYE
 +    // The eye of a view matrix, the point it moves to the origin, or false for a view without one (a zero matrix).
 +    inline bool viewEye(const hlslpp::float4x4 &view, hlslpp::float3 &eye) {
@@ -4969,28 +4957,29 @@ index e842dcc..c1e7bfc 100644
 +        view[3][2] = translation.z;
 +    }
 +#endif
-     
-     // ProjectionProcessor
- 
-@@ -124,6 +144,18 @@ namespace RT64 {
-                 viewMatrix = rigidBody->lerp(p.curFrameWeight, *prevViewMatrix, curViewTransform, true);
-                 prevViewTransform = rigidBody->lerp(p.prevFrameWeight, *prevViewMatrix, curViewTransform, true);
- 
++
+     inline void adjustProjectionMatrix(interop::float4x4 &matrix, const float aspectRatioScale) {
+         matrix[0][0] *= aspectRatioScale;
+         matrix[1][0] *= aspectRatioScale;
+@@ -134,6 +150,18 @@ namespace RT64 {
+                     projMatrix = curProjTransform;
+                     prevProjTransform = curProjTransform;
+                 }
++
 +#           if RT64_INTERPOLATE_CAMERA_EYE
 +                // The view's translation is the eye in the view's own axes, so lerping it took the eye of a camera far from the
 +                // world's origin off the line between its two places as the camera turned, and what is near the camera swung
 +                // in the frames between. The eye is lerped instead (kept at the current one when the position isn't), and
-+                // each lerped view's translation is put back from it.
++                // each interpolated view's translation is put back from it.
 +                hlslpp::float3 prevEye, curEye;
 +                if (viewEye(*prevViewMatrix, prevEye) && viewEye(curViewTransform, curEye)) {
 +                    setViewEye(viewMatrix, rigidBody->lerpTranslation ? hlslpp::lerp(prevEye, curEye, p.curFrameWeight) : curEye);
 +                    setViewEye(prevViewTransform, rigidBody->lerpTranslation ? hlslpp::lerp(prevEye, curEye, p.prevFrameWeight) : curEye);
 +                }
 +#           endif
-+
-                 // We only interpolate the projection if the view matrix has been interpolated.
-                 const bool interpolateProjection = rigidBody->lerpTranslation || rigidBody->lerpRotation;
-                 if (interpolateProjection) {
+             }
+             else {
+                 prevViewTransform = viewMatrix;
 diff --git a/src/render/rt64_raster_shader.cpp b/src/render/rt64_raster_shader.cpp
 index 721a01e..e7a0578 100644
 --- a/src/render/rt64_raster_shader.cpp

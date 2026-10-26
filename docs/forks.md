@@ -505,8 +505,9 @@ rt64 9b87e67           with Emscripten, a tile that finds no tile copy samples t
                        texcoords that leave the row sample TMEM again: Perfect Dark's night vision copies each row
                        through a 513x9 tile of line 160, and drew each from RDRAM, at 30 (docs/findings.md, Perfect
                        Dark's night vision)
-rt64 2c4230e           RT64_INTERPOLATE_CAMERA_EYE: a camera's eye is lerped on the line between its two places and
-                       each interpolated view's translation put back from it, its lerped axes kept; lerping the view's
+rt64 2c4230e,          RT64_INTERPOLATE_CAMERA_EYE: a camera's eye is lerped on the line between its two places and
+rt64 df06c6b           each interpolated view's translation put back from it, its lerped axes kept; lerping the view's
                        translation, the eye in the view's own axes, took a camera far from the origin that turns off
-                       that line (F-Zero X's, 12,000 units out, up to 25 units) and what is near it swung
+                       that line (F-Zero X's, 12,000 units out, up to 25 units) and what is near it swung; df06c6b moves
+                       its lines off those Conker's own patch to the file changes
 ```
