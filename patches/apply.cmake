@@ -42,13 +42,16 @@ function(_n64recomp_browser_changes top sub out)
     set(${out} ${hash} PARENT_SCOPE)
 endfunction()
 
-# Fetches the upstream commit <name>.patch was made on from the fork patches.txt names into the repository at <top>, and
-# returns it, or nothing if it can't.
+# Fetches the upstream commit <name>.patch was made on (or the commit after <out>, an earlier one) from the fork
+# patches.txt names into the repository at <top>, and returns it, or nothing if it can't.
 function(_n64recomp_browser_fetch_base name top out)
     file(STRINGS "${N64RECOMP_BROWSER_PATCHES_DIR}/patches.txt" rows REGEX "^${name} ")
     string(REGEX REPLACE " +" ";" row "${rows}")
     list(GET row 2 fork)
     list(GET row 3 base)
+    if (ARGC GREATER 3)
+        set(base "${ARGV3}")
+    endif()
     message(STATUS "N64Recomp-browser: fetching ${name}'s upstream ${base} from ${fork}")
     # --refetch brings the commit's files even where the checkout has the commit already: a partial clone
     # (--filter=blob:none, as DKR-R's bootstrap makes) holds upstream's commits without their files, and git apply
@@ -149,7 +152,10 @@ endfunction()
 # since <commit>, three ways: the files as upstream's commit with <commit>'s patch, as they are, and as upstream's
 # commit with this patch. So the recomp's merge takes the web's later changes by itself, and only a change that meets
 # its own lines stops, the file left with conflict markers to merge by hand into its own change, which is then from this
-# commit. Merging again, or where nothing moved, changes nothing.
+# commit. Merging again, or where nothing moved, changes nothing. Where the upstream commit the patches are made on moved
+# since <commit>, <commit>'s patch goes on the upstream commit it was made on, and upstream's change to a file between
+# the two is taken back out of this patch's side first: the recomp's files are on its own commit, so only the web's
+# change is merged. One that meets the web's lines (the fork merged it by hand) stops for a merge by hand.
 function(n64recomp_browser_merge_since name dir commit)
     get_filename_component(dir "${dir}" ABSOLUTE)
     execute_process(COMMAND git rev-parse --show-toplevel WORKING_DIRECTORY "${dir}"
@@ -187,10 +193,16 @@ function(n64recomp_browser_merge_since name dir commit)
     if (NOT base)
         message(FATAL_ERROR "N64Recomp-browser: can't fetch ${name}'s upstream commit to merge into ${dir}")
     endif()
-    if (NOT CMAKE_MATCH_1 STREQUAL base)
-        # The web's change since <commit> would bring upstream's too, which isn't the recomp's.
-        message(FATAL_ERROR "N64Recomp-browser: ${name}'s upstream moved since ${commit} (${CMAKE_MATCH_1} to ${base}): "
-            "merge the web's change to ${ARGN} into ${dir}'s by hand")
+    set(then_base "${CMAKE_MATCH_1}")
+    if (NOT then_base)
+        message(FATAL_ERROR "N64Recomp-browser: no ${name} in patches.txt at ${commit}")
+    endif()
+    if (NOT then_base STREQUAL base)
+        _n64recomp_browser_fetch_base(${name} "${top}" fetched ${then_base})
+        if (NOT fetched)
+            message(FATAL_ERROR "N64Recomp-browser: can't fetch ${name}'s upstream ${then_base}, which ${commit}'s patch "
+                "was made on")
+        endif()
     endif()
 
     # The files as upstream's commit with each patch, in an index of their own.
@@ -201,21 +213,23 @@ function(n64recomp_browser_merge_since name dir commit)
     foreach (side old new)
         if (side STREQUAL old)
             set(patch "${work}/old.patch")
+            set(on "${then_base}")
         else()
             set(patch "${N64RECOMP_BROWSER_PATCHES_DIR}/${name}.patch")
+            set(on "${base}")
         endif()
         set(env ${CMAKE_COMMAND} -E env "GIT_INDEX_FILE=${work}/${side}.index")
         if (sub)
-            execute_process(COMMAND ${env} git read-tree "--prefix=${sub}" "${base}" WORKING_DIRECTORY "${top}")
+            execute_process(COMMAND ${env} git read-tree "--prefix=${sub}" "${on}" WORKING_DIRECTORY "${top}")
             set(directory "--directory=${sub}")
         else()
-            execute_process(COMMAND ${env} git read-tree "${base}" WORKING_DIRECTORY "${top}")
+            execute_process(COMMAND ${env} git read-tree "${on}" WORKING_DIRECTORY "${top}")
             set(directory "")
         endif()
         execute_process(COMMAND ${env} git apply --cached --whitespace=nowarn ${directory} ${include} "${patch}"
             WORKING_DIRECTORY "${top}" RESULT_VARIABLE result ERROR_VARIABLE error)
         if (NOT result EQUAL 0)
-            message(FATAL_ERROR "N64Recomp-browser: ${name}.patch (${side}) doesn't apply to upstream's ${base}:\n${error}")
+            message(FATAL_ERROR "N64Recomp-browser: ${name}.patch (${side}) doesn't apply to upstream's ${on}:\n${error}")
         endif()
     endforeach()
 
@@ -239,6 +253,31 @@ function(n64recomp_browser_merge_since name dir commit)
                 file(WRITE "${work}/${side}" "")
             endif()
         endforeach()
+        if (NOT then_base STREQUAL base)
+            # Upstream's change to the file, taken back out of this patch's side.
+            foreach (side then now)
+                if (side STREQUAL then)
+                    set(on "${then_base}")
+                else()
+                    set(on "${base}")
+                endif()
+                execute_process(COMMAND git cat-file blob "${on}:${file}" WORKING_DIRECTORY "${top}"
+                    OUTPUT_FILE "${work}/${side}" RESULT_VARIABLE result ERROR_QUIET)
+                if (NOT result EQUAL 0)
+                    file(WRITE "${work}/${side}" "")
+                endif()
+            endforeach()
+            execute_process(COMMAND git merge-file "${work}/new" "${work}/now" "${work}/then" WORKING_DIRECTORY "${top}"
+                RESULT_VARIABLE result)
+            if (NOT result EQUAL 0)
+                message(FATAL_ERROR "N64Recomp-browser: ${name}'s upstream change to ${file} from ${then_base} to ${base} "
+                    "meets the web's: merge the web's change to it since ${commit} into ${dir}'s by hand")
+            endif()
+            execute_process(COMMAND ${CMAKE_COMMAND} -E compare_files "${work}/old" "${work}/new" RESULT_VARIABLE result)
+            if (result EQUAL 0)
+                continue()
+            endif()
+        endif()
         if (NOT EXISTS "${top}/${sub}${file}")
             file(WRITE "${top}/${sub}${file}" "")
         endif()
