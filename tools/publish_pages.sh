@@ -12,7 +12,8 @@
 #    (~/.cache/n64recomp-pages) with no files checked out.
 # 2. Builds the page there by the fork's BUILDING.md steps (Rush 2049's: remote_build.sh build), in that image, or on
 #    the host itself for a repo whose scripts run images of their own (Perfect Dark's: the decomp's, then the web's;
-#    Super Mario 64's, F-Zero X's and Mario Party 1's, 2's and 3's: the web's).
+#    Super Mario 64's, F-Zero X's and Mario Party 1's, 2's and 3's: the web's). A build that stops on ninja's "still
+#    dirty after 100 tries" is built once more when no file in the copy is dated ahead of the host's clock (again_dirty).
 # 3. Hashes the files the page serves (.html, .js, .wasm, .data, coi_serviceworker.js) as git does and compares them
 #    with the blobs in its folder of the hub's gh-pages (below). A commit builds the same bytes in any copy
 #    (frontend/build_speed.cmake, once the game's N64Recomp-browser pin has it: before, a ccache hit could carry another
@@ -446,6 +447,26 @@ git config --unset-all submodule.alternateLocation || :; git config --unset-all 
 git repack -a -d -q && rm .git/objects/info/alternates
 EOF
 }
+# again_dirty <copy> <log> <command>...: runs a build into <log>, and once more if ninja stopped on "still dirty after
+# 100 tries": a CMake input dated ahead of the host's clock, so each of CMake's reruns writes a build.ninja still older
+# than it (one of N64Recomp's 20 s ahead made 100 reruns in 3.2 s and stopped its build, one 3 s ahead just got
+# through). Seen on a new copy's first build on a host in WSL, whose clock had moved by a few seconds, and the same
+# build run again at once built. Before the second try it names the file furthest ahead, and by how much, and waits
+# until the clock is past every file in the copy (2 minutes at most).
+again_dirty() {
+    local copy=$1 log=$2
+    shift 2
+    "$@" > "$log" 2>&1 && return 0
+    grep -q "still dirty after" "$log" || return 1
+    ssh -o BatchMode=yes "$BUILD_HOST" "cd ~/rush2049/$copy && bash -s" << 'EOF'
+now=$(date +%s.%N)
+find repo -newermt "@$now" -printf '%T@ %P\n' 2> /dev/null | sort -n | tail -1 |
+    awk -v now="$now" '{ printf "   %s was %.1f s ahead of the clock\n", $2, $1 - now }'
+for i in $(seq 24); do [ -z "$(find repo -newermt "@$(date +%s.%N)" -print -quit 2> /dev/null)" ] && break; sleep 5; done
+EOF
+    echo "   build.ninja stayed dirty (an input dated ahead of the host's clock): building again"
+    "$@" > "$log" 2>&1
+}
 # same_files <clone> <main> <pin> <commit>: whether <commit>'s files are <main>'s with N64Recomp-browser at <pin>,
 # checked in a scratch index, so a merge or a squash of the pin's PR passes too.
 same_files() {
@@ -500,7 +521,8 @@ for g in "${selected[@]}"; do
         > "$work/$g.log" 2>&1; then
         echo "   sync failed:"; tail -5 "$work/$g.log"; failed+=("$g"); continue
     elif [[ $g == rush ]]; then
-        bash "$remote_build" -n $copy build > "$work/$g.log" 2>&1 || { echo "   build failed:"; tail -20 "$work/$g.log"; failed+=("$g"); continue; }
+        again_dirty $copy "$work/$g.log" bash "$remote_build" -n $copy build ||
+            { echo "   build failed:"; tail -20 "$work/$g.log"; failed+=("$g"); continue; }
     else
         rom="${ROMS:?set ROMS to the folder holding <game>.z64}/$g.z64"
         have="$(ssh -o BatchMode=yes "$BUILD_HOST" "sha1sum rush2049/$copy/rom.z64 2> /dev/null || true")"  # remote_build.sh's base
@@ -513,7 +535,7 @@ for g in "${selected[@]}"; do
         else
             run=(bash "$remote_build" -n $copy run "$script")
         fi
-        if ! "${run[@]}" > "$work/$g.log" 2>&1; then
+        if ! again_dirty $copy "$work/$g.log" "${run[@]}"; then
             echo "   build failed:"; tail -20 "$work/$g.log"; failed+=("$g"); continue
         fi
     fi
