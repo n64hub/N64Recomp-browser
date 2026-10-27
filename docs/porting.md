@@ -61,6 +61,11 @@ What a recomp's code needed for wasm, besides N64ModernRuntime-0003 and N64Recom
   functions its `funcs.h` never declares (N64Recomp 025cab9 declares them), and Emscripten makes an implicit
   declaration an error. A new one shows as that error or as `unreachable` at run time; `frontend/`'s link fails on any
   wasm-ld warning so a mismatch shows at build time.
+- A microcode RT64's GBI database lacks leaves its lists with no GBI: the log says "Unable to find a matching GBI"
+  and names the microcode, and the page traps with `function signature mismatch` in `send_dl` at the first list drawn
+  with it (a native build reads garbage there too). Add it to `src/gbi/rt64_gbi.cpp` in rt64-web: XXH3 of the first
+  bytes of its text and data as RDRAM holds them, as many as that family's entries hash (rt64 fcbf916, L3DEX2.fifo
+  2.06, whose text is 2.05's).
 - WebAssembly only rounds to nearest and `fesetround` silently does nothing; without N64Recomp-0001 a game's truncating
   float-to-int conversions round (Rush 2049's attract race walked off RDRAM after 40 s). Float to int out of range
   saturates in wasm and gives 0x80000000 on x86; nothing has hit it yet.
