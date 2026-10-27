@@ -55,6 +55,9 @@ the game forks take no PRs: a change is a commit pushed to the fork's `main` as 
 (`forks.txt` here, a game fork's submodule). This project's own recomps, `rush-2049-recomp`, `perfect-dark-recomp`,
 `super-mario-64-recomp`, `f-zero-x-recomp`, `mario-party-recomp` and `mario-party-3-recomp`, work by PRs: moving one's
 `lib/N64Recomp-browser` is a PR there.
+`mario-party-engine`, the code the Mario Party recomps share (their process scheduler, `gen_syms.py`), takes no PRs
+either: a change is a commit pushed to its `main`, which each Mario Party recomp's `lib/mario-party-engine` moves onto
+by a PR there, built and played like a pin move. Code one Mario Party recomp would copy from another goes there.
 
 Branches don't outlive their work: every one of these repos deletes a PR's branch when it merges ("Automatically
 delete head branches", on in each, a new fork included), and a branch pushed to a fork to hold work not on `main` yet

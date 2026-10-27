@@ -450,9 +450,10 @@ Its README, CLAUDE.md and docs/web.md have the rest.
 mariopartyrd/marioparty decompilation's symbols, with RecompFrontend's launcher and menus. It is on upstream's rt64,
 N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
 N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches between dozens of small processes
-with its own setjmp and longjmp, which a recomp can't: its patches run each process on a thread of its own, one at a
-time, on the desktop and the page alike (its docs/processes.md), so the page needs no Asyncify, and load each of its
-131 overlays through its OvlLoad. RT64 interpolates a board to the display's rate with no tags in the game's display
+with its own setjmp and longjmp, which a recomp can't: the patches and natives the Mario Party recomps share
+(`n64hub/mario-party-engine`, their `lib/mario-party-engine`) run each process on a thread of its own, one at a time,
+on the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own
+patches load each of its 131 overlays through its OvlLoad. RT64 interpolates a board to the display's rate with no tags in the game's display
 lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its `patches/widescreen.c` taking a camera's view
 to the window's edges. The engine draws a frame in several RSP tasks, one a camera and some of them empty, which RT64
 interpolates as one game frame (rt64 bce5e11), so Mushroom Village, the minigames' instructions and the minigames
@@ -469,9 +470,10 @@ mariopartyrd/marioparty3 decompilation's symbols, with RecompFrontend's launcher
 MarioParty3-Recomp credited for where its audio microcode lies and which overlay loaders to hook. It is on upstream's
 rt64, N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
 N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches between dozens of small processes
-with its own setjmp and longjmp, which a recomp can't: its patches run each process on a thread of its own, one at a
-time, on the desktop and the page alike (its docs/processes.md), so the page needs no Asyncify, and load each overlay
-through its OvlLoad. It draws a board's camera to the window's edges on a picture wider than 4:3, past the scissor
+with its own setjmp and longjmp, which a recomp can't: the patches and natives the Mario Party recomps share
+(`n64hub/mario-party-engine`, their `lib/mario-party-engine`) run each process on a thread of its own, one at a time,
+on the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own
+patches load each overlay through its OvlLoad. It draws a board's camera to the window's edges on a picture wider than 4:3, past the scissor
 that held it inside 4:3 and the console's overscan border. Its `tools/build_web.sh` runs a Docker image of its own, so
 `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 462 shaders: the boot
 (the launcher, the title, the file select, the mode select and a Battle Royale's setup, 53, one of them a board's
