@@ -460,9 +460,12 @@ its own setjmp and longjmp, which a recomp can't: the patches and natives the Ma
 the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own patches load each
 of its 131 overlays through its OvlLoad. RT64 interpolates a board to the display's rate with no tags in the game's
 display lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its `patches/widescreen.c` taking a camera's
-view to the window's edges. The engine draws a frame in several RSP tasks, one a camera and some of them empty, which
-RT64 interpolates as one game frame (rt64 bce5e11), so Mushroom Village, the minigames' instructions and the minigames
-interpolate to the display's rate as the boards do. Its `tools/build_web.sh` runs a Docker image of its own, so
+view to the window's edges and its `patches/background.c` a board's background, through the engine's `camera_view.c`
+and `board_back.c`, so the window's sides show more of the board, unstretched. The engine draws a frame in several RSP
+tasks, one a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
+each whole, where frames of a dozen tasks ended early and the board flickered without its HUD, text or characters, and
+5f104ed holds one that a present for the frame before would split, which drew Toad tiny and an object beside him huge), so
+Mushroom Village, the minigames' instructions and the minigames interpolate to the display's rate as the boards do. Its `tools/build_web.sh` runs a Docker image of its own, so
 `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 346 shaders in 69
 sections: the boot and the village, the rules' board, each board, each minigame and each of the village's places,
 recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone playing: a survey in
@@ -497,8 +500,9 @@ N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches
 its own setjmp and longjmp, which a recomp can't: the patches and natives the Mario Party recomps share
 (`n64hub/mario-party-engine`, their `lib/mario-party-engine`) run each process on a thread of its own, one at a time, on
 the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own patches load each
-overlay through its OvlLoad. It draws a board's camera to the window's edges on a picture wider than 4:3, past the
-scissor that held it inside 4:3 and the console's overscan border. Its `tools/build_web.sh` runs a Docker image of its
+overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a picture wider than
+4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background zoomed and mirrored
+as the game draws it. Its `tools/build_web.sh` runs a Docker image of its
 own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 462 shaders: the
 boot (the launcher, the title, the file select, the mode select and a Battle Royale's setup, 53, one of them a board's
 start's at a 3840x2000 canvas, added by hand), a section for each of the Battle Royale map's six boards and one for
