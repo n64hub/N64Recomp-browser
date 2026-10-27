@@ -14,7 +14,9 @@
 // viewport set to the size asked for, and is driven over WebDriver BiDi. A window off the desktop never has focus, so
 // keys are KeyboardEvents dispatched on `window` and clicks mouse events dispatched on the canvas itself; and since
 // those carry no user activation, the page answers Load ROM with its own "Choose a file" button, which the ROM step
-// clicks after replacing a file input's click() with one that sets its files to the ROM, sent to the page in pieces.
+// clicks after replacing a file input's click() with one that sets its files to the ROM, sent to the page in pieces;
+// where the page asked for no file in 10 s (a key OoT: Recompiled's launcher missed as it faded in) it presses Load
+// ROM again, as Chrome's step does, twice at most.
 // That works whether the page is served here or comes from elsewhere (GitHub Pages), which can't fetch from here.
 //
 // onScreen puts either browser's window on the desktop instead, maximized, at the desktop's own scale and size, with
@@ -843,12 +845,15 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
           this.dispatchEvent(new Event('change', { bubbles: true }));
         };
       })()`);
-      await act();
-      for (let i = 0; i < 100; i++) {
-        await sleep(100);
-        if (await evaluate(`window.__romGiven || (${clickChooseButton}, false)`)) return;
+      for (let tries = 1; ; tries++) {
+        await act();
+        for (let i = 0; i < 100; i++) {
+          await sleep(100);
+          if (await evaluate(`window.__romGiven || (${clickChooseButton}, false)`)) return;
+        }
+        if (tries === 3) throw new Error('the page never asked for a file');
+        line('page_driver: the page asked for no file 10 s after Load ROM: pressing it again');
       }
-      throw new Error('the page never asked for a file');
     },
     screenshot: async () => Buffer.from((await send('browsingContext.captureScreenshot', { context })).result.data, 'base64'),
     resize: (w, h) => send('browsingContext.setViewport', { context, viewport: { width: w, height: h }, devicePixelRatio: scale }),
