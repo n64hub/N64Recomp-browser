@@ -1466,6 +1466,17 @@ still on the phone's mixes and twice as rough as the fastest where 2s come now a
 phone, Rush 2049's race without its own hold presented 53 a second against 38-42 (docs/phones.md, Rush 2049 on a
 Galaxy S21), and on a desktop GPU uncapped 164.7 against Pages' 165.3.
 
+A host fast enough to queue a game's next work early can also leave a frame with no in-between frames at all. Jet
+Force Gemini draws its characters' shadows (64x64) as an RSP task of their own before each frame, and on an RTX 5080
+desktop with 16 cores (headless Chrome uncapped, 3840x2000, its play plan) that task came before the present that
+waits for it. RT64_GAME_FRAME_WORKLOADS ended a frame of the shadow pass alone at that wait (`?frame-log`: every
+frame `end=wait` with the shadow pass alone, the frame before it `end=next`). That frame took the interpolated
+frames' counters with one present, and the next frame was matched against it, so Goldwood presented 59-62 a second
+where the launcher and menus read about 357 and a 12-core host 210-350. rt64 e549855 holds such a frame like one
+with too few workloads, and Goldwood then presented 346-356, every frame interpolated: the A/B read 353.6 against
+Pages' 62.5, its p99 gap 4.6 ms against 18.2, and Banjo-Kazooie's 360 against 359 (whole GPU turns, a host shared
+with other plays; plays.jsonl).
+
 ## Faults
 
 `play_page.mjs --fault resize,hidden,audio,device,reload` (its header), played from Pages on an RTX 5080 (headless
