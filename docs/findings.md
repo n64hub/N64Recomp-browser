@@ -1290,7 +1290,7 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   the IR scanner went from 1.8 to 30 against Pages, interleaved (plays.jsonl's set pd-irfix-1), the lens its own red,
   0 syncs a frame. The third, a load after a draw into its row, costs the rest: each such piece ends the
   framebuffer pair (`RDP::checkImageOverlap()` tests the rows of the pair's bounding box), 123 pairs a game frame
-  against 4 with the scanner off, and the game drew 43-50 trying 60 and held 30; 18 in Firefox. rt64 635551d (with 081411f) tests a
+  against 4 with the scanner off, and the game drew 43-50 trying 60 and held 30; 18 in Firefox. rt64 635551d tests a
   load against the rects the pair drew (its newest 8, and the box of the older ones), byte by byte in the rows the load
   touches: on the same b6a5e60 build, 50 pairs a game frame with the scanner on and 4 off (`?frame-log`), and the game
   58 against main's 30, interleaved (set pd-pairs-1), the picture the same. By the game's code the 46 more are the
