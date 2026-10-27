@@ -539,8 +539,8 @@ rt64 bce5e11           RT64_GAME_FRAME_WORKLOADS, in place of 179adb8's RT64_OFF
                        that workload's maps alone; the frame's rate is read through upstream's own lines, beside which
                        Conker's own rt64 change sits
 rt64 997f61f,          with Emscripten, the VI's viewport into the swap chain has its edges on whole pixels: a target
-rt64 83d4be7           rounded up to whole pixels (Auto's 1708x960 at a 1600x900 canvas under Expand) letterboxed the
-                       picture by a third of a pixel, and Chrome's WebGPU drew no row past the viewport's last whole
-                       one, so the canvas's last row stayed black; 83d4be7 rounds in fromHDtoWindow, out of the lines
-                       Wave Race's and Pokémon Snap's own rt64 changes change
+rt64 83d4be7,          rounded up to whole pixels (Auto's 1708x960 at a 1600x900 canvas under Expand) letterboxed the
+rt64 46f182f           picture by a third of a pixel, and Chrome's WebGPU drew no row past the viewport's last whole
+                       one, so the canvas's last row stayed black; 83d4be7 rounds in fromHDtoWindow and 46f182f with
+                       roundf and no include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change
 ```
