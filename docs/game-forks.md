@@ -230,7 +230,7 @@ file loads is under a second. Its BUILDING.md and the headers of `web/page.cmake
 the canvas and dp scaling, the first run's defaults), render to RAM kept exact for the pause background, the shader list
 and its survey, the warps.
 
-`n64hub/JetForceGemini-Recomp-web` is Jet Force Gemini: Recompiled, VibinToast's, and merges his releases (v1.2.2):
+`n64hub/JetForceGemini-Recomp-web` is Jet Force Gemini: Recompiled, VibinToast's, and merges his releases (v1.2.4):
 his launcher (RmlUi, no RecompFrontend), options, profiles and renderer are the fork's. His `lib/` pins his forks of
 rt64, N64ModernRuntime and N64Recomp; the page's are upstream's at the commits N64Recomp-browser patches, with the web
 support and then his changes made again for those commits on top (`patches/web/rt64.patch`: F3DDKR, Dinosaur Planet's
