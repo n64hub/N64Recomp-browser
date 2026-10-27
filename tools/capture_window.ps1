@@ -30,8 +30,14 @@ param(
     [Parameter(Mandatory)][string]$OutDir, [string]$ExeArgs = '', [string[]]$Env = @(), [int]$Flag = 2
 )
 Add-Type -AssemblyName System.Drawing
-Add-Type -TypeDefinition @"
+# The C# below uses System.Drawing, which PowerShell 7 spreads over several assemblies: a bitmap made first loads them.
+[System.Drawing.Bitmap]::new(1, 1).Dispose()
+$drawing = [AppDomain]::CurrentDomain.GetAssemblies() | Where-Object {
+    $_.GetName().Name -match '^System\.(Drawing|Private\.Windows)' -and $_.Location } | ForEach-Object { $_.Location }
+Add-Type -ReferencedAssemblies $drawing -TypeDefinition @"
 using System;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 public static class CaptureWindow {
     public delegate bool EnumProc(IntPtr h, IntPtr l);
@@ -40,10 +46,13 @@ public static class CaptureWindow {
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
     [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
     [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
     [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint mapType);
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+    [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
 
     // The largest visible window of the process pid, or zero.
     public static IntPtr Of(uint pid) {
@@ -57,6 +66,37 @@ public static class CaptureWindow {
             return true;
         }, IntPtr.Zero);
         return best;
+    }
+
+    // A 160x90 grey copy of a capture.
+    public static float[] Small(Bitmap bmp) {
+        using (var s = new Bitmap(160, 90, PixelFormat.Format32bppArgb)) {
+            using (var g = Graphics.FromImage(s)) {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
+                g.DrawImage(bmp, 0, 0, 160, 90);
+            }
+
+            var data = s.LockBits(new Rectangle(0, 0, 160, 90), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            var bytes = new byte[data.Stride * 90];
+            Marshal.Copy(data.Scan0, bytes, 0, bytes.Length);
+            s.UnlockBits(data);
+            var v = new float[160 * 90];
+            for (int y = 0; y < 90; y++) {
+                for (int x = 0; x < 160; x++) {
+                    int i = y * data.Stride + x * 4;
+                    v[y * 160 + x] = 0.114f * bytes[i] + 0.587f * bytes[i + 1] + 0.299f * bytes[i + 2];
+                }
+            }
+
+            return v;
+        }
+    }
+
+    // The mean absolute difference of two grey copies.
+    public static double Diff(float[] a, float[] b) {
+        double t = 0;
+        for (int i = 0; i < a.Length; i++) t += Math.Abs(a[i] - b[i]);
+        return t / a.Length;
     }
 }
 "@
@@ -79,34 +119,34 @@ function Send-Key($hwnd, $name, $ms) {
     [void][CaptureWindow]::PostMessage($hwnd, 0x101, [IntPtr]$vk, [IntPtr]([long]$l -bor 0xC0000000L))
 }
 
-# Captures the window into a bitmap, kept in memory until the end so a burst isn't slowed by saving.
+# Captures the window's client area (the game's picture, without the title bar and frame PrintWindow draws too). A
+# shot is saved at once; a burst's captures are kept in memory until the end so a burst isn't slowed by saving.
 $script:captures = New-Object System.Collections.ArrayList
 function Capture($hwnd, $name) {
-    $r = New-Object CaptureWindow+RECT
-    [void][CaptureWindow]::GetClientRect($hwnd, [ref]$r)
-    $w = $r.R - $r.L; $h = $r.B - $r.T
+    $c = New-Object CaptureWindow+RECT; $wr = New-Object CaptureWindow+RECT; $o = New-Object CaptureWindow+POINT
+    [void][CaptureWindow]::GetClientRect($hwnd, [ref]$c)
+    [void][CaptureWindow]::GetWindowRect($hwnd, [ref]$wr)
+    [void][CaptureWindow]::ClientToScreen($hwnd, [ref]$o)
+    $w = $c.R - $c.L; $h = $c.B - $c.T
     if ($w -le 0 -or $h -le 0) { Write-Output "${name}: the window has no client area"; return }
-    $bmp = New-Object System.Drawing.Bitmap $w, $h
-    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $window = New-Object System.Drawing.Bitmap ($wr.R - $wr.L), ($wr.B - $wr.T)
+    $g = [System.Drawing.Graphics]::FromImage($window)
     $hdc = $g.GetHdc()
     [void][CaptureWindow]::PrintWindow($hwnd, $hdc, [uint32]$Flag)
     $g.ReleaseHdc($hdc); $g.Dispose()
-    [void]$script:captures.Add(@($name, $bmp, [DateTimeOffset]::Now.ToUnixTimeMilliseconds(), $script:clock.Elapsed.TotalSeconds))
+    $bmp = $window.Clone((New-Object System.Drawing.Rectangle ($o.X - $wr.L), ($o.Y - $wr.T), $w, $h), $window.PixelFormat)
+    $window.Dispose()
+    $capture = @($name, $bmp, [DateTimeOffset]::Now.ToUnixTimeMilliseconds(), $script:clock.Elapsed.TotalSeconds)
+    if ($name -notmatch '-\d\d$') { Save $capture }
+    [void]$script:captures.Add($capture)
 }
 
-# A 160x90 grey copy of a capture, as floats.
-function Small($bmp) {
-    $s = New-Object System.Drawing.Bitmap 160, 90
-    $g = [System.Drawing.Graphics]::FromImage($s)
-    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBilinear
-    $g.DrawImage($bmp, 0, 0, 160, 90); $g.Dispose()
-    $v = New-Object 'float[]' (160 * 90)
-    for ($y = 0; $y -lt 90; $y++) { for ($x = 0; $x -lt 160; $x++) {
-        $c = $s.GetPixel($x, $y); $v[$y * 160 + $x] = 0.299 * $c.R + 0.587 * $c.G + 0.114 * $c.B } }
-    $s.Dispose()
-    return ,$v
+function Save($capture) {
+    if ($capture[1] -eq $null) { return }
+    $capture[1].Save((Join-Path $OutDir "$($capture[0]).png"), [System.Drawing.Imaging.ImageFormat]::Png)
+    Add-Content -Path (Join-Path $OutDir 'captures.tsv') -Value ("{0}`t{1}`t{2:N3}" -f $capture[0], $capture[2], $capture[3])
+    if ($capture[0] -notmatch '-\d\d$') { $capture[1].Dispose(); $capture[1] = $null }
 }
-function Diff($a, $b) { $t = 0.0; for ($i = 0; $i -lt $a.Length; $i++) { $t += [Math]::Abs($a[$i] - $b[$i]) }; $t / $a.Length }
 
 $psi = New-Object System.Diagnostics.ProcessStartInfo $Exe
 $psi.Arguments = $ExeArgs
@@ -117,12 +157,12 @@ $psi.RedirectStandardError = $true
 foreach ($e in $Env) { $k, $v = $e -split '=', 2; $psi.EnvironmentVariables[$k] = $v }
 $proc = New-Object System.Diagnostics.Process
 $proc.StartInfo = $psi
-$outEvent = Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived -MessageData (Join-Path $OutDir 'stdout.log') -Action {
-    Add-Content -Path $Event.MessageData -Value $EventArgs.Data }
-$errEvent = Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived -MessageData (Join-Path $OutDir 'stderr.log') -Action {
-    Add-Content -Path $Event.MessageData -Value $EventArgs.Data }
 [void]$proc.Start()
-$proc.BeginOutputReadLine(); $proc.BeginErrorReadLine()
+# Copied to the files as they come, off this thread: a game that logs every frame (RT64_FRAME_LOG) would stall on a
+# full pipe otherwise.
+$outFile = [System.IO.File]::Create((Join-Path $OutDir 'stdout.log'))
+$errFile = [System.IO.File]::Create((Join-Path $OutDir 'stderr.log'))
+$copies = @($proc.StandardOutput.BaseStream.CopyToAsync($outFile), $proc.StandardError.BaseStream.CopyToAsync($errFile))
 $script:clock = [System.Diagnostics.Stopwatch]::StartNew()
 Set-Content -Path (Join-Path $OutDir 'pid.txt') -Value $proc.Id
 Write-Output "started pid $($proc.Id)"
@@ -152,29 +192,25 @@ try {
     }
 } finally {
     if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force; Write-Output "stopped pid $($proc.Id)" }
-    Start-Sleep -Milliseconds 500
-    Unregister-Event -SourceIdentifier $outEvent.Name; Unregister-Event -SourceIdentifier $errEvent.Name
+    [void][System.Threading.Tasks.Task]::WaitAll($copies, 5000)
+    $outFile.Dispose(); $errFile.Dispose()
 }
 
-$tsv = foreach ($c in $script:captures) {
-    $c[1].Save((Join-Path $OutDir "$($c[0]).png"), [System.Drawing.Imaging.ImageFormat]::Png)
-    "{0}`t{1}`t{2:N3}" -f $c[0], $c[2], $c[3]
-}
-Set-Content -Path (Join-Path $OutDir 'captures.tsv') -Value $tsv
+foreach ($c in $script:captures) { Save $c }
 
 $flicker = @()
 $series = $script:captures | Where-Object { $_[0] -match '-\d\d$' } | Group-Object { $_[0] -replace '-\d\d$', '' }
 foreach ($s in $series) {
-    $small = @($s.Group | ForEach-Object { ,(Small $_[1]) })
+    $small = @($s.Group | ForEach-Object { ,[CaptureWindow]::Small($_[1]) })
     for ($i = 1; $i -lt $small.Count - 1; $i++) {
-        $before = Diff $small[$i] $small[$i - 1]; $after = Diff $small[$i] $small[$i + 1]
-        $apart = Diff $small[$i - 1] $small[$i + 1]
+        $before = [CaptureWindow]::Diff($small[$i], $small[$i - 1]); $after = [CaptureWindow]::Diff($small[$i], $small[$i + 1])
+        $apart = [CaptureWindow]::Diff($small[$i - 1], $small[$i + 1])
         if ([Math]::Min($before, $after) -gt 1.5 * $apart + 0.7) {
             $flicker += "{0} {1:N1}/{2:N1} vs {3:N1}" -f $s.Group[$i][0], $before, $after, $apart
         }
     }
 }
-foreach ($c in $script:captures) { $c[1].Dispose() }
+foreach ($c in $script:captures) { if ($c[1] -ne $null) { $c[1].Dispose() } }
 Set-Content -Path (Join-Path $OutDir 'flicker.txt') -Value $flicker
 Write-Output "$($script:captures.Count) captures; frames unlike both neighbours: $($flicker.Count)"
 $flicker | ForEach-Object { Write-Output "  $_" }
