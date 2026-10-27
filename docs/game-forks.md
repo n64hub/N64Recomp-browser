@@ -446,6 +446,23 @@ each and most of them in every one, recorded by `tools/record_shaders.sh` and `t
 course at machine select where the race reads it and has the computer drive player 1's machine, as its play plans do.
 Its README, CLAUDE.md and docs/web.md have the rest.
 
+`n64hub/mario-party-recomp` is Mario Party (USA), not a fork but this project's own recomp (GPL-3.0), from the
+mariopartyrd/marioparty decompilation's symbols, with RecompFrontend's launcher and menus. It is on upstream's rt64,
+N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
+N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches between dozens of small processes
+with its own setjmp and longjmp, which a recomp can't: its patches run each process on a thread of its own, one at a
+time, on the desktop and the page alike (its docs/processes.md), so the page needs no Asyncify, and load each of its
+131 overlays through its OvlLoad. RT64 interpolates a board to the display's rate with no tags in the game's display
+lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its `patches/widescreen.c` taking a camera's view
+to the window's edges. Mushroom Village, the title, the minigames' instructions and the minigames present the game's
+own 30: the engine draws a frame in several RSP tasks, one a camera and some of them empty, which RT64 interpolates as
+frames of their own. Its `tools/build_web.sh` runs a Docker image of its own, so `publish_pages.sh` runs it on the
+build host and not in rush-2049-recomp's image. Its list is 346 shaders in 69 sections: the boot and the village, the
+rules' board, each board, each minigame and each of the village's places, recorded by `tools/record_shaders.sh` and
+`tools/shader_plan.json` without anyone playing: a survey in `patches/survey.c` sends the game to each overlay the way
+the game goes there, a minigame by its instructions screen as a board opens it, and A plays it. Minigame Island's
+section holds only its start and its introduction. Its README, CLAUDE.md and docs/web.md have the rest.
+
 `n64hub/mario-party-3-recomp` is Mario Party 3 (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty3 decompilation's symbols, with RecompFrontend's launcher and menus, and Rainchus's
 MarioParty3-Recomp credited for where its audio microcode lies and which overlay loaders to hook. It is on upstream's
@@ -473,9 +490,9 @@ once a VI; its controller reads held it to 30 on a fast CPU, which its `patches/
 Racing 30 (DKR-R's Accurate profile, the desktop's default, holds RT64 at Original; the page plays Modern), Jet Force
 Gemini 30 dropping to 20 when a frame runs long, or 60 (its Game Frame Rate, 60 on a page: 54-59 at the display's 60
 and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), and the
-cartridge's for the other twelve: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
+cartridge's for the other thirteen: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
 (Terrydactyland 12, Hailfire Peaks 10), Wave Race 64 20 in races, Star Fox 64 30 (20 where a scene sets 3 VIs a
-frame), GoldenEye's and Conker's variable. None of the twelve has an option to run faster.
+frame), GoldenEye's and Conker's variable. None of the thirteen has an option to run faster.
 
 A game fork may take a change that runs its game faster when that makes the page play better. Weigh it: logic at 60
 gives lower input lag, motion the game computes rather than RT64 interpolates, and what interpolation misses (some

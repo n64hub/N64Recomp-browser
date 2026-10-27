@@ -53,8 +53,8 @@ any game.
 The forks (`rt64-web`, `plume-web`, `hlslpp-web`, `N64ModernRuntime-web`, `N64Recomp-web`, `RecompFrontend-web`) and
 the game forks take no PRs: a change is a commit pushed to the fork's `main` as a fast-forward, pinned by its SHA
 (`forks.txt` here, a game fork's submodule). This project's own recomps, `rush-2049-recomp`, `perfect-dark-recomp`,
-`super-mario-64-recomp`, `f-zero-x-recomp` and `mario-party-3-recomp`, work by PRs: moving one's `lib/N64Recomp-browser`
-is a PR there.
+`super-mario-64-recomp`, `f-zero-x-recomp`, `mario-party-recomp` and `mario-party-3-recomp`, work by PRs: moving one's
+`lib/N64Recomp-browser` is a PR there.
 
 Branches don't outlive their work: every one of these repos deletes a PR's branch when it merges ("Automatically
 delete head branches", on in each, a new fork included), and a branch pushed to a fork to hold work not on `main` yet
@@ -64,9 +64,9 @@ branches only: upstream's others are deleted when it is made.
 ## If the change reaches another repo, YOU make it
 
 This repo's work is all of this project's recomp work, so a change it needs in one of the project's own recomps
-(`rush-2049-recomp`, `perfect-dark-recomp`, `super-mario-64-recomp`, `f-zero-x-recomp`, `mario-party-3-recomp`) is
-made in the same work, not
-handed on as work of its own: a PR there, from a checkout of its `main`, landed by whoever does the work like one here,
+(`rush-2049-recomp`, `perfect-dark-recomp`, `super-mario-64-recomp`, `f-zero-x-recomp`, `mario-party-recomp`,
+`mario-party-3-recomp`) is made in the same work, not handed on as work of its own: a PR there, from a checkout of its
+`main`, landed by whoever does the work like one here,
 then this repo's half, if it has one. A cause found in a recomp is fixed there, in the work that found it. A fork or a
 game fork is changed as The forks says, by a commit pushed to its `main`, never a PR. Rush 2049's own bugs, and Rush
 work of its own size, stay Rush 2049's; a small Rush change this work needs (its pin, its shader list or play plan, a
@@ -168,8 +168,8 @@ the last one at once (docs/publishing.md): it builds each game's page on the new
 changed (each once in Firefox for crashes and errors, and an A/B in Chrome against the page Pages serves on two or three
 games that stand for the rest when the tag can move speed), and only a page that boots with no WebGPU errors and plays
 no worse than Pages moves its fork onto the tag, is published and gets its row updated. One that plays worse stays on
-Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 3 are retested in the same
-work, never filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
+Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party and Mario Party 3
+are retested in the same work, never filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
 that left its page's bytes alone.
 
 A critical fix doesn't wait for the retest: a fix for a page on Pages that crashes, never boots, loses its WebGPU
