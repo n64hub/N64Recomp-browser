@@ -569,4 +569,8 @@ rt64 6a06f75           RT64_GAME_FRAME_WORKLOADS: a held frame waits up to 300 m
                        in about 60 part-drawn as the characters jumped out of the tube, its rest up to 260 ms late.
                        RT64_FRAME_LOG prints each game frame to stderr as it ends (why, its workloads, presents,
                        waits), which tools/frame_log.mjs reads
+rt64 5a80f01           with Emscripten, a block loaded from part of a framebuffer row has a tile copy as wide as what
+                       it loaded, not to its row's end, which checkRowTileCopy() turned down (rt64 9b87e67): Perfect
+                       Dark's IR scanner loads each row crossing its lens as three pieces, and the two that end inside
+                       the row each waited for the framebuffer in RAM, at 1.9 frames a second
 ```
