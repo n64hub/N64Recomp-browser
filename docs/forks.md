@@ -552,4 +552,9 @@ rt64 5f104ed           RT64_GAME_FRAME_WORKLOADS: a frame with fewer workloads t
                        at a wait for the rest of them, up to 34 ms: a present showing the frame before came in the
                        middle of Mario Party's next one about every 0.4 s, and each half, matched against the whole
                        frame before, drew Toad tiny and an object beside him huge between the game's frames
+rt64 e0f41b3           RT64_GAME_FRAME_WORKLOADS: a frame's interpolated frames stop when the workload queue is full,
+                       as when the next frame has ended: the game waits for that frame before it queues anything more,
+                       and past InterpolatedTargetSlots (8) its frames waited for presents that never came. Uncapped
+                       (12 frames a 30 fps game frame) Mario Party 2's page stopped for good in its opening after
+                       27-46 s, render, present and game threads each waiting for the next
 ```

@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 5f104ed6e12652bd822cad79afd44b079a775058
+rt64: https://github.com/n64hub/rt64-web e0f41b3a842550f387714e749713c15d147b4565
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3920,7 +3920,7 @@ index 8ea27d5..589d7eb 100644
  
          void reset();
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..c3c1f60 100644
+index 5a331aa..96cfd62 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -45,6 +45,13 @@ namespace RT64 {
@@ -4425,15 +4425,20 @@ index 5a331aa..c3c1f60 100644
                  const int64_t setupTimeMicro = workloadTimer.elapsedMicroseconds();
                  const int64_t adjustedTimeWindowMicro = originalTimeMicro - setupTimeMicro;
                  const int64_t maxTimePerFrameMicro = adjustedTimeWindowMicro / displayFrames;
-@@ -1063,6 +1291,15 @@ namespace RT64 {
+@@ -1063,6 +1291,20 @@ namespace RT64 {
                  bool skipWorkloadNow = false;
                  uint32_t targetIndex = 0;
                  uint32_t framesRendered = 0;
 +                auto newerWorkloadQueued = [&]() {
 +                    std::scoped_lock<std::mutex> cursorLock(cursorMutex);
 +#               if RT64_GAME_FRAME_WORKLOADS
-+                    // The next frame's first workloads alone (an offscreen pass) aren't a frame: these frames go on.
-+                    return endedGameFrame(threadCursor) > 0;
++                    // The next frame's first workloads alone (an offscreen pass) aren't a frame: these frames go on. Not
++                    // while the queue is full, though: the game waits for this frame before it queues another workload or
++                    // the present that shows this one, so no frame can end and a frame's interpolated frames past
++                    // InterpolatedTargetSlots would wait for presents that never come. A frame the queue ended when it
++                    // was full held every workload there was, and Mario Party 2's page stopped for good in its opening,
++                    // uncapped, with 8 of a frame's 12 drawn.
++                    return (endedGameFrame(threadCursor) > 0) || (((writeCursor + 1) % int(workloads.size())) == barrierCursor);
 +#               else
 +                    return (writeCursor != threadCursor);
 +#               endif
@@ -4441,7 +4446,7 @@ index 5a331aa..c3c1f60 100644
                  int64_t renderTimeTotalMicro = 0;
                  for (uint32_t frame = 0; (frame < displayFrames) && !skipWorkloadNow; frame++) {
                      // Evaluate if this frame should be skipped. Measure the current time and compare it to what frame is estimated should be have been rendered by now.
-@@ -1071,7 +1308,7 @@ namespace RT64 {
+@@ -1071,7 +1313,7 @@ namespace RT64 {
                          const int64_t expectedTimeMicro = frame * maxTimePerFrameMicro;
                          const int64_t measuredFrameMicro = renderTimeTotalMicro / framesRendered;
                          if ((currentTimeMicro > expectedTimeMicro) || ((currentTimeMicro + measuredFrameMicro) > adjustedTimeWindowMicro)) {
@@ -4450,7 +4455,7 @@ index 5a331aa..c3c1f60 100644
                              skippedFrames = true;
                              continue;
                          }
-@@ -1081,20 +1318,48 @@ namespace RT64 {
+@@ -1081,20 +1323,48 @@ namespace RT64 {
                      uint32_t overrideModifier = 0;
                      if (generateInterpolatedFrames) {
                          prevFrameWeight = std::clamp((workloadConfig.targetRate + displayTicks - logicalTicks) / float(workloadConfig.targetRate), 0.0f, 1.0f);
@@ -4505,7 +4510,7 @@ index 5a331aa..c3c1f60 100644
                                  });
                              }
  
-@@ -1102,7 +1367,7 @@ namespace RT64 {
+@@ -1102,7 +1372,7 @@ namespace RT64 {
                          }
                      }
                      else if (workload.paused) {
@@ -4514,7 +4519,7 @@ index 5a331aa..c3c1f60 100644
                          prevFrameWeight = 1.0f - curFrameWeight;
                      }
                      else {
-@@ -1112,28 +1377,30 @@ namespace RT64 {
+@@ -1112,28 +1382,30 @@ namespace RT64 {
  
                      const bool uploadExtras = (frame == 0) && workloadConfig.raytracingEnabled;
                      if (uploadExtras) {
@@ -4554,7 +4559,7 @@ index 5a331aa..c3c1f60 100644
  
                          {
                              std::scoped_lock<std::mutex> managerLock(ext.sharedResources->interpolatedMutex);
-@@ -1143,7 +1410,7 @@ namespace RT64 {
+@@ -1143,7 +1415,7 @@ namespace RT64 {
  
                          // Add the amount of display ticks that correspond to the remaining frames.
                          if (skipWorkloadNow) {
@@ -4563,7 +4568,7 @@ index 5a331aa..c3c1f60 100644
                          }
  
                          ext.sharedResources->interpolatedCondition.notify_all();
-@@ -1164,8 +1431,43 @@ namespace RT64 {
+@@ -1164,8 +1436,43 @@ namespace RT64 {
  
                  threadConfigurationValidate();
  
