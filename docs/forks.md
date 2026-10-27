@@ -557,4 +557,7 @@ rt64 e0f41b3           RT64_GAME_FRAME_WORKLOADS: a frame's interpolated frames 
                        and past InterpolatedTargetSlots (8) its frames waited for presents that never came. Uncapped
                        (12 frames a 30 fps game frame) Mario Party 2's page stopped for good in its opening after
                        27-46 s, render, present and game threads each waiting for the next
+N64ModernRuntime       upstream merged in at cdf5abb, the runtime Conker pins: recomp::Configuration
+67c3139                gains argc/argv (--game, --game-mode; a page passes none), and the VI thread skips an update
+                       while no VI mode has been set, where it read a null mode
 ```
