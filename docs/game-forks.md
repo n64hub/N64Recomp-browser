@@ -475,7 +475,7 @@ CLAUDE.md and docs/web.md have the rest.
 
 `n64hub/mario-party-2-recomp` is Mario Party 2 (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty2 decompilation's symbols, with RecompFrontend's launcher and menus. It is on upstream's rt64,
-N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
+N64ModernRuntime and RecompFrontend at the commits the forks are built on (`patches/patches.txt`), patched by the
 N64Recomp-browser tag its `lib/N64Recomp-browser` pins. It runs Hudson's processes on threads as Mario Party does,
 with the same scheduler from its `lib/mario-party-engine`, so the page needs no Asyncify. Its own
 patches load each overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a
