@@ -20,6 +20,12 @@ options; `docs/findings.md` has what was measured this way.
 - A page served from a build dir needs `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy:
   require-corp` (threads need SharedArrayBuffer); on Pages `coi_serviceworker.js` sets them after one reload. Look at a
   page with CDP `Page.captureScreenshot` of that page.
+- Look at a desktop build with `tools/capture_window.ps1`: it plays a timed plan of keys in the window of the build it
+  starts and captures that window alone with PrintWindow, never the screen, in shots or series, and lists the frames
+  unlike both of their neighbours. With `RT64_FRAME_LOG` set, RT64 (rt64-web, RT64_GAME_FRAME_WORKLOADS on) prints
+  each game frame, why it ended and what each of its workloads drew, and each present and wait; `tools/frame_log.mjs`
+  reads that beside the captures' times, to tell a frame drawn in parts from one matched wrongly. Their headers say
+  how.
 
 ## Plans
 
