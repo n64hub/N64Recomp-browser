@@ -560,4 +560,8 @@ rt64 e0f41b3           RT64_GAME_FRAME_WORKLOADS: a frame's interpolated frames 
 N64ModernRuntime       upstream merged in at cdf5abb, the runtime Conker pins: recomp::Configuration
 67c3139                gains argc/argv (--game, --game-mode; a page passes none), and the VI thread skips an update
                        while no VI mode has been set, where it read a null mode
+rt64 ea445cc           RT64_GAME_FRAME_WORKLOADS: a present after part of a frame holds it for the rest as a wait
+                       does, once it has fewer workloads that draw than the frame before: Mario Party's VI showed a
+                       board frame's framebuffer after the first of its three or four tasks a few times a minute, and
+                       the frame ended there drew its 3D alone, without characters, Toad, HUD or text, for a frame
 ```
