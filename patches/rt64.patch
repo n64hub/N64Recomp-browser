@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 635551d28703b044bdef6517c27d7e2d093f36e4
+rt64: https://github.com/n64hub/rt64-web 081411f01c814bf5626cbded398419ecd7df9ead
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1829,37 +1829,48 @@ index 8d36b51..629d290 100644
          void discardRegionsTMEM(uint32_t tmemStart, uint32_t tmemWords, uint32_t tmemMask);
          void synchronizeRegionsTMEM();
 diff --git a/src/hle/rt64_framebuffer_pair.cpp b/src/hle/rt64_framebuffer_pair.cpp
-index c944393..9f02ef0 100644
+index c944393..a81d252 100644
 --- a/src/hle/rt64_framebuffer_pair.cpp
 +++ b/src/hle/rt64_framebuffer_pair.cpp
-@@ -27,7 +27,26 @@ namespace RT64 {
+@@ -7,6 +7,29 @@
+ #include "shared/rt64_blender.h"
+ 
+ namespace RT64 {
++#if defined(__EMSCRIPTEN__)
++    // FramebufferPair::DrawnRect
++
++    void FramebufferPair::DrawnRect::merge(const FixedRect &rect) {
++        FixedRect::merge(rect);
++
++        FixedRect &recentRect = recent[recentCursor];
++        if (!recentRect.isNull()) {
++            older.merge(recentRect);
++        }
++
++        recentRect = rect;
++        recentCursor = (recentCursor + 1) % RecentCount;
++    }
++
++    void FramebufferPair::DrawnRect::reset() {
++        FixedRect::reset();
++        recent.fill(FixedRect());
++        recentCursor = 0;
++        older.reset();
++    }
++#endif
++
+     // FramebufferPair
+ 
+     void FramebufferPair::reset() {
+@@ -27,6 +50,7 @@ namespace RT64 {
          startFbOperations.clear();
          endFbOperations.clear();
          drawColorRect.reset();
 +        viewportRect.reset();
          drawDepthRect.reset();
-+#   if defined(__EMSCRIPTEN__)
-+        recentColorRects.fill(FixedRect());
-+        recentColorRectCursor = 0;
-+        olderColorRect.reset();
-+#   endif
-+    }
-+
-+    void FramebufferPair::mergeDrawColorRect(const FixedRect &rect) {
-+        drawColorRect.merge(rect);
-+#   if defined(__EMSCRIPTEN__)
-+        FixedRect &recentRect = recentColorRects[recentColorRectCursor];
-+        if (!recentRect.isNull()) {
-+            olderColorRect.merge(recentRect);
-+        }
-+
-+        recentRect = rect;
-+        recentColorRectCursor = (recentColorRectCursor + 1) % RecentColorRectCount;
-+#   endif
      }
  
-     void FramebufferPair::addGameCall(const GameCall &gameCall) {
-@@ -39,8 +58,12 @@ namespace RT64 {
+@@ -39,8 +63,12 @@ namespace RT64 {
          fillRectOnly = fillRectOnly && (proj.type == Projection::Type::Rectangle) && (gameCall.callDesc.otherMode.cycleType() == G_CYC_FILL);
          gameCallCount++;
  
@@ -1875,30 +1886,35 @@ index c944393..9f02ef0 100644
      }
  
 diff --git a/src/hle/rt64_framebuffer_pair.h b/src/hle/rt64_framebuffer_pair.h
-index 60b0fa4..f5f6e47 100644
+index 60b0fa4..f22331a 100644
 --- a/src/hle/rt64_framebuffer_pair.h
 +++ b/src/hle/rt64_framebuffer_pair.h
-@@ -51,10 +51,20 @@ namespace RT64 {
+@@ -50,7 +50,25 @@ namespace RT64 {
+         std::vector<FramebufferOperation> endFbOperations;
          std::array<uint32_t, 4> ditherPatterns;
          FixedRect scissorRect;
++#   if defined(__EMSCRIPTEN__)
++        // The box of the rects drawn into the color image, which also keeps the newest few apart and the box of the
++        // older ones, so a load ends the pair only if it reads pixels drawn in it (RDP::checkImageOverlap). Its merge()
++        // and reset() hide FixedRect's, so the code that draws merges into it as upstream's does.
++        struct DrawnRect : FixedRect {
++            static constexpr uint32_t RecentCount = 8;
++            std::array<FixedRect, RecentCount> recent;
++            uint32_t recentCursor = 0;
++            FixedRect older;
++
++            void merge(const FixedRect &rect);
++            void reset();
++        };
++
++        DrawnRect drawColorRect;
++#   else
          FixedRect drawColorRect;
++#   endif
 +        FixedRect viewportRect; // The viewports the pass's triangles were drawn through, each cut to its scissor.
          FixedRect drawDepthRect;
          FlushReason flushReason;
-+#   if defined(__EMSCRIPTEN__)
-+        // The rects drawn into the color image, the newest few on their own and the box of the older ones, so a load
-+        // ends the pair only if it reads pixels drawn in it (RDP::checkImageOverlap). drawColorRect is the box of all.
-+        static constexpr uint32_t RecentColorRectCount = 8;
-+        std::array<FixedRect, RecentColorRectCount> recentColorRects;
-+        uint32_t recentColorRectCursor;
-+        FixedRect olderColorRect;
-+#   endif
  
-         void reset();
-+        void mergeDrawColorRect(const FixedRect &rect);
-         void addGameCall(const GameCall &gameCall);
-         bool inProjection(uint32_t transformsIndex, Projection::Type type) const;
-         int changeProjection(uint32_t transformsIndex, Projection::Type type);
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
 index 87392d0..4bea218 100644
 --- a/src/hle/rt64_game_frame.cpp
@@ -2882,7 +2898,7 @@ index e08b02c..7b7d896 100644
          void threadAdvanceBarrier();
          void threadLoop();
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index a10c11a..42fd713 100644
+index a10c11a..f416125 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -200,7 +200,63 @@ namespace RT64 {
@@ -2937,8 +2953,8 @@ index a10c11a..42fd713 100644
 +            }
 +        };
 +
-+        bool colorOverlap = drawnInto(fbPair.olderColorRect);
-+        for (const FixedRect &rect : fbPair.recentColorRects) {
++        bool colorOverlap = drawnInto(fbPair.drawColorRect.older);
++        for (const FixedRect &rect : fbPair.drawColorRect.recent) {
 +            colorOverlap = colorOverlap || drawnInto(rect);
 +        }
 +
@@ -2995,15 +3011,6 @@ index a10c11a..42fd713 100644
          const float Fixed16ToFloat = 1.0f / 65535.0f;
          hlslpp::float2 &primDepth = primDepthStack[primDepthStackSize - 1];
          primDepth.x = (z & 0x7FFFU) * Fixed15ToFloat;
-@@ -1148,7 +1221,7 @@ namespace RT64 {
- 
-             const FixedRect intRect = scissorRect.intersection(drawRect);
-             if (!intRect.isNull()) {
--                fbPair.drawColorRect.merge(intRect);
-+                fbPair.mergeDrawColorRect(intRect);
-                 if (otherMode.zUpd()) {
-                     fbPair.drawDepthRect.merge(intRect);
-                 }
 @@ -1174,6 +1247,9 @@ namespace RT64 {
          uly += extAlignment.topOffset;
          lrx += extAlignment.rightOffset;
@@ -3014,15 +3021,6 @@ index a10c11a..42fd713 100644
  
          // There's a very common error in many games where rectangles are incorrectly configured with one
          // less pixel than what's required to fill out the screen because other rectangle methods under
-@@ -1216,7 +1292,7 @@ namespace RT64 {
- 
-             const FixedRect intRect = scissorRect.intersection(drawRect);
-             if (!intRect.isNull()) {
--                fbPair.drawColorRect.merge(intRect);
-+                fbPair.mergeDrawColorRect(intRect);
-                 if (otherMode.zUpd()) {
-                     fbPair.drawDepthRect.merge(intRect);
-                 }
 @@ -1311,6 +1387,28 @@ namespace RT64 {
              updateCallTexcoords(u1, v1);
              updateCallTexcoords(u2, v2);
@@ -3103,7 +3101,7 @@ index 6051f4e..f719325 100644
          // Dump memory contents into a file if the process is active.
          if (!state->dumpingTexturesDirectory.empty()) {
 diff --git a/src/hle/rt64_rsp.cpp b/src/hle/rt64_rsp.cpp
-index 1da2550..a230fb2 100644
+index 1da2550..a2d33d3 100644
 --- a/src/hle/rt64_rsp.cpp
 +++ b/src/hle/rt64_rsp.cpp
 @@ -1128,9 +1128,41 @@ namespace RT64 {
@@ -3150,7 +3148,7 @@ index 1da2550..a230fb2 100644
              const hlslpp::float3 U = posScreen[globalIndices[1]] - posScreen[globalIndices[0]];
              const hlslpp::float3 V = posScreen[globalIndices[2]] - posScreen[globalIndices[0]];
              const hlslpp::float3 N = hlslpp::cross(V, U);
-@@ -1138,23 +1170,33 @@ namespace RT64 {
+@@ -1138,16 +1170,26 @@ namespace RT64 {
          }
  
          const FixedRect &scissorRect = state->rdp->scissorRectStack[state->rdp->scissorStackSize - 1];
@@ -3184,14 +3182,6 @@ index 1da2550..a230fb2 100644
              }
  
              const interop::RSPViewport &viewport = viewportStack[viewportStackSize - 1];
-             const FixedRect viewportClipRect = viewport.rect(clipRatios.data());
-             drawRect = viewportClipRect.intersection(scissorRect.intersection(drawRect));
-             if (!drawRect.isNull()) {
--                fbPair.drawColorRect.merge(drawRect);
-+                fbPair.mergeDrawColorRect(drawRect);
-                 if (otherModeStack[otherModeStackSize - 1].zUpd()) {
-                     fbPair.drawDepthRect.merge(drawRect);
-                 }
 diff --git a/src/hle/rt64_shared_queue_resources.h b/src/hle/rt64_shared_queue_resources.h
 index 8858dac..933b80e 100644
 --- a/src/hle/rt64_shared_queue_resources.h
