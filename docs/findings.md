@@ -458,7 +458,7 @@ It came back from 12:19 UTC that day. Pokémon Snap's page (Snap64Recomp-web on 
 11:54, held by the uncapped 360. From 12:19 to 12:45 it read 68 (71.6 animation frames), then 172 and, from Pages, 174
 (120 animation frames, the GPU 15% busy, the browser on half the cores it had). Its 11:54 build read 176 in the same
 minutes, and Mario Kart 64's page, 358* in its row, read 171. Firefox read Snap at 203-206 throughout. Snap's Chrome
-cell is its 11:54 run, and Star Fox 64's 173*, from Pages at 12:28-12:31, was played in that state.
+number is its 11:54 run, and Star Fox 64's 173*, from Pages at 12:28-12:31, was played in that state.
 
 ## A present's sleep in Chrome
 
@@ -579,7 +579,7 @@ v0.58.0) and 17,000-30,000 there with `gfx.webrender.dcomp-texture-overlay-win`.
   Pages (v0.63.0, Firefox 158, 3840x2000, cold, a quiet host), interleaved, presents a second (animation frames):
   Rush 2049 134.0 (11,892) and 120.4 (11,433) at 0 against 149.7, 121.2, 145.2, 128.6 and 134.4 (270-345) at 360,
   Banjo 279.6 (3,290) and 286.5 (3,795) against 281.8 and 272.4 (~300); the browser's process 4.1-4.4 cores at 0,
-  2.4-3.4 at 360. So the stand-in's earlier Firefox cells stand, though `play_page.mjs` compares a Firefox run with
+  2.4-3.4 at 360. So the stand-in's earlier Firefox numbers stand, though `play_page.mjs` compares a Firefox run with
   none from before (it records `uncapped` as 360).
 - At 360 the animation frames fall to 190-300 where the page's thread is busy (Rush 2049's race), still above its
   presents: they hold presents back only on a page that presents near 360, which is the ceiling anyway.
@@ -768,14 +768,14 @@ in its best power efficiency mode; a 3840x2160 display at 200%), every run on th
 headless, Firefox 158, 1920x945 off the desktop, cold, `?present-stats`, each game's play plan (`--play 90` after the
 start for those without one). The runs are plays.jsonl's 42 of that date on v0.46.0 at 1920x945 noted "laptop report",
 their `gpu.busy` the Intel GPU's 3D engine (~12% of it the idle desktop); those noted "part A, the table" give the
-README's cells, the presents a second after the waits. Headless Chrome read within a present of the window, and no run
+laptop's numbers, the presents a second after the waits. Headless Chrome read within a present of the window, and no run
 had a WebGPU error or exception. Firefox's longest gaps were its shader waits, and in GoldenEye's intro it had many
 times Chrome's gaps over 100 ms.
 
 - Firefox's 20-30 is RT64's pacing, its done callbacks 25-45 ms late; with 1 ms timers it drew 59 (WebGPU in Chrome
   and Firefox).
 - Chrome sat at 51-55 in six games with the Intel GPU at most 70% busy and the browser and the host far from busy, so a
-  slow CPU isn't what holds it, and Chrome's 3x CPU throttling (docs/playing.md, A cell of the Games table) doesn't stand in for it: Conker drew
+  slow CPU isn't what holds it, and Chrome's 3x CPU throttling (docs/playing.md, A page's numbers) doesn't stand in for it: Conker drew
   more that way on the desktop than on the laptop. RT64 paced Conker in Chrome 3 times; the other 54s are unexplained.
   On v0.58.0 it drew 58-60 there (below).
 - Maximized on the desktop at its 200% (the runs noted "part C"), instead of off it, Firefox's Intel load rose ~30
@@ -790,7 +790,7 @@ times Chrome's gaps over 100 ms.
 On 2026-10-17, the same laptop played nine pages from Pages, all built on v0.58.0 (Chrome 155, Firefox 158, plugged
 in, best power efficiency, Windows' global timer at 1 ms set by something already running, the host 1-13% busy before
 each run), cold, each game's play plan: plays.jsonl's 79 runs of that date noted "laptop report", failed ones
-included, those noted "onscreen" giving the README's cells. No run that played had a WebGPU error or exception.
+included, those noted "onscreen" giving the laptop's numbers. No run that played had a WebGPU error or exception.
 
 - Off the desktop (1920x945) Chrome headed drew 58.2-60.1 in all nine and headless the same within a present, where on
   v0.46.0 it sat at 51-55. Firefox drew 59.7-59.9 in Banjo, Majora's Mask, Donkey Kong 64 and Wave Race 64 (20-30 on

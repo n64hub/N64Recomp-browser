@@ -309,7 +309,7 @@ jobs:
           rt64="$RUNNER_TEMP/jfg/web-build/lib/rt64"
           flags=(-std=c++17 -pthread -fwasm-exceptions -msimd128 -sUSE_SDL=2 --use-port=emdawnwebgpu -fsyntax-only
             -DFFX_GCC -DHLSL_CPU -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DRT64_FREE_DISCARDED_TARGETS=1
-            -DRT64_OFFSCREEN_WORKLOADS=1 -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PREBUILT_SHADERS -DRT64_UNEVEN_FRAME_RATES=1
+            -DRT64_GAME_FRAME_WORKLOADS=1 -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PREBUILT_SHADERS -DRT64_UNEVEN_FRAME_RATES=1
             -DRT64_WGSL=1 "-DXXH_HAS_INCLUDE(x)=0")
           for dir in src src/contrib src/contrib/plume src/contrib/imgui src/contrib/hlslpp/include \
             src/contrib/mupen64plus-core/src/api src/contrib/nativefiledialog-extended/src/include \

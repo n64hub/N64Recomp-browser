@@ -5,14 +5,14 @@
 #   bash tools/publish_pages.sh <rush-2049-recomp checkout> [<game>...] [--dry-run | --browser <commit> [--keep <dir>]]
 #       [--ref <commit>] [--played <dir>] [-- <queue command>...]
 #
-# For each game in the list below (all of them unless named):
+# For each game in the list below (all of them unless named, but those not released yet: unreleased, below):
 # 1. Syncs its repo's origin/main to a copy kept on $BUILD_HOST, with rush-2049-recomp's tools/remote_build.sh (its
 #    Docker image, a copy per name, one shared ccache): Rush 2049's is the copy named publish, as its own
 #    tools/publish_page.sh has it, and a fork's is pages-<game>, synced from a clone of it kept here in $PAGES_CACHE
 #    (~/.cache/n64recomp-pages) with no files checked out.
 # 2. Builds the page there by the fork's BUILDING.md steps (Rush 2049's: remote_build.sh build), in that image, or on
 #    the host itself for a repo whose scripts run images of their own (Perfect Dark's: the decomp's, then the web's;
-#    Super Mario 64's and F-Zero X's: the web's).
+#    Super Mario 64's, F-Zero X's and Mario Party 1's, 2's and 3's: the web's).
 # 3. Hashes the files the page serves (.html, .js, .wasm, .data, coi_serviceworker.js) as git does and compares them
 #    with the blobs in its folder of the hub's gh-pages (below). A commit builds the same bytes in any copy
 #    (frontend/build_speed.cmake, once the game's N64Recomp-browser pin has it: before, a ccache hit could carry another
@@ -22,12 +22,12 @@
 #    (tools/play_page.mjs) with the game's own shader_plan.json (tools/, DKR-R's web/): launcher, ROM, Start Game,
 #    then 20 s of the game running by itself, uncapped at the stand-in's 3840x2000 as every measured play is (docs/playing.md,
 #    Uncapped, and the browsers' clocks), which has to present frames with no WebGPU error. Each run goes into
-#    plays.jsonl (play_page.mjs --record), to be committed with the Games table's rows. A queue command after -- goes in
+#    plays.jsonl (play_page.mjs --record), to be committed with the work. A queue command after -- goes in
 #    front of each boot's play_page.mjs, as ab_pages.mjs's does, so the boot takes its turn in the machine's GPU queue
 #    (CLAUDE.md, Playing a page): a shared turn with a short limit, like a smoke play (docs/playing.md, What a change
 #    plays). Without one it plays at once, beside whatever else holds the GPU, and its presents a second read that.
-# 6. Prints the pages it published, which are then played in Chrome and Firefox and their cells in the README's Games
-#    table updated (CLAUDE.md, The games table): that needs Firefox in a window.
+# 6. Prints the pages it published, which are then played in Chrome and Firefox (CLAUDE.md,
+#    The games table): that needs Firefox in a window.
 # --dry-run stops after 3, saying which pages differ.
 # --browser <commit> is the retest before the pins move (CLAUDE.md, "The pins"): a dry run of every game with its
 # N64Recomp-browser moved to <commit> (a tag, or a commit this checkout has) in its copy only, Rush 2049's by a
@@ -129,10 +129,19 @@ rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
 fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-zero-x
+mp1    n64hub/mario-party-recomp             MarioPartyRecompiled build/web mario-party
+mp2    n64hub/mario-party-2-recomp           MarioParty2Recompiled build/web mario-party-2
+mp3    n64hub/mario-party-3-recomp           MarioParty3Recompiled build/web mario-party-3
 "
+# Games whose pages are not published until the games are released: left out of a run that names no game, and built
+# only as a dry run (--dry-run, --browser, --ref), so their pins can still be built and played.
+unreleased=" mp1 mp2 mp3 "
 selected=("${args[@]:1}")
-[[ ${#selected[@]} -gt 0 ]] || selected=($(awk 'NF { print $1 }' <<< "$games"))
+[[ ${#selected[@]} -gt 0 ]] || selected=($(awk -v u="$unreleased" 'NF && !index(u, " " $1 " ") { print $1 }' <<< "$games"))
 for g in "${selected[@]}"; do grep -q "^$g " <<< "$games" || { echo "no game $g (one of: $(awk 'NF { printf "%s ", $1 }' <<< "$games"))"; exit 1; }; done
+for g in "${selected[@]}"; do
+    [[ $dry_run == true || $unreleased != *" $g "* ]] || { echo "$g is not released: its page is built only as a dry run"; exit 1; }
+done
 if [[ -n "$ref" ]]; then
     [[ ${#args[@]} -eq 2 ]] || { echo "--ref builds one game's commit: name the game"; exit 1; }
     [[ -n "${PAGES_COPY:-}" ]] || { echo "--ref builds in copies of its own: set PAGES_COPY"; exit 1; }
@@ -386,7 +395,26 @@ build_fzx() {
     cmp -s ../rom.z64 roms/fzerox.us.z64 || cp ../rom.z64 roms/fzerox.us.z64
     bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
-on_host=" pd sm64 fzx "
+# Its tools/build_web.sh recompiles from roms/marioparty.us.z64 (the syms/ are in git) and builds the page, in its own
+# image.
+build_mp1() {
+    mkdir -p roms
+    cmp -s ../rom.z64 roms/marioparty.us.z64 || cp ../rom.z64 roms/marioparty.us.z64
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
+# Mario Party 2's, the same from roms/marioparty2.us.z64.
+build_mp2() {
+    mkdir -p roms
+    cmp -s ../rom.z64 roms/marioparty2.us.z64 || cp ../rom.z64 roms/marioparty2.us.z64
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
+# Mario Party 3's, the same from roms/marioparty3.us.z64.
+build_mp3() {
+    mkdir -p roms
+    cmp -s ../rom.z64 roms/marioparty3.us.z64 || cp ../rom.z64 roms/marioparty3.us.z64
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
+on_host=" pd sm64 fzx mp1 mp2 mp3 "
 
 # --- Here ---
 
@@ -556,7 +584,7 @@ $dry_run && { echo "dry run: nothing published"; [[ ${#failed[@]} -eq 0 ]]; exit
 if [[ ${#published[@]} -eq 0 ]]; then
     echo "every page is what its main builds: nothing published"
 else
-    echo "published, to play in Chrome and Firefox and update in the README's Games table:"
+    echo "published, to play in Chrome and Firefox:"
     for g in "${published[@]}"; do
         read -r _ repo name dir folder <<< "$(grep "^$g " <<< "$games")"
         echo "  $g $hub_url$folder/ (main $(git -C "$([[ $g == rush ]] && echo "$rush" || echo "$cache/$g")" rev-parse --short origin/main))"

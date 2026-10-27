@@ -20,7 +20,7 @@ a doc points at the other.
 - `docs/`, read when the task needs it:
   - `docs/porting.md`: what the web needs: WebGPU and the shaders, prebuilt shader lists, Emscripten, mods. Read it
     before a port or a change to a fork.
-  - `docs/playing.md`: playing and measuring a page, writing a Games table cell, the games page (`site/`).
+  - `docs/playing.md`: playing and measuring a page, a page's numbers, the games page (`site/`).
   - `docs/publishing.md`: the retest, a critical fix, building and publishing pages.
   - `docs/forks.md`: every fork commit by its label. `docs/game-forks.md`: each game fork's port, its game's own frame
     rate, how the games compare. Read a game fork's part there and its own docs before changing it.
@@ -53,7 +53,11 @@ any game.
 The forks (`rt64-web`, `plume-web`, `hlslpp-web`, `N64ModernRuntime-web`, `N64Recomp-web`, `RecompFrontend-web`) and
 the game forks take no PRs: a change is a commit pushed to the fork's `main` as a fast-forward, pinned by its SHA
 (`forks.txt` here, a game fork's submodule). This project's own recomps, `rush-2049-recomp`, `perfect-dark-recomp`,
-`super-mario-64-recomp` and `f-zero-x-recomp`, work by PRs: moving one's `lib/N64Recomp-browser` is a PR there.
+`super-mario-64-recomp`, `f-zero-x-recomp`, `mario-party-recomp`, `mario-party-2-recomp` and `mario-party-3-recomp`,
+work by PRs: moving one's `lib/N64Recomp-browser` is a PR there.
+`mario-party-engine`, the code the Mario Party recomps share (their process scheduler, `gen_syms.py`), takes no PRs
+either: a change is a commit pushed to its `main`, which each Mario Party recomp's `lib/mario-party-engine` moves onto
+by a PR there, built and played like a pin move. Code one Mario Party recomp would copy from another goes there.
 
 Branches don't outlive their work: every one of these repos deletes a PR's branch when it merges ("Automatically
 delete head branches", on in each, a new fork included), and a branch pushed to a fork to hold work not on `main` yet
@@ -63,8 +67,9 @@ branches only: upstream's others are deleted when it is made.
 ## If the change reaches another repo, YOU make it
 
 This repo's work is all of this project's recomp work, so a change it needs in one of the project's own recomps
-(`rush-2049-recomp`, `perfect-dark-recomp`, `super-mario-64-recomp`, `f-zero-x-recomp`) is made in the same work, not
-handed on as work of its own: a PR there, from a checkout of its `main`, landed by whoever does the work like one here,
+(`rush-2049-recomp`, `perfect-dark-recomp`, `super-mario-64-recomp`, `f-zero-x-recomp`, `mario-party-recomp`,
+`mario-party-2-recomp`, `mario-party-3-recomp`) is made in the same work, not handed on as work of its own: a PR there, from a checkout of its
+`main`, landed by whoever does the work like one here,
 then this repo's half, if it has one. A cause found in a recomp is fixed there, in the work that found it. A fork or a
 game fork is changed as The forks says, by a commit pushed to its `main`, never a PR. Rush 2049's own bugs, and Rush
 work of its own size, stay Rush 2049's; a small Rush change this work needs (its pin, its shader list or play plan, a
@@ -127,11 +132,11 @@ hlslpp-web; N64ModernRuntime-web's `N64Recomp` is N64Recomp-web. Notes name a ch
 a fork gets its row there in the PR that moves `forks.txt` onto it.
 
 Nine options are off on a desktop build, on with Emscripten, and settable natively: `RT64_FLIPPED_RECT_HIGH_RES` (rt64
-fe91344), `RT64_OFFSCREEN_WORKLOADS` and `RT64_UNEVEN_FRAME_RATES` (rt64 179adb8), `RT64_FREE_DISCARDED_TARGETS` (rt64
-51c3fdd), `RT64_INTERPOLATE_CAMERA_EYE` (rt64 2c4230e), `ULTRAMODERN_LIBULTRA_THREAD_STOP`
-(N64ModernRuntime 0df8334), `ULTRAMODERN_HOLD_BLOCKED_MESSAGES` (N64ModernRuntime 66539ab),
-`ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS` (N64ModernRuntime bf96a62) and `ULTRAMODERN_RSP_TASKS_COPIED`
-(N64ModernRuntime 0ec6c51).
+fe91344), `RT64_UNEVEN_FRAME_RATES` (rt64 179adb8), `RT64_GAME_FRAME_WORKLOADS` (rt64 bce5e11),
+`RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA_EYE` (rt64 2c4230e),
+`ULTRAMODERN_LIBULTRA_THREAD_STOP` (N64ModernRuntime 0df8334), `ULTRAMODERN_HOLD_BLOCKED_MESSAGES`
+(N64ModernRuntime 66539ab), `ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS` (N64ModernRuntime bf96a62) and
+`ULTRAMODERN_RSP_TASKS_COPIED` (N64ModernRuntime 0ec6c51).
 
 ## Changing it
 
@@ -165,14 +170,15 @@ it can break (Changing it). Every game takes it in the next retest, a run on a s
 the last one at once (docs/publishing.md): it builds each game's page on the newest tag, plays the ones whose files
 changed (each once in Firefox for crashes and errors, and an A/B in Chrome against the page Pages serves on two or three
 games that stand for the rest when the tag can move speed), and only a page that boots with no WebGPU errors and plays
-no worse than Pages moves its fork onto the tag, is published and gets its row updated. One that plays worse stays on
-Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X are retested in the same
-work, never filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
-that left its page's bytes alone.
+no worse than Pages moves its fork onto the tag and is published. One that plays worse stays on
+Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X
+are retested in the same work, never filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
+that left its page's bytes alone. Mario Party 1, 2 and 3 are not published until the games are released
+(docs/publishing.md): the retest leaves them out.
 
 A critical fix doesn't wait for the retest: a fix for a page on Pages that crashes, never boots, loses its WebGPU
 device or can't be played moves the pins of the games it fixes (this project's own recomps' by a PR), builds, plays in Chrome and
-Firefox and publishes each, and updates their rows, in the same work. A bug only main has waits for the retest; once
+Firefox and publishes each, in the same work. A bug only main has waits for the retest; once
 the retest publishes it, its fix is critical.
 
 **Publishing** is the deploy; no CI job does it. A retest or critical fix publishes the pages it moves, and a change to
@@ -185,9 +191,8 @@ docs/publishing.md.
 
 ## The games table
 
-The README's Games table has each game's repo and page, how it plays in Chrome and Firefox on a laptop's integrated
-graphics (Intel UHD) or a stand-in for one, and when it was last played (no desktop column: a desktop GPU plays them
-all). Whoever plays a page that changed (a retest, a critical fix, a change to a game's repo or shader list) does all
+The README's Games table has each game's recomp, repo and page, and nothing about how it plays: a frame rate or a date
+means nothing to a player, so a page's numbers are kept in `plays.jsonl`, and kept good. Whoever plays a page that changed (a retest, a critical fix, a change to a game's repo or shader list) does all
 of this in the same work, as docs/playing.md says:
 
 - Plays it in Chrome and Firefox, always both (Chrome for the numbers, Firefox for what only it turns up: a race in
@@ -196,10 +201,11 @@ of this in the same work, as docs/playing.md says:
   In a retest Firefox plays from Pages only the A/B's games and each page whose repo changed more than its pin since
   the main Pages served: the others' bytes played clean in Firefox from the build, and their serving is the hub's,
   which those plays and every page's boot from Pages in headless Chrome check (docs/publishing.md, The retest).
-- Records every run, failed ones too, in `plays.jsonl` (`play_page.mjs --record`), committed with the row and nowhere
+- Records every run, failed ones too, in `plays.jsonl` (`play_page.mjs --record`), committed with the work and nowhere
   else.
-- Writes the cell as a number, from a laptop run or else the stand-in (`*`), never "smooth" and never against an
-  earlier result; a page given only the smoke play keeps its numbers. A new game gets a row in its port's work.
+- Keeps its numbers good: its median presents a second in Chrome on a laptop's integrated graphics (Intel UHD), or
+  else on the stand-in for one, are 60 or its game's own rate, and a page below that has work filed to make it 60
+  (docs/playing.md, A page's numbers). A new game gets a row in its port's work.
 
 ## Playing a page
 

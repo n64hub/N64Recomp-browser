@@ -460,7 +460,7 @@ rt64 2f9290c           next present comes, every present found a newer one queue
                        running (docs/phones.md); 01d734b moves the function it adds out of the lines Jet Force
                        Gemini's own RT64 patch changes, and 2f9290c out of where Pokémon Snap's port adds one, where
                        its web fork's three-way merge put it inside that function without a conflict
-rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_OFFSCREEN_WORKLOADS is: 7844c07 put
+rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_GAME_FRAME_WORKLOADS is: 7844c07 put
                        fields of VIHistory under it in rt64_vi.h, so a recomp's own code that includes rt64_state.h
                        (Diddy Kong Racing's F3DDKR and scenery code, Pokémon Snap's render context) saw every State
                        member after it at another offset than rt64 did; Diddy Kong Racing's race on a desktop GPU
@@ -524,6 +524,39 @@ plume 6109ba1,         a descriptor set's binding of a buffer destroyed since is
 rt64 1b46172           unset one is, and logged the first 8 times: reading the freed buffer's handle threw ('reading
                        size' in wgpuBufferGetSize) on the device thread and the page never presented again, as F-Zero
                        X's did at 4K in Chrome on a fast desktop GPU with its race's depth buffer copied at two sizes
+rt64 fcbf916,          the GBI database knows L3DEX2.fifo 2.06, 2.05's text with data of its own, on every build: a
+rt64 839e4c6           game that loaded that line microcode had no GBI, so its lists read the command table from near
+                       address 0 and the page trapped ('function signature mismatch' in send_dl); 839e4c6 keeps its
+                       data segment in an array of its own, so CBFD's and Jet Force Gemini's own rt64 changes, which
+                       change dataSegments' count, still apply
+rt64 bce5e11           RT64_GAME_FRAME_WORKLOADS, in place of 179adb8's RT64_OFFSCREEN_WORKLOADS: the workloads a game
+                       frame is drawn in (one per RSP task the game ends with a full sync), up to the present that
+                       shows what they drew, are interpolated as one frame, matched against the one before as a whole
+                       and all drawn for each interpolated frame; the queue holds 16. Mario Party's village, a
+                       minigame's instructions and the minigame drew exactly the game's 30 (headless Chrome 155,
+                       3840x2000 uncapped, RTX 2070, two interleaved pairs: 30.2 and 30.6 presents a second) and
+                       interpolate (246.1 and 238.9). A scene stays in one workload, as matching reads it through
+                       that workload's maps alone; the frame's rate is read through upstream's own lines, beside which
+                       Conker's own rt64 change sits
+rt64 997f61f,          with Emscripten, the VI's viewport into the swap chain has its edges on whole pixels: a target
+rt64 83d4be7,          rounded up to whole pixels (Auto's 1708x960 at a 1600x900 canvas under Expand) letterboxed the
+rt64 46f182f           picture by a third of a pixel, and Chrome's WebGPU drew no row past the viewport's last whole
+                       one, so the canvas's last row stayed black; 83d4be7 rounds in fromHDtoWindow and 46f182f with
+                       roundf and no include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change
+rt64 d64a926           RT64_GAME_FRAME_WORKLOADS's frames drawn whole: a workload that draws nothing isn't an offscreen
+                       pass, a shown framebuffer is any of the VI's last eight different ones (not viHistory's last
+                       three VIs, which miss a third framebuffer shown now and then) and the queue holds 32, so a frame
+                       of up to a dozen workloads fits beside the one before and the next; each ended Mario Party's
+                       frames early, and the frames between the game's showed its board without HUD, text or characters
+rt64 5f104ed           RT64_GAME_FRAME_WORKLOADS: a frame with fewer workloads that draw than the one before is held
+                       at a wait for the rest of them, up to 34 ms: a present showing the frame before came in the
+                       middle of Mario Party's next one about every 0.4 s, and each half, matched against the whole
+                       frame before, drew Toad tiny and an object beside him huge between the game's frames
+rt64 e0f41b3           RT64_GAME_FRAME_WORKLOADS: a frame's interpolated frames stop when the workload queue is full,
+                       as when the next frame has ended: the game waits for that frame before it queues anything more,
+                       and past InterpolatedTargetSlots (8) its frames waited for presents that never came. Uncapped
+                       (12 frames a 30 fps game frame) Mario Party 2's page stopped for good in its opening after
+                       27-46 s, render, present and game threads each waiting for the next
 N64ModernRuntime       upstream merged in at cdf5abb, the runtime Conker pins: recomp::Configuration
 67c3139                gains argc/argv (--game, --game-mode; a page passes none), and the VI thread skips an update
                        while no VI mode has been set, where it read a null mode
