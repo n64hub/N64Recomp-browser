@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 997f61f1aa370ed4cf45c68599190e0721a2cb21
+rt64: https://github.com/n64hub/rt64-web 83d4be7b7c663cd1d8e9c63be812b3e925c67c71
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -7995,7 +7995,7 @@ index c90b949..fa7324d 100644
          VertexProcessor(RenderDevice *device);
          ~VertexProcessor();
 diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
-index b4ff4e9..ee8b274 100644
+index b4ff4e9..1a24af8 100644
 --- a/src/render/rt64_vi_renderer.cpp
 +++ b/src/render/rt64_vi_renderer.cpp
 @@ -7,6 +7,8 @@
@@ -8007,22 +8007,23 @@ index b4ff4e9..ee8b274 100644
  namespace RT64 {
      // VIRenderer
  
-@@ -119,6 +121,15 @@ namespace RT64 {
-         topLeftScissor = fromHDtoWindow(topLeftScissor, hdSize, windowSize);
-         bottomRightScissor = fromHDtoWindow(bottomRightScissor, hdSize, windowSize);
+@@ -38,7 +40,16 @@ namespace RT64 {
+             relativeScale = windowSize.x / hdSize.x;
+         }
  
 +#   if defined(__EMSCRIPTEN__)
-+        // The viewport's edges on whole pixels. A target rounded up to whole pixels (Auto's 1708x960 for 1706.67x960 at a
-+        // 1600x900 canvas) letterboxes the picture by a fraction of a pixel, and Chrome's WebGPU draws no row past the
-+        // viewport's last whole one: a viewport from 0.35 to 899.65 left the canvas's last row black, though its centre at
-+        // 899.5 is inside. Rounding moves the picture's edges by half a pixel at most.
-+        topLeftViewport = { std::round(float(topLeftViewport.x)), std::round(float(topLeftViewport.y)) };
-+        bottomRightViewport = { std::round(float(bottomRightViewport.x)), std::round(float(bottomRightViewport.y)) };
++        // On whole pixels, the viewport's edges as the scissor's. A target rounded up to whole pixels (Auto's 1708x960 for
++        // 1706.67x960 at a 1600x900 canvas) letterboxes the picture by a fraction of a pixel, and Chrome's WebGPU draws no
++        // row past the viewport's last whole one: a viewport from 0.35 to 899.65 left the canvas's last row black, though
++        // its centre at 899.5 is inside. Rounding moves the picture's edges by half a pixel at most.
++        const hlslpp::float2 windowCoordinate = windowCenter + relativeCoordinate * relativeScale;
++        return { std::round(float(windowCoordinate.x)), std::round(float(windowCoordinate.y)) };
++#   else
+         return windowCenter + relativeCoordinate * relativeScale;
 +#   endif
-+
-         viewport = RenderViewport(topLeftViewport.x, topLeftViewport.y, bottomRightViewport.x - topLeftViewport.x, bottomRightViewport.y - topLeftViewport.y);
-         scissor = RenderRect(lround(topLeftScissor.x), lround(topLeftScissor.y), lround(bottomRightScissor.x), lround(bottomRightScissor.y));
      }
+ 
+     void VIRenderer::render(const RenderParams &p) {
 diff --git a/src/shaders/BicubicScalingCS.hlsl b/src/shaders/BicubicScalingCS.hlsl
 index 087471b..2c42302 100644
 --- a/src/shaders/BicubicScalingCS.hlsl
