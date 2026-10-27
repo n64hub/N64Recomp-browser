@@ -557,4 +557,8 @@ rt64 e0f41b3           RT64_GAME_FRAME_WORKLOADS: a frame's interpolated frames 
                        and past InterpolatedTargetSlots (8) its frames waited for presents that never came. Uncapped
                        (12 frames a 30 fps game frame) Mario Party 2's page stopped for good in its opening after
                        27-46 s, render, present and game threads each waiting for the next
+rt64 ea445cc           RT64_GAME_FRAME_WORKLOADS: a present after part of a frame holds it for the rest as a wait
+                       does, once it has fewer workloads that draw than the frame before: Mario Party's VI showed a
+                       board frame's framebuffer after the first of its three or four tasks a few times a minute, and
+                       the frame ended there drew its 3D alone, without characters, Toad, HUD or text, for a frame
 ```
