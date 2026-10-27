@@ -24,7 +24,8 @@ A run on a schedule that takes every change since the last one at once:
   N64Recomp-browser onto the tag (a commit to the fork's `main`), is published and gets its row updated. One that plays
   worse stays on Pages as it was, its fork on its last tag, and has work filed. So a fork's `main` is what its page was
   built from, and `git log <played>..<built>` here lists what a page took since it was last played.
-- Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X, this project's own recomps, are retested in the same work,
+- Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party, this project's own recomps, are retested in the
+  same work,
   built, played, recorded and their rows updated the same way, never filed for later; only their pins move differently, by a
   PR on each one's repo that moves `lib/N64Recomp-browser` to the tag and builds the same bytes, which the retest
   merges before it publishes the page. Rush 2049's PR also runs the desktop game, and its pin moves even to a tag that
