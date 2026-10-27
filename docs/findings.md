@@ -1283,7 +1283,14 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   that row, and RT64 found no tile copy for them, so each waited for the framebuffer in RAM, whose stale contents
   showed (a cyan crescent at the semicircle's edge). perfect-dark-recomp's `patches/ir_lens.c` loads such a row once
   and draws the pieces from it: 60 with the IR scanner on, the semicircle its own red as the game's combiner makes it,
-  in an A/B against Pages interleaved; which of the three loses RT64 the tile copy is still open.
+  in an A/B against Pages interleaved. Of the three, the start mid-row lost the tile copy: RT64 gave a block's copy
+  the pixels to its row's end, wider than what was loaded, which `checkRowTileCopy()` turns down, so the two pieces
+  that end inside the row each waited; the unaligned start is a whole pixel, and made no difference. rt64 5a80f01
+  gives such a block a copy as wide as it loaded: on a build from before `ir_lens.c` (perfect-dark-recomp b6a5e60),
+  the IR scanner went from 1.8 to 30 against Pages, interleaved (plays.jsonl's set pd-irfix-1), the lens its own red,
+  0 syncs a frame. The third, a load after a draw into its row, costs the rest: each such piece ends the
+  framebuffer pair (`RDP::checkImageOverlap()` tests the rows of the pair's bounding box), 123 pairs a game frame
+  against 4 with the scanner off, and the game drew 43-50 trying 60 and held 30; 18 in Firefox.
 
 ## A page's thread in Chrome, throttled
 
