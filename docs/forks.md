@@ -460,7 +460,7 @@ rt64 2f9290c           next present comes, every present found a newer one queue
                        running (docs/phones.md); 01d734b moves the function it adds out of the lines Jet Force
                        Gemini's own RT64 patch changes, and 2f9290c out of where Pokémon Snap's port adds one, where
                        its web fork's three-way merge put it inside that function without a conflict
-rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_OFFSCREEN_WORKLOADS is: 7844c07 put
+rt64 43ef41c           RT64_UNEVEN_FRAME_RATES is a PUBLIC definition, as RT64_GAME_FRAME_WORKLOADS is: 7844c07 put
                        fields of VIHistory under it in rt64_vi.h, so a recomp's own code that includes rt64_state.h
                        (Diddy Kong Racing's F3DDKR and scenery code, Pokémon Snap's render context) saw every State
                        member after it at another offset than rt64 did; Diddy Kong Racing's race on a desktop GPU
@@ -529,4 +529,13 @@ rt64 839e4c6           game that loaded that line microcode had no GBI, so its l
                        address 0 and the page trapped ('function signature mismatch' in send_dl); 839e4c6 keeps its
                        data segment in an array of its own, so CBFD's and Jet Force Gemini's own rt64 changes, which
                        change dataSegments' count, still apply
+rt64 RT64SHA           RT64_GAME_FRAME_WORKLOADS, in place of 179adb8's RT64_OFFSCREEN_WORKLOADS: the workloads a game
+                       frame is drawn in (one per RSP task the game ends with a full sync), up to the present that
+                       shows what they drew, are interpolated as one frame, matched against the one before as a whole
+                       and all drawn for each interpolated frame; the queue holds 16. A game that draws its frames
+                       in several tasks on three of its screens drew exactly its 30 on them (headless Chrome 155,
+                       3840x2000 uncapped, RTX 2070, two interleaved pairs: 30.2 and 30.6 presents a second) and
+                       interpolates (246.1 and 238.9). A scene stays in one workload, as matching reads it through
+                       that workload's maps alone; the frame's rate is read through upstream's own lines, beside which
+                       Conker's own rt64 change sits
 ```

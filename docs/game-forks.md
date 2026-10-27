@@ -249,11 +249,11 @@ The page opens widescreen, at Game Frame Rate 60 and with Frame Interpolation at
 4:3 at the game's own pacing without Frame Interpolation, and moves a page's settings saved before it did to those once
 (`page_defaults` in its options file). RT64 interpolates in play since rt64 179adb8: the game draws its shadows' render
 targets in a display list of its own before each frame's, which RT64 took for a frame, so the frame after it matched
-nothing and was never interpolated, and its frames take 2 and 3 VIs on a page, which upstream's original rate needs
-equal. His runtime holds the game thread that submits a display list until the graphics thread has drawn it (upstream's
-never waits there), which held the whole game through render to RAM's exact copy. The game rebuilds a list's memory as
-soon as it has submitted it, so the page copies RDRAM's 8 MB at the submit and lets the game go, RT64 reading the list
-from the copy (as DKR-R-web's runtime does) and writing render to RAM's copies to the game's RDRAM and the copy both.
+nothing and was never interpolated (the two are one game frame since rt64 RT64SHA), and its frames take 2 and 3
+VIs on a page, which upstream's original rate needs equal. His runtime holds the game thread that submits a display
+list until the graphics thread has drawn it (upstream's never waits there), which held the whole game through render
+to RAM's exact copy. The game rebuilds a list's memory as soon as it has submitted it, so the page copies RDRAM's 8 MB
+at the submit and lets the game go, RT64 reading the list from the copy (as DKR-R-web's runtime does) and writing render to RAM's copies to the game's RDRAM and the copy both.
 Its scheduler, the thread that submits the lists, starts a sound task only once the graphics task has left the RSP,
 yielding the graphics task, which the runtime answers with its completion: the page sends the RSP's completion as the
 graphics thread takes the task, and the RDP's once the frame is drawn, which needed N64ModernRuntime 66539ab (the game
