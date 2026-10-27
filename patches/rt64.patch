@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web bce5e11947f850a20908e5918e18400fbc754b85
+rt64: https://github.com/n64hub/rt64-web 46f182fc930122297d6345f9b06bb5e97408edef
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -7994,6 +7994,27 @@ index c90b949..fa7324d 100644
  
          VertexProcessor(RenderDevice *device);
          ~VertexProcessor();
+diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
+index b4ff4e9..bc37787 100644
+--- a/src/render/rt64_vi_renderer.cpp
++++ b/src/render/rt64_vi_renderer.cpp
+@@ -38,7 +38,16 @@ namespace RT64 {
+             relativeScale = windowSize.x / hdSize.x;
+         }
+ 
++#   if defined(__EMSCRIPTEN__)
++        // On whole pixels, the viewport's edges as the scissor's. A target rounded up to whole pixels (Auto's 1708x960 for
++        // 1706.67x960 at a 1600x900 canvas) letterboxes the picture by a fraction of a pixel, and Chrome's WebGPU draws no
++        // row past the viewport's last whole one: a viewport from 0.35 to 899.65 left the canvas's last row black, though
++        // its centre at 899.5 is inside. Rounding moves the picture's edges by half a pixel at most.
++        const hlslpp::float2 windowCoordinate = windowCenter + relativeCoordinate * relativeScale;
++        return { roundf(float(windowCoordinate.x)), roundf(float(windowCoordinate.y)) };
++#   else
+         return windowCenter + relativeCoordinate * relativeScale;
++#   endif
+     }
+ 
+     void VIRenderer::render(const RenderParams &p) {
 diff --git a/src/shaders/BicubicScalingCS.hlsl b/src/shaders/BicubicScalingCS.hlsl
 index 087471b..2c42302 100644
 --- a/src/shaders/BicubicScalingCS.hlsl
