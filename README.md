@@ -41,6 +41,7 @@ three also have releases of their desktop build for Windows and Linux on their r
 | Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) |
 | F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) |
 | Mario Party | this project's own recomp | [mario-party-recomp](https://github.com/n64hub/mario-party-recomp) | [play](https://n64hub.com/mario-party/) |
+| Mario Party 2 | this project's own recomp | [mario-party-2-recomp](https://github.com/n64hub/mario-party-2-recomp) | [play](https://n64hub.com/mario-party-2/) |
 | Mario Party 3 | this project's own recomp | [mario-party-3-recomp](https://github.com/n64hub/mario-party-3-recomp) | [play](https://n64hub.com/mario-party-3/) |
 
 ## Using it in a recomp

@@ -467,6 +467,22 @@ recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyon
 a board opens it, and A plays it. Minigame Island's section holds only its start and its introduction. Its README,
 CLAUDE.md and docs/web.md have the rest.
 
+`n64hub/mario-party-2-recomp` is Mario Party 2 (USA), not a fork but this project's own recomp (GPL-3.0), from the
+mariopartyrd/marioparty2 decompilation's symbols, with RecompFrontend's launcher and menus. It is on upstream's rt64,
+N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
+N64Recomp-browser tag its `lib/N64Recomp-browser` pins. It runs Hudson's processes on threads as Mario Party does,
+from a copy of the same scheduler in its own `src/game/process_threads.cpp`, so the page needs no Asyncify. Its own
+patches load each overlay through its OvlLoad. It draws a board seen from afar and the minigames to the window's edges
+on a picture wider than 4:3 (`patches/widescreen.c`, past the scissor that held them inside 4:3); a board's close view,
+the players' panels at its foot, still draws in 4:3. Its `tools/build_web.sh` runs a Docker image of its own, so
+`publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 448 shaders: the boot (the
+launcher, the opening, the title and Mario Land, 36), the rules' board, each of the six boards and a section for every
+six of the 60 minigames that are not duels, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without
+anyone playing: a survey in `patches/survey.c` sends the game to each board with GwSystem's board index set as it goes,
+and to each minigame by its explanation screen as a board opens it, with four computer players. The six duels are not in
+it: opened outside a board's own duel they pick among the board's spaces and crash, so a page builds their shaders as it
+first draws them. Its README, CLAUDE.md and docs/web.md have the rest.
+
 `n64hub/mario-party-3-recomp` is Mario Party 3 (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty3 decompilation's symbols, with RecompFrontend's launcher and menus, and Rainchus's
 MarioParty3-Recomp credited for where its audio microcode lies and which overlay loaders to hook. It is on upstream's
