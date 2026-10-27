@@ -587,4 +587,9 @@ rt64 635551d           with Emscripten, a load ends its framebuffer pair only if
                        IR scanner piece after a row's first ended a pair, 123 a game frame, and Perfect Dark held 30
 rt64 081411f           the same rects kept by drawColorRect itself (its merge() and reset()), so the lines that draw
                        are upstream's again: Jet Force Gemini's own patch changes the RSP's
+rt64 e549855           RT64_GAME_FRAME_WORKLOADS: a frame of offscreen passes alone is held at a wait, as one with too
+                       few workloads is, for the workload that draws what the VI shows: Jet Force Gemini's shadow
+                       pass, the next frame's, came before the present that waits for it on a fast host, ended there
+                       as a frame of its own with one present, and the frame after was matched against it, so
+                       Goldwood showed no in-between frames, 60 presents a second uncapped
 ```
