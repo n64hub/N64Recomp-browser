@@ -474,7 +474,7 @@ CLAUDE.md and docs/web.md have the rest.
 mariopartyrd/marioparty2 decompilation's symbols, with RecompFrontend's launcher and menus. It is on upstream's rt64,
 N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
 N64Recomp-browser tag its `lib/N64Recomp-browser` pins. It runs Hudson's processes on threads as Mario Party does,
-from a copy of the same scheduler in its own `src/game/process_threads.cpp`, so the page needs no Asyncify. Its own
+with the same scheduler from its `lib/mario-party-engine`, so the page needs no Asyncify. Its own
 patches load each overlay through its OvlLoad. It draws a board seen from afar and the minigames to the window's edges
 on a picture wider than 4:3 (`patches/widescreen.c`, past the scissor that held them inside 4:3); a board's close
 view, the players' panels at its foot, still draws in 4:3. Its `tools/build_web.sh` runs a Docker image of its own, so
