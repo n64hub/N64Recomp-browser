@@ -21,7 +21,7 @@
 #   N64Recomp-browser moved, pushed as a fast-forward) and is published as played (publish_pages.sh --played, which
 #   boots it from Pages in headless Chrome). An --ab game, and one whose repo changed more than its pin since the main
 #   Pages served, is then played from Pages in Firefox (play_pages.sh); the rest are not (docs/publishing.md, The
-#   retest). Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party move by a PR on their own repos
+#   retest). Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3 move by a PR on their own repos
 #   (CLAUDE.md, The pins): for each, the run pushes the pin commit as
 #   branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
 #   build has run), `publish_pages.sh <checkout> <game> --played <dir>/keep` and `play_pages.sh <checkout> firefox
@@ -57,7 +57,7 @@ games="$(sed -n '/^games="/,/^"/p' "$here/publish_pages.sh" | grep -v '"')"
 for g in "${selected[@]}" "${ab[@]}"; do grep -q "^$g " <<< "$games" || { echo "no game $g"; exit 1; }; done
 git -C "$here/.." fetch -q --tags origin
 tag_sha="$(git -C "$here/.." rev-parse -q --verify "$tag^{commit}")" || { echo "no tag $tag"; exit 1; }
-own=" rush pd sm64 fzx mp1 "
+own=" rush pd sm64 fzx mp1 mp2 mp3 "
 # The --ab games first, then the rest in the order given.
 order=("${ab[@]}")
 for g in "${selected[@]}"; do [[ " ${ab[*]} " == *" $g "* ]] || order+=("$g"); done

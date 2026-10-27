@@ -12,7 +12,7 @@
 #    (~/.cache/n64recomp-pages) with no files checked out.
 # 2. Builds the page there by the fork's BUILDING.md steps (Rush 2049's: remote_build.sh build), in that image, or on
 #    the host itself for a repo whose scripts run images of their own (Perfect Dark's: the decomp's, then the web's;
-#    Super Mario 64's, F-Zero X's, Mario Party's and Mario Party 3's: the web's).
+#    Super Mario 64's, F-Zero X's and Mario Party 1's, 2's and 3's: the web's).
 # 3. Hashes the files the page serves (.html, .js, .wasm, .data, coi_serviceworker.js) as git does and compares them
 #    with the blobs in its folder of the hub's gh-pages (below). A commit builds the same bytes in any copy
 #    (frontend/build_speed.cmake, once the game's N64Recomp-browser pin has it: before, a ccache hit could carry another
@@ -130,6 +130,7 @@ pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web per
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
 fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-zero-x
 mp1    n64hub/mario-party-recomp             MarioPartyRecompiled build/web mario-party
+mp2    n64hub/mario-party-2-recomp           MarioParty2Recompiled build/web mario-party-2
 mp3    n64hub/mario-party-3-recomp           MarioParty3Recompiled build/web mario-party-3
 "
 selected=("${args[@]:1}")
@@ -395,13 +396,19 @@ build_mp1() {
     cmp -s ../rom.z64 roms/marioparty.us.z64 || cp ../rom.z64 roms/marioparty.us.z64
     bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
+# Mario Party 2's, the same from roms/marioparty2.us.z64.
+build_mp2() {
+    mkdir -p roms
+    cmp -s ../rom.z64 roms/marioparty2.us.z64 || cp ../rom.z64 roms/marioparty2.us.z64
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
 # Mario Party 3's, the same from roms/marioparty3.us.z64.
 build_mp3() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/marioparty3.us.z64 || cp ../rom.z64 roms/marioparty3.us.z64
     bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
-on_host=" pd sm64 fzx mp1 mp3 "
+on_host=" pd sm64 fzx mp1 mp2 mp3 "
 
 # --- Here ---
 
