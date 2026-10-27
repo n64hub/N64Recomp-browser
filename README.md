@@ -423,6 +423,8 @@ take the web support without moving its submodules to the forks (Using it in a r
   passes, their size, their draws by shader and the GPU time of each; `webgpu_census.js`, another, counts its WebGPU calls
   and bytes a second by kind, and `gpu_growth.mjs` plays those kinds one at a time in a test page, `gpu_growth.html`,
   reading Firefox's GPU process memory around each; `memory_scan.ps1` says whose code made what that process grows.
+  `capture_window.ps1` plays a desktop build by a plan and captures its own window, and `frame_log.mjs` reads RT64's
+  frame log beside those captures (docs/playing.md).
   `frame_lengths.js`, a preload too, logs how long the game's frames are against the page's presents, and
   `frame_lengths.mjs` counts from that what each guess at a frame's length would hold and cut. `wait_probe.js` logs
   whether a timed wait off the page's thread ends on time, each second of a play, and `heap_probe.js` how much of its

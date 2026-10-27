@@ -8,6 +8,6 @@
 rt64              rt64                        https://github.com/n64hub/rt64-web              5473732a822a4423b5696e7cb18fecc425a59875
 plume             rt64/src/contrib/plume      https://github.com/n64hub/plume-web             d890ac899e505fb30040e037a4037cdeca68f033
 hlslpp            rt64/src/contrib/hlslpp     https://github.com/n64hub/hlslpp-web            6f5274c66132e8f951c400103d897582b8f21491
-N64ModernRuntime  N64ModernRuntime            https://github.com/n64hub/N64ModernRuntime-web  589bbf018a3e6d3646ddf7de1e7919f1b7e99bb1
+N64ModernRuntime  N64ModernRuntime            https://github.com/n64hub/N64ModernRuntime-web  cdf5abbd5026fef5c364c676e4667c45e42b6863
 N64Recomp         N64ModernRuntime/N64Recomp  https://github.com/n64hub/N64Recomp-web         81213c1831fab2521a6a5459c67b63437d67e253
 RecompFrontend    RecompFrontend              https://github.com/n64hub/RecompFrontend-web    b2c5c18d73054416c844486611fd2c2b9d8a4927

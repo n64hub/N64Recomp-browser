@@ -475,22 +475,23 @@ CLAUDE.md and docs/web.md have the rest.
 
 `n64hub/mario-party-2-recomp` is Mario Party 2 (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty2 decompilation's symbols, with RecompFrontend's launcher and menus. It is on upstream's rt64,
-N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
+N64ModernRuntime and RecompFrontend at the commits the forks are built on (`patches/patches.txt`), patched by the
 N64Recomp-browser tag its `lib/N64Recomp-browser` pins. It runs Hudson's processes on threads as Mario Party does,
 with the same scheduler from its `lib/mario-party-engine`, so the page needs no Asyncify. Its own
-patches load each overlay through its OvlLoad. It draws a board seen from afar and the minigames to the window's edges
-on a picture wider than 4:3 (`patches/widescreen.c`, past the scissor that held them inside 4:3); a board's close
-view, the players' panels at its foot, still draws in 4:3. Its `tools/build_web.sh` runs a Docker image of its own, so
-`publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 450 shaders: the boot
-(the launcher, the opening, the title and Mario Land, 38, two of them added by hand), the rules' board, each of the
+patches load each overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a
+picture wider than 4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background
+zoomed and mirrored as the game draws it, and a hook keeps the scissor its text sets inside the picture as Mario Party
+3's does. Its `tools/build_web.sh` runs a Docker image of its own, so
+`publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 452 shaders: the boot
+(the launcher, the opening, the title and Mario Land, 40, four of them added by hand), the rules' board, each of the
 six boards and a section for every six of the 60 minigames that are not duels, recorded by `tools/record_shaders.sh`
 and `tools/shader_plan.json` without anyone playing: a survey in `patches/survey.c` sends the game to each board with
 GwSystem's board index set as it goes, and to each minigame by its explanation screen as a board opens it, with four
 computer players. The six duels are not in it: opened outside a board's own duel they pick among the board's spaces
 and crash, so a page builds their shaders as it first draws them. The engine draws a frame in several RSP tasks, as
-Mario Party's does, but its page pins a tag before rt64 bce5e11, which interpolates them as one game frame: built on
-it, the page's game stops within a minute when it presents uncapped. So its menus and minigames present the game's
-own 30. Its README, CLAUDE.md and docs/web.md have the rest.
+Mario Party's does, which RT64 interpolates as one game frame and draws whole (rt64 bce5e11, d64a926, 5f104ed,
+e0f41b3 and ea445cc, `RT64_GAME_FRAME_WORKLOADS` on in its desktop build too), so its menus and minigames interpolate to
+the display's rate as the boards do. Its README, CLAUDE.md and docs/web.md have the rest.
 
 `n64hub/mario-party-3-recomp` is Mario Party 3 (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty3 decompilation's symbols, with RecompFrontend's launcher and menus, and Rainchus's

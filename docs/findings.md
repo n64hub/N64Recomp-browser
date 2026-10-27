@@ -1255,6 +1255,21 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   them; presents 155 and 121 a second for Pages, 136 and 132 for the build, which the other program's share of the
   GPU decides. Banjo-Tooie's regular plan read 192 a second for Pages and 203 for the build, and the build played
   clean in Firefox with the goggles on.
+  With both on a GPU of its own (v0.130.0, perfect-dark-recomp main 3dcd6d7, Chrome uncapped at 3840x2000, RTX 5080, a
+  host busy with a retest's builds, plays.jsonl's pd runs of 2026-10-27 noted "goggles in Extraction"), the game
+  holds 59-60 frames a second with the goggles on as off, at ~355 presents a second, the GPU 43-44% busy against
+  23%. Each pass costs about a tenth of the GPU: the goggles' patch with its blur left out read 34-35%, its scanlines
+  left out 31-32%, the lens left out 23%. What costs is the passes' draws over the whole 4570x2400 target at each
+  present, a third scene pass of it, 0.79 ms of GPU passes a present against 0.42 (`pass_probe.js`); the row copies
+  are 36 texture copies of 6 rows a frame. Drawing the lens a 6-row block at a time from the game's patches (one
+  rectangle a block, 37 loads of the view's 220 rows against 220), or both passes as one two-cycle draw a row, read
+  the same 42-44%, and the one pass 0.70 ms of passes against 0.79, so neither went in. With the CPU throttled 4 times,
+  uncapped, the game fell from 58 to 26-30 with the goggles on, with or without the block patch, and kept 58 with the
+  lens left out: the page's main thread, busy 0.93-0.98 either way, gave the lens's per-present work (RT64's copies
+  and draws through plume, `copyTextureToTexture` among them) the time its presents had. Capped, as a phone presents,
+  the throttled game read 53-57 with the goggles on and 52-56 off in two interleaved pairs, no worse. The goggles also
+  missed 8 shaders of the list, drawn through the ubershader until built (perfect-dark-recomp's list has them now): at
+  the same 43-44% busy on that GPU, and the throttled pairs read nothing either way.
 
 ## A page's thread in Chrome, throttled
 

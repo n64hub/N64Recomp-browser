@@ -557,4 +557,16 @@ rt64 e0f41b3           RT64_GAME_FRAME_WORKLOADS: a frame's interpolated frames 
                        and past InterpolatedTargetSlots (8) its frames waited for presents that never came. Uncapped
                        (12 frames a 30 fps game frame) Mario Party 2's page stopped for good in its opening after
                        27-46 s, render, present and game threads each waiting for the next
+N64ModernRuntime       upstream merged in at cdf5abb, the runtime Conker pins: recomp::Configuration
+67c3139                gains argc/argv (--game, --game-mode; a page passes none), and the VI thread skips an update
+                       while no VI mode has been set, where it read a null mode
+rt64 ea445cc           RT64_GAME_FRAME_WORKLOADS: a present after part of a frame holds it for the rest as a wait
+                       does, once it has fewer workloads that draw than the frame before: Mario Party's VI showed a
+                       board frame's framebuffer after the first of its three or four tasks a few times a minute, and
+                       the frame ended there drew its 3D alone, without characters, Toad, HUD or text, for a frame
+rt64 6a06f75           RT64_GAME_FRAME_WORKLOADS: a held frame waits up to 300 ms for the rest of its workloads, or
+                       until the present queue is full, not 34 ms: on a busy host Mario Party's board showed a frame
+                       in about 60 part-drawn as the characters jumped out of the tube, its rest up to 260 ms late.
+                       RT64_FRAME_LOG prints each game frame to stderr as it ends (why, its workloads, presents,
+                       waits), which tools/frame_log.mjs reads
 ```
