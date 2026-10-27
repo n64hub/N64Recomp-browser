@@ -524,7 +524,9 @@ plume 6109ba1,         a descriptor set's binding of a buffer destroyed since is
 rt64 1b46172           unset one is, and logged the first 8 times: reading the freed buffer's handle threw ('reading
                        size' in wgpuBufferGetSize) on the device thread and the page never presented again, as F-Zero
                        X's did at 4K in Chrome on a fast desktop GPU with its race's depth buffer copied at two sizes
-rt64 fcbf916           the GBI database knows L3DEX2.fifo 2.06, 2.05's text with data of its own, on every build: a
-                       game that loaded that line microcode had no GBI, so its lists read the command table from near
-                       address 0 and the page trapped ('function signature mismatch' in send_dl)
+rt64 fcbf916,          the GBI database knows L3DEX2.fifo 2.06, 2.05's text with data of its own, on every build: a
+rt64 839e4c6           game that loaded that line microcode had no GBI, so its lists read the command table from near
+                       address 0 and the page trapped ('function signature mismatch' in send_dl); 839e4c6 keeps its
+                       data segment in an array of its own, so CBFD's and Jet Force Gemini's own rt64 changes, which
+                       change dataSegments' count, still apply
 ```
