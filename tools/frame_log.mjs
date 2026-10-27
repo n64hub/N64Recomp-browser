@@ -10,15 +10,12 @@
 // present; full: the queue; paused) and how many
 // drew in fewer or more workloads than the frame before, and the runs of frames with the same shape (how many
 // workloads draw and what each draws to). A frame drawn in parts reads as a frame of fewer workloads that draw between
-// two of more; a frame matched wrongly as a frame of the same shape as its neighbours, whose transforms RT64 paired
-// with the frame before's far from where they were (it prints each pair whose position moved more than 0.3 of the -1
-// to 1 screen, both ends on it): fast objects and identical ones (sparkles, coins) read so too, so look at what they
-// are.
+// two of more; a frame matched wrongly against the one before (interpolation pairing the wrong objects) as a frame of
+// the same shape as its neighbours.
 //
 // With --around, what came within --span ms (200) of each capture named (a name in captures.tsv, as flicker.txt
 // lists them), each against the capture's time: each frame, its end and its workloads' framebuffers, each present the
-// game queued (after which workload, showing which framebuffer), each wait for a workload (the present thread's) and
-// each frame's matching.
+// game queued (after which workload, showing which framebuffer) and each wait for a workload (the present thread's).
 import fs from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -35,24 +32,10 @@ if (!logPath || logPath.startsWith('--')) {
 // The frames, each { t, n, end, drawn, before, workloads: [{ id, shown, off, pairs: ['ADDR/W', ...] }] }.
 const frames = [];
 const events = [];
-const matches = [];
 for (const line of fs.readFileSync(logPath, 'utf8').split(/\r?\n/)) {
     let m = line.match(/^(PQ|WAIT) t=(\d+) wl=(\d+)(?: fb=([0-9A-F]+))?/);
     if (m) {
         events.push({ t: Number(m[2]), text: (m[1] === 'PQ') ? `present after ${m[3]} shows ${m[4]}` : `wait for ${m[3]}` });
-        continue;
-    }
-
-    m = line.match(/^MT t=(\d+) wl=(\d+) scenes=(\d+) matched=(\d+) transforms=(\d+) far=(\d+) farthest=([\d.]+)/);
-    if (m) {
-        matches.push({ t: Number(m[1]), far: Number(m[6]) });
-        events.push({ t: Number(m[1]), text: `matched from ${m[2]}: ${m[4]}/${m[3]} scenes, ${m[5]} transforms, ${m[6]} far${(m[6] !== '0') ? ` (farthest ${m[7]})` : ''}` });
-        continue;
-    }
-
-    m = line.match(/^TM t=(\d+) wl=(\d+) cur=(\d+) prev=(\d+) at=(\S+) from=(\S+) pos=(\S+)/);
-    if (m) {
-        events.push({ t: Number(m[1]), text: `  far match in ${m[2]}: transform ${m[3]} at ${m[5]} with ${m[4]} at ${m[6]}, ${m[7]} apart in the world` });
         continue;
     }
 
@@ -93,10 +76,6 @@ for (const f of frames) {
 const seconds = (frames[frames.length - 1].t - frames[0].t) / 1000;
 console.log(`${frames.length} game frames in ${seconds.toFixed(1)} s; ended by ${Object.entries(ends).map(([k, v]) => `${k} ${v}`).join(', ')}`);
 console.log(`${fewer} drew in fewer workloads than the frame before, ${more} in more`);
-if (matches.length > 0) {
-    const far = matches.filter((m) => m.far > 0);
-    console.log(`${matches.length} frames matched with the one before, ${far.length} with a transform paired far from where it was`);
-}
 
 const runs = [];
 for (const f of frames) {
