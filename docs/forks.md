@@ -592,4 +592,10 @@ rt64 e549855           RT64_GAME_FRAME_WORKLOADS: a frame of offscreen passes al
                        pass, the next frame's, came before the present that waits for it on a fast host, ended there
                        as a frame of its own with one present, and the frame after was matched against it, so
                        Goldwood showed no in-between frames, 60 presents a second uncapped
+rt64 cad03e4           RT64_SCISSOR_INSIDE_FRAMEBUFFER: an extended scissor past the framebuffer's left or right edge
+                       counts only to it in the area a framebuffer pair drew in, which tells what covers the frame's
+                       whole width (a projection RT64 keeps at its aspect, a fill it widens): mario-party-engine's
+                       wipe draws under one aligned to the centre that reaches far past 4:3, and on each frame of a
+                       wipe Mario Party 1's sprites (its HUD, a board's title card) and a star wipe's shape were
+                       drawn stretched to the window's width
 ```
