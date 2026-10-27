@@ -543,4 +543,18 @@ rt64 83d4be7,          rounded up to whole pixels (Auto's 1708x960 at a 1600x900
 rt64 46f182f           picture by a third of a pixel, and Chrome's WebGPU drew no row past the viewport's last whole
                        one, so the canvas's last row stayed black; 83d4be7 rounds in fromHDtoWindow and 46f182f with
                        roundf and no include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change
+rt64 d64a926           RT64_GAME_FRAME_WORKLOADS's frames drawn whole: a workload that draws nothing isn't an offscreen
+                       pass, a shown framebuffer is any of the VI's last eight different ones (not viHistory's last
+                       three VIs, which miss a third framebuffer shown now and then) and the queue holds 32, so a frame
+                       of up to a dozen workloads fits beside the one before and the next; each ended Mario Party's
+                       frames early, and the frames between the game's showed its board without HUD, text or characters
+rt64 5f104ed           RT64_GAME_FRAME_WORKLOADS: a frame with fewer workloads that draw than the one before is held
+                       at a wait for the rest of them, up to 34 ms: a present showing the frame before came in the
+                       middle of Mario Party's next one about every 0.4 s, and each half, matched against the whole
+                       frame before, drew Toad tiny and an object beside him huge between the game's frames
+rt64 e0f41b3           RT64_GAME_FRAME_WORKLOADS: a frame's interpolated frames stop when the workload queue is full,
+                       as when the next frame has ended: the game waits for that frame before it queues anything more,
+                       and past InterpolatedTargetSlots (8) its frames waited for presents that never came. Uncapped
+                       (12 frames a 30 fps game frame) Mario Party 2's page stopped for good in its opening after
+                       27-46 s, render, present and game threads each waiting for the next
 ```
