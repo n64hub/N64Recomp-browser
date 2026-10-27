@@ -1,6 +1,6 @@
 # Playing and measuring a page
 
-How a page is played and measured, how a run becomes a cell of the README's Games table, and the games page in `site/`.
+How a page is played and measured, how its numbers are kept, and the games page in `site/`.
 CLAUDE.md (The games table) has the rules; `tools/play_page.mjs`'s and `tools/page_driver.mjs`'s headers have the
 options; `docs/findings.md` has what was measured this way.
 
@@ -205,7 +205,7 @@ A laptop's integrated graphics finds most new flaws. Without one, a desktop take
 the run, so plays.jsonl compares a run only with runs that set the same (numbers: docs/findings.md, The stand-in,
 measured, and Laptop-like limits on a desktop, measured):
 
-- `--size 3840x2000 --uncapped`, the stand-in of a cell: about 7 times a laptop window's pixels, so a frame's GPU cost
+- `--size 3840x2000 --uncapped`, the stand-in: about 7 times a laptop window's pixels, so a frame's GPU cost
   shows as presents a second. It finds a costly frame and clears none.
 - `--size 1920x945`, the laptop window's viewport: what the page lays out and clicks, and the sizes Auto draws at
   (GoldenEye's scene 2682x1320), a target's memory with them. A desktop GPU draws every page at the display's
@@ -222,31 +222,29 @@ None stands in for Windows composing a laptop's screen on the same GPU (what pac
 for the GPU's own speed at a laptop's size; Firefox drawing a list's misses with the ubershader (GoldenEye's Dam
 collapse) shows on a desktop as `shader missed:` lines.
 
-## A cell of the Games table
+## A page's numbers
 
-- A cell is written from a run on integrated graphics (a laptop report or a hand test there), or else from the
-  stand-in, marked `*`: the page from Pages on a desktop GPU with a 3840x2000 canvas (about 7 times a laptop window's
+The README's Games table shows no frame rates and no dates: a page's numbers are its runs in `plays.jsonl`, and the
+retest and every change are judged against them.
+
+- A page's number is from a run on integrated graphics (a laptop report or a hand test there), or else from the
+  stand-in: the page from Pages on a desktop GPU with a 3840x2000 canvas (about 7 times a laptop window's
   pixels), one CSS pixel a pixel, uncapped (`play_page.mjs --uncapped --size 3840x2000 --play 25`). Uncapped, its
   presents a second are what the page can make: higher is a cheaper frame, 342 or more is the ceiling, and the retest
   compares with earlier uncapped runs only. The stand-in is gentler than a laptop and sees cost only, so it finds a
   problem but can't clear one, and a laptop result stays until a newer laptop run replaces it (docs/findings.md, The
   stand-in, measured, and A laptop, measured).
-- A cell is a number: the median presents a second after the waits ("58", "240*"), `†` beside the game's own rate
-  ("20†": a page showing it, where RT64 paced presents to the game's frames (a GPU falling behind) or doesn't
-  interpolate), a laptop's and the stand-in's both when the stand-in's is newer ("20†; 240*"), words only where there
-  is no number ("never boots", "not yet"); never "smooth", never against an earlier result ("the crash is gone"). A cell
-  whose laptop result a fix was made for gives the stand-in's number until played there again. A cell below 60
-  without a `†` has work filed to make it 60. A Played cell is the date and the tag the page was built on
-  ("2026-10-16, v0.39.0"); one that names no tag is played in the next retest. Under the table are two lines and no
-  more.
-- A page given only the smoke play (What a change plays) keeps its cells' numbers, which a change
-  that can't move speed leaves standing, and its Played cell moves to the tag.
-- A laptop's cell comes from a run on screen (`--on-screen`: maximized at the laptop's own scale, as a player's window
+- The number is the median presents a second in Chrome after the waits. A page reading below 60 that isn't its game's
+  own rate (a page showing that, where RT64 paces presents to the game's frames (a GPU falling behind) or doesn't
+  interpolate) has work filed to make it 60. A laptop result a fix was made for stands until the laptop plays it again.
+- A page given only the smoke play (What a change plays) keeps its numbers, which a change that can't move speed
+  leaves standing.
+- A laptop's number comes from a run on screen (`--on-screen`: maximized at the laptop's own scale, as a player's window
   is) as well as the usual one off the desktop, and gives the on-screen number: Windows never composites a window off
-  the desktop, which flattered Firefox on Intel UHD. Its Chrome cell is played headless too, whose presents never wait
+  the desktop, which flattered Firefox on Intel UHD. Its Chrome run is played headless too, whose presents never wait
   for a compositor or display. Chrome's CPU throttling (CDP `Emulation.setCPUThrottlingRate`, 3) stands in for a
   laptop's slower CPU, but isn't what held Chrome at 51-55 there on v0.46.0 (docs/findings.md, A laptop, measured).
-- Every run, failed ones too, goes in `plays.jsonl`, committed with the row
+- Every run, failed ones too, goes in `plays.jsonl`, committed with the work
   (`play_page.mjs --record plays.jsonl --game <name> --build <tag>`, with `--note` for anything a player's visit
   wouldn't have: a preload, a test build). What a script compares runs by goes in fields, not the note: `--set <id>`
   for the runs of one interleaved set, `--role baseline` for the page Pages serves and `--role candidate` for the

@@ -449,39 +449,41 @@ Its README, CLAUDE.md and docs/web.md have the rest.
 `n64hub/mario-party-recomp` is Mario Party (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty decompilation's symbols, with RecompFrontend's launcher and menus. It is on upstream's rt64,
 N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
-N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches between dozens of small processes
-with its own setjmp and longjmp, which a recomp can't: its patches run each process on a thread of its own, one at a
-time, on the desktop and the page alike (its docs/processes.md), so the page needs no Asyncify, and load each of its
-131 overlays through its OvlLoad. RT64 interpolates a board to the display's rate with no tags in the game's display
-lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its `patches/widescreen.c` taking a camera's view
-to the window's edges. The engine draws a frame in several RSP tasks, one a camera and some of them empty, which RT64
-interpolates as one game frame (rt64 bce5e11), so Mushroom Village, the minigames' instructions and the minigames
+N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches between dozens of small processes with
+its own setjmp and longjmp, which a recomp can't: the patches and natives the Mario Party recomps share
+(`n64hub/mario-party-engine`, their `lib/mario-party-engine`) run each process on a thread of its own, one at a time, on
+the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own patches load each
+of its 131 overlays through its OvlLoad. RT64 interpolates a board to the display's rate with no tags in the game's
+display lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its `patches/widescreen.c` taking a camera's
+view to the window's edges. The engine draws a frame in several RSP tasks, one a camera and some of them empty, which
+RT64 interpolates as one game frame (rt64 bce5e11), so Mushroom Village, the minigames' instructions and the minigames
 interpolate to the display's rate as the boards do. Its `tools/build_web.sh` runs a Docker image of its own, so
 `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 346 shaders in 69
 sections: the boot and the village, the rules' board, each board, each minigame and each of the village's places,
 recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone playing: a survey in
-`patches/survey.c` sends the game to each overlay the way the game goes there, a minigame by its instructions screen
-as a board opens it, and A plays it. Minigame Island's section holds only its start and its introduction. Its
-README, CLAUDE.md and docs/web.md have the rest.
+`patches/survey.c` sends the game to each overlay the way the game goes there, a minigame by its instructions screen as
+a board opens it, and A plays it. Minigame Island's section holds only its start and its introduction. Its README,
+CLAUDE.md and docs/web.md have the rest.
 
 `n64hub/mario-party-3-recomp` is Mario Party 3 (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty3 decompilation's symbols, with RecompFrontend's launcher and menus, and Rainchus's
 MarioParty3-Recomp credited for where its audio microcode lies and which overlay loaders to hook. It is on upstream's
 rt64, N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
-N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches between dozens of small processes
-with its own setjmp and longjmp, which a recomp can't: its patches run each process on a thread of its own, one at a
-time, on the desktop and the page alike (its docs/processes.md), so the page needs no Asyncify, and load each overlay
-through its OvlLoad. It draws a board's camera to the window's edges on a picture wider than 4:3, past the scissor
-that held it inside 4:3 and the console's overscan border. Its `tools/build_web.sh` runs a Docker image of its own, so
-`publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 462 shaders: the boot
-(the launcher, the title, the file select, the mode select and a Battle Royale's setup, 53, one of them a board's
+N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches between dozens of small processes with
+its own setjmp and longjmp, which a recomp can't: the patches and natives the Mario Party recomps share
+(`n64hub/mario-party-engine`, their `lib/mario-party-engine`) run each process on a thread of its own, one at a time, on
+the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own patches load each
+overlay through its OvlLoad. It draws a board's camera to the window's edges on a picture wider than 4:3, past the
+scissor that held it inside 4:3 and the console's overscan border. Its `tools/build_web.sh` runs a Docker image of its
+own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 462 shaders: the
+boot (the launcher, the title, the file select, the mode select and a Battle Royale's setup, 53, one of them a board's
 start's at a 3840x2000 canvas, added by hand), a section for each of the Battle Royale map's six boards and one for
 every six of the 70 minigames, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone
-playing: a board's index is written where the setup reads it, and a survey in `patches/survey.c` takes the game from
-the setup's way to the first board to each minigame in turn, with the teams, computer players and minigame index a
-board sets, and four computer players play each to its end. The engine draws a frame in several RSP tasks, as Mario
-Party's does, which RT64 interpolates as one game frame since rt64 bce5e11: a page built before it presents the game's
-own 30 in a board's menus and minigames. Its README and docs/web.md have the rest.
+playing: a board's index is written where the setup reads it, and a survey in `patches/survey.c` takes the game from the
+setup's way to the first board to each minigame in turn, with the teams, computer players and minigame index a board
+sets, and four computer players play each to its end. The engine draws a frame in several RSP tasks, as Mario Party's
+does, which RT64 interpolates as one game frame since rt64 bce5e11: a page built before it presents the game's own 30 in
+a board's menus and minigames. Its README and docs/web.md have the rest.
 
 ## The games' own frame rates
 

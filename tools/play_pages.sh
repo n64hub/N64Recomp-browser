@@ -17,7 +17,7 @@
 #    Rush 2) and the scripts beside it, uncapped at the stand-in's 3840x2000 as every measured play is (docs/playing.md),
 #    on a fresh profile, its shot steps writing into a scratch dir. Each play goes into plays.jsonl
 #    (play_page.mjs --record) as "Pages, <tag>" (or "Pages, main <sha>" for a pin that is no tag), or --build's label,
-#    and --note's text, to be committed with the Games table's rows.
+#    and --note's text, to be committed with the work.
 # 3. Says ok or FAILED (no presents, a WebGPU error or an exception), its presents a second (Firefox's are not compared:
 #    docs/playing.md), and for a failed play its log's tail and whether the game got as far as "Initializing recomp
 #    heap" (one that never does hung in its loads, before the game started).

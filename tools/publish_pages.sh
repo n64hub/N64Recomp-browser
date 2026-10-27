@@ -22,12 +22,12 @@
 #    (tools/play_page.mjs) with the game's own shader_plan.json (tools/, DKR-R's web/): launcher, ROM, Start Game,
 #    then 20 s of the game running by itself, uncapped at the stand-in's 3840x2000 as every measured play is (docs/playing.md,
 #    Uncapped, and the browsers' clocks), which has to present frames with no WebGPU error. Each run goes into
-#    plays.jsonl (play_page.mjs --record), to be committed with the Games table's rows. A queue command after -- goes in
+#    plays.jsonl (play_page.mjs --record), to be committed with the work. A queue command after -- goes in
 #    front of each boot's play_page.mjs, as ab_pages.mjs's does, so the boot takes its turn in the machine's GPU queue
 #    (CLAUDE.md, Playing a page): a shared turn with a short limit, like a smoke play (docs/playing.md, What a change
 #    plays). Without one it plays at once, beside whatever else holds the GPU, and its presents a second read that.
-# 6. Prints the pages it published, which are then played in Chrome and Firefox and their cells in the README's Games
-#    table updated (CLAUDE.md, The games table): that needs Firefox in a window.
+# 6. Prints the pages it published, which are then played in Chrome and Firefox (CLAUDE.md,
+#    The games table): that needs Firefox in a window.
 # --dry-run stops after 3, saying which pages differ.
 # --browser <commit> is the retest before the pins move (CLAUDE.md, "The pins"): a dry run of every game with its
 # N64Recomp-browser moved to <commit> (a tag, or a commit this checkout has) in its copy only, Rush 2049's by a
@@ -578,7 +578,7 @@ $dry_run && { echo "dry run: nothing published"; [[ ${#failed[@]} -eq 0 ]]; exit
 if [[ ${#published[@]} -eq 0 ]]; then
     echo "every page is what its main builds: nothing published"
 else
-    echo "published, to play in Chrome and Firefox and update in the README's Games table:"
+    echo "published, to play in Chrome and Firefox:"
     for g in "${published[@]}"; do
         read -r _ repo name dir folder <<< "$(grep "^$g " <<< "$games")"
         echo "  $g $hub_url$folder/ (main $(git -C "$([[ $g == rush ]] && echo "$rush" || echo "$cache/$g")" rev-parse --short origin/main))"

@@ -20,14 +20,14 @@ A run on a schedule that takes every change since the last one at once:
   drop within the noise is not, and a build whose Firefox play isn't clean is worse only if Pages' plays clean, its
   failure filed either way. Leaks, OOMs and other faults that take many minutes to show are the soak's, not the
   retest's.
-- Only a page that boots with no WebGPU errors and plays no worse than its row and its earlier runs moves its fork's
-  N64Recomp-browser onto the tag (a commit to the fork's `main`), is published and gets its row updated. One that plays
+- Only a page that boots with no WebGPU errors and plays no worse than its earlier runs moves its fork's
+  N64Recomp-browser onto the tag (a commit to the fork's `main`) and is published. One that plays
   worse stays on Pages as it was, its fork on its last tag, and has work filed. So a fork's `main` is what its page was
   built from, and `git log <played>..<built>` here lists what a page took since it was last played.
 - Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3, this project's own recomps, are
   retested in the
   same work,
-  built, played, recorded and their rows updated the same way, never filed for later; only their pins move differently, by a
+  built, played and recorded the same way, never filed for later; only their pins move differently, by a
   PR on each one's repo that moves `lib/N64Recomp-browser` to the tag and builds the same bytes, which the retest
   merges before it publishes the page. Rush 2049's PR also runs the desktop game, and its pin moves even to a tag that
   left its page's bytes alone, since its desktop build can take something from it. A critical fix that plays every game takes it along the same way.
@@ -40,7 +40,7 @@ A run on a schedule that takes every change since the last one at once:
   once it reads no worse each game's pin moves as soon as its own smoke play is clean, and
   `tools/publish_pages.sh <rush-2049-recomp checkout> <game> --played <dir>` publishes the files that were played,
   with no second build (it checks the moved main is the built one with only the pin moved) and boots it from Pages in
-  headless Chrome, in a whole turn of its own between the next game's plays, and its row is updated. Then the A/B's
+  headless Chrome, in a whole turn of its own between the next game's plays. Then the A/B's
   games, and each page whose repo changed more than its pin since the main Pages served (its own shell, patches or
   plan: a page's own Content-Security-Policy that blocked the hub's favicon failed only from Pages, in Firefox), are
   played from Pages in Firefox by their regular plans, `tools/play_pages.sh <rush-2049-recomp checkout> firefox
@@ -62,7 +62,7 @@ A run on a schedule that takes every change since the last one at once:
 ## A critical fix
 
 A fix for a page on Pages that crashes, never boots, loses its WebGPU device or can't be played moves the pins of the
-games it fixes (this project's own recomps' by a PR), builds, plays in Chrome and Firefox and publishes each, and updates their rows,
+games it fixes (this project's own recomps' by a PR), builds, plays in Chrome and Firefox and publishes each,
 in the same work; the others take it in the retest.
 
 A change only a desktop build compiles (code outside the WGSL build, rt64 7734fe4) reaches Rush 2049's desktop build

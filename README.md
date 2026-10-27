@@ -18,35 +18,30 @@ support on more than one game: what one of them or one browser turns up is fixed
 really is that game's own, so every game and both browsers get it. Those seven are this project's own recomps; the first
 three also have releases of their desktop build for Windows and Linux on their repo's Releases page.
 
-| Game | Recomp | Repo | Page | Intel UHD, Chrome | Intel UHD, Firefox | Played |
-|---|---|---|---|---|---|---|
-| San Francisco Rush 2049 | this project's own recomp | [rush-2049-recomp](https://github.com/n64hub/rush-2049-recomp) | [play](https://n64hub.com/rush-2049/) | 57; 125* | 21; 133* | 2026-10-26, v0.123.0; laptop 2026-10-17, v0.58.0 |
-| GoldenEye 007 | [GoldenEye64Recomp](https://github.com/podulator/GoldenEye64Recomp) by podulator, from cblock85's | [GoldenEye64Recomp-web](https://github.com/n64hub/GoldenEye64Recomp-web) | [play](https://n64hub.com/goldeneye/) | 60; 342* | 356* | 2026-10-26, v0.123.0; laptop 2026-10-18, v0.63.0 |
-| The Legend of Zelda: Majora's Mask | [Zelda 64: Recompiled](https://github.com/Zelda64Recomp/Zelda64Recomp) by Zelda64Recomp | [Zelda64Recomp-web](https://github.com/n64hub/Zelda64Recomp-web) | [play](https://n64hub.com/majoras-mask/) | 60; 209* | 37; 160* | 2026-10-26, v0.123.0; laptop 2026-10-17, v0.58.0 |
-| Banjo-Kazooie | [Banjo: Recompiled](https://github.com/BanjoRecomp/BanjoRecomp) by BanjoRecomp | [BanjoRecomp-web](https://github.com/n64hub/BanjoRecomp-web) | [play](https://n64hub.com/banjo-kazooie/) | 60; 312* | 30†; 269* | 2026-10-26, v0.123.0; laptop 2026-10-17, v0.58.0 |
-| Conker's Bad Fur Day | [CBFD-Recompiled](https://github.com/sciaschi/CBFD-Recompiled) by sciaschi | [CBFD-Recompiled-web](https://github.com/n64hub/CBFD-Recompiled-web) | [play](https://n64hub.com/conker/) | 53; 327* | 28; 266* | 2026-10-26, v0.123.0; laptop 2026-10-17, v0.58.0 |
-| Donkey Kong 64 | [Donkey Kong 64: Recompiled](https://github.com/Rainchus/Donkey-Kong-64-Recompiled) by Rainchus | [Donkey-Kong-64-Recompiled-web](https://github.com/n64hub/Donkey-Kong-64-Recompiled-web) | [play](https://n64hub.com/donkey-kong-64/) | 60; 360* | 38; 337* | 2026-10-26, v0.123.0; laptop 2026-10-17, v0.58.0 |
-| Wave Race 64 | [Wave Race 64: Recompiled](https://github.com/danielgomesvieira2000/wave-race-64-recomp) by danielgomesvieira2000 | [wave-race-64-recomp-web](https://github.com/n64hub/wave-race-64-recomp-web) | [play](https://n64hub.com/wave-race-64/) | 54; 312* | 20†; 294* | 2026-10-26, v0.123.0; laptop 2026-10-15, v0.46.0 |
-| Pilotwings 64 | [Pilotwings 64: Recompiled](https://github.com/danielgomesvieira2000/pilotwings-64-recomp) by danielgomesvieira2000 | [pilotwings-64-recomp-web](https://github.com/n64hub/pilotwings-64-recomp-web) | [play](https://n64hub.com/pilotwings-64/) | 60; 254* | 37; 179* | 2026-10-26, v0.123.0; laptop 2026-10-17, v0.58.0 |
-| Banjo-Tooie | [Banjo-Tooie: Recompiled](https://github.com/Vidanox/BanjoTooieRecompiled) by Vidanox | [BanjoTooieRecompiled-web](https://github.com/n64hub/BanjoTooieRecompiled-web) | [play](https://n64hub.com/banjo-tooie/) | 59; 182* | 30†; 127* | 2026-10-26, v0.123.0; laptop 2026-10-17, v0.58.0 |
-| Mario Kart 64 | [MarioKart64Recomp](https://github.com/sonicdcer/MarioKart64Recomp) by sonicdcer | [MarioKart64Recomp-web](https://github.com/n64hub/MarioKart64Recomp-web) | [play](https://n64hub.com/mario-kart-64/) | 60; 358* | 43; 342* | 2026-10-26, v0.123.0; laptop 2026-10-18, v0.63.0 |
-| Star Fox 64 | [Starfox64Recomp](https://github.com/sonicdcer/Starfox64Recomp) by sonicdcer | [Starfox64Recomp-web](https://github.com/n64hub/Starfox64Recomp-web) | [play](https://n64hub.com/star-fox-64/) | 173* | 201* | 2026-10-26, v0.123.0 |
-| The Legend of Zelda: Ocarina of Time | [OoT: Recompiled](https://github.com/JonB-Dev/oot-recompiled) by JonB-Dev | [oot-recompiled-web](https://github.com/n64hub/oot-recompiled-web) | [play](https://n64hub.com/ocarina-of-time/) | 60; 320* | 37; 282* | 2026-10-26, v0.123.0; laptop 2026-10-18, v0.63.0 |
-| Diddy Kong Racing | [DKR-R](https://github.com/ThatGuyMcd/DKR-R) by ThatGuyMcd | [DKR-R-web](https://github.com/n64hub/DKR-R-web) | [play](https://n64hub.com/diddy-kong-racing/) | 323* | 253* | 2026-10-26, v0.123.0 |
-| Jet Force Gemini | [Jet Force Gemini: Recompiled](https://github.com/VibinToast/JetForceGemini-Recomp) by VibinToast | [JetForceGemini-Recomp-web](https://github.com/n64hub/JetForceGemini-Recomp-web) | [play](https://n64hub.com/jet-force-gemini/) | 58; 334* | 44; 218* | 2026-10-26, v0.123.0; laptop 2026-10-18, v0.63.0 |
-| Pokémon Snap | [Snap64Recomp](https://github.com/JackandBeans/Snap64Recomp) by JackandBeans | [Snap64Recomp-web](https://github.com/n64hub/Snap64Recomp-web) | [play](https://n64hub.com/pokemon-snap/) | 358* | 206* | 2026-10-26, v0.123.0 |
-| Rush 2: Extreme Racing USA | [Rush 2 Recompiled](https://github.com/bryantmh/rush2recompiled) by bryantmh | [rush2recompiled-web](https://github.com/n64hub/rush2recompiled-web) | [play](https://n64hub.com/rush-2/) | 172* | 103* | 2026-10-26, v0.123.0 |
-| 1080° Snowboarding | [1080° Snowboarding: Recompiled](https://github.com/thebradshaw/1080-Snowboarding-decomp) by thebradshaw | [1080-Snowboarding-recomp-web](https://github.com/n64hub/1080-Snowboarding-recomp-web) | [play](https://n64hub.com/1080-snowboarding/) | 360* | 343* | 2026-10-26, v0.123.0 |
-| Perfect Dark | this project's own recomp | [perfect-dark-recomp](https://github.com/n64hub/perfect-dark-recomp) | [play](https://n64hub.com/perfect-dark/) | not yet | not yet | 2026-10-26, v0.123.0 |
-| Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) | 354* | 348* | 2026-10-26, v0.123.0 |
-| F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) | 359* | 316* | 2026-10-26, v0.123.0 |
-| Mario Party | this project's own recomp | [mario-party-recomp](https://github.com/n64hub/mario-party-recomp) | [play](https://n64hub.com/mario-party/) | 130* | 119* | 2026-10-27, v0.126.0 |
-| Mario Party 3 | this project's own recomp | [mario-party-3-recomp](https://github.com/n64hub/mario-party-3-recomp) | [play](https://n64hub.com/mario-party-3/) | 68* | 104* | 2026-10-27, v0.125.0 |
-
-Median presents a second after the shader waits on a laptop's Intel UHD, maximized on its screen; * on a stand-in, newer than
-the laptop's: a desktop GPU at 3840x2000, uncapped from v0.47.0 (higher is a cheaper frame, 360 at most), Firefox's
-animation frames held at 360 from v0.67.0 (a row on an older tag was played before the hold); † the game's own rate.
-Goal: 60.
+| Game | Recomp | Repo | Page |
+|---|---|---|---|
+| San Francisco Rush 2049 | this project's own recomp | [rush-2049-recomp](https://github.com/n64hub/rush-2049-recomp) | [play](https://n64hub.com/rush-2049/) |
+| GoldenEye 007 | [GoldenEye64Recomp](https://github.com/podulator/GoldenEye64Recomp) by podulator, from cblock85's | [GoldenEye64Recomp-web](https://github.com/n64hub/GoldenEye64Recomp-web) | [play](https://n64hub.com/goldeneye/) |
+| The Legend of Zelda: Majora's Mask | [Zelda 64: Recompiled](https://github.com/Zelda64Recomp/Zelda64Recomp) by Zelda64Recomp | [Zelda64Recomp-web](https://github.com/n64hub/Zelda64Recomp-web) | [play](https://n64hub.com/majoras-mask/) |
+| Banjo-Kazooie | [Banjo: Recompiled](https://github.com/BanjoRecomp/BanjoRecomp) by BanjoRecomp | [BanjoRecomp-web](https://github.com/n64hub/BanjoRecomp-web) | [play](https://n64hub.com/banjo-kazooie/) |
+| Conker's Bad Fur Day | [CBFD-Recompiled](https://github.com/sciaschi/CBFD-Recompiled) by sciaschi | [CBFD-Recompiled-web](https://github.com/n64hub/CBFD-Recompiled-web) | [play](https://n64hub.com/conker/) |
+| Donkey Kong 64 | [Donkey Kong 64: Recompiled](https://github.com/Rainchus/Donkey-Kong-64-Recompiled) by Rainchus | [Donkey-Kong-64-Recompiled-web](https://github.com/n64hub/Donkey-Kong-64-Recompiled-web) | [play](https://n64hub.com/donkey-kong-64/) |
+| Wave Race 64 | [Wave Race 64: Recompiled](https://github.com/danielgomesvieira2000/wave-race-64-recomp) by danielgomesvieira2000 | [wave-race-64-recomp-web](https://github.com/n64hub/wave-race-64-recomp-web) | [play](https://n64hub.com/wave-race-64/) |
+| Pilotwings 64 | [Pilotwings 64: Recompiled](https://github.com/danielgomesvieira2000/pilotwings-64-recomp) by danielgomesvieira2000 | [pilotwings-64-recomp-web](https://github.com/n64hub/pilotwings-64-recomp-web) | [play](https://n64hub.com/pilotwings-64/) |
+| Banjo-Tooie | [Banjo-Tooie: Recompiled](https://github.com/Vidanox/BanjoTooieRecompiled) by Vidanox | [BanjoTooieRecompiled-web](https://github.com/n64hub/BanjoTooieRecompiled-web) | [play](https://n64hub.com/banjo-tooie/) |
+| Mario Kart 64 | [MarioKart64Recomp](https://github.com/sonicdcer/MarioKart64Recomp) by sonicdcer | [MarioKart64Recomp-web](https://github.com/n64hub/MarioKart64Recomp-web) | [play](https://n64hub.com/mario-kart-64/) |
+| Star Fox 64 | [Starfox64Recomp](https://github.com/sonicdcer/Starfox64Recomp) by sonicdcer | [Starfox64Recomp-web](https://github.com/n64hub/Starfox64Recomp-web) | [play](https://n64hub.com/star-fox-64/) |
+| The Legend of Zelda: Ocarina of Time | [OoT: Recompiled](https://github.com/JonB-Dev/oot-recompiled) by JonB-Dev | [oot-recompiled-web](https://github.com/n64hub/oot-recompiled-web) | [play](https://n64hub.com/ocarina-of-time/) |
+| Diddy Kong Racing | [DKR-R](https://github.com/ThatGuyMcd/DKR-R) by ThatGuyMcd | [DKR-R-web](https://github.com/n64hub/DKR-R-web) | [play](https://n64hub.com/diddy-kong-racing/) |
+| Jet Force Gemini | [Jet Force Gemini: Recompiled](https://github.com/VibinToast/JetForceGemini-Recomp) by VibinToast | [JetForceGemini-Recomp-web](https://github.com/n64hub/JetForceGemini-Recomp-web) | [play](https://n64hub.com/jet-force-gemini/) |
+| Pokémon Snap | [Snap64Recomp](https://github.com/JackandBeans/Snap64Recomp) by JackandBeans | [Snap64Recomp-web](https://github.com/n64hub/Snap64Recomp-web) | [play](https://n64hub.com/pokemon-snap/) |
+| Rush 2: Extreme Racing USA | [Rush 2 Recompiled](https://github.com/bryantmh/rush2recompiled) by bryantmh | [rush2recompiled-web](https://github.com/n64hub/rush2recompiled-web) | [play](https://n64hub.com/rush-2/) |
+| 1080° Snowboarding | [1080° Snowboarding: Recompiled](https://github.com/thebradshaw/1080-Snowboarding-decomp) by thebradshaw | [1080-Snowboarding-recomp-web](https://github.com/n64hub/1080-Snowboarding-recomp-web) | [play](https://n64hub.com/1080-snowboarding/) |
+| Perfect Dark | this project's own recomp | [perfect-dark-recomp](https://github.com/n64hub/perfect-dark-recomp) | [play](https://n64hub.com/perfect-dark/) |
+| Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) |
+| F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) |
+| Mario Party | this project's own recomp | [mario-party-recomp](https://github.com/n64hub/mario-party-recomp) | [play](https://n64hub.com/mario-party/) |
+| Mario Party 3 | this project's own recomp | [mario-party-3-recomp](https://github.com/n64hub/mario-party-3-recomp) | [play](https://n64hub.com/mario-party-3/) |
 
 ## Using it in a recomp
 
@@ -421,7 +416,7 @@ take the web support without moving its submodules to the forks (Using it in a r
   timed waits end on Windows' default 15.6 ms tick, as Firefox's do on a laptop. `record_shaders.mjs` records a
   prebuilt shader list by a plan, and `play_page.mjs` plays a page, a build or one on Pages, by the same kind of plan in
   Chrome or Firefox and measures it: presents a second, sound frames short, WebGPU errors, the shader waits, the GPU's
-  load and the browser's cores, a line every few seconds and a summary, for a game's notes and the Games table;
+  load and the browser's cores, a line every few seconds and a summary, for a game's notes and `plays.jsonl`;
   `--record` appends the run to `plays.jsonl`, every page play kept, a JSON line each, so how each game's page plays
   can be followed day by day; `ab_pages.mjs` plays a new build and the page Pages serves interleaved in Chrome, says
   whether the build plays worse, and with `--smoke` plays the build once in Firefox for crashes and errors (the retest's
