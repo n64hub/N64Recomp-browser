@@ -569,4 +569,13 @@ rt64 6a06f75           RT64_GAME_FRAME_WORKLOADS: a held frame waits up to 300 m
                        in about 60 part-drawn as the characters jumped out of the tube, its rest up to 260 ms late.
                        RT64_FRAME_LOG prints each game frame to stderr as it ends (why, its workloads, presents,
                        waits), which tools/frame_log.mjs reads
+rt64 9a700cc           RT64_GAME_FRAME_WORKLOADS: a workload not paired with one of the frame before's draws its own
+                       transforms, as process() decides, where the empty interpolated ones were uploaded: Mario
+                       Party 2, running late as a turn began, drew its next frame into the framebuffer it hadn't
+                       shown, one frame of twice the workloads, and uncapped its board's background drew off the
+                       screen between frames, black in 6 of 60 shots, none after. A page opened with ?frame-log
+                       prints RT64_FRAME_LOG's lines to the console
+rt64 4b71075           the same in process(), which fills such a workload's interpolated transforms with its own, and
+                       upload() as upstream has it: Snap64's RT64 and Jet Force Gemini's and 1080's own patches fix
+                       it on that line their own way, and the web's patch met their lines
 ```
