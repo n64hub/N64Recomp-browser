@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 9a700cc945eceb351270d0adee9ec35ba9444ed1
+rt64: https://github.com/n64hub/rt64-web 4b710756f8820af02e62188e46e8e9dd03a4fb2b
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -8162,23 +8162,27 @@ index 9131697..1ed2132 100644
          std::atomic<bool> uploadThreadRunning;
          std::stack<StreamDescription> streamDescStack;
 diff --git a/src/render/rt64_transform_processor.cpp b/src/render/rt64_transform_processor.cpp
-index cd8004d..90d4a7e 100644
+index cd8004d..8b1a312 100644
 --- a/src/render/rt64_transform_processor.cpp
 +++ b/src/render/rt64_transform_processor.cpp
-@@ -74,7 +74,12 @@ namespace RT64 {
-         uploads.clear();
- 
-         for (uint32_t w : p.curFrame->workloads) {
--            const bool prevFrameValid = (p.prevFrame != nullptr);
-+            // As process() decides it: a workload of a game frame of several (RT64_GAME_FRAME_WORKLOADS) that wasn't paired
-+            // with one of the frame before's has no interpolated transforms, and its own are drawn. Decided for the frame,
-+            // the empty vectors' storage was uploaded as its transforms, and between the game's frames whatever it held drew:
-+            // Mario Party 2's next frame, drawn into the framebuffer it hadn't shown yet as a turn began, made one frame of
-+            // twice the workloads, and its background's tiles drew off the screen, leaving the black behind them.
-+            const bool prevFrameValid = (p.prevFrame != nullptr) && p.curFrame->frameMap.workloads[w].mapped;
-             Workload &workload = p.workloadQueue->workloads[w];
-             const DrawData &drawData = workload.drawData;
-             DrawBuffers &drawBuffers = workload.drawBuffers;
+@@ -61,6 +61,17 @@ namespace RT64 {
+             }
+             // Copy as normal and just generate the inverse of the transforms.
+             else {
++                // upload() draws the interpolated transforms whenever there's a frame before, so a workload of a game frame
++                // of several (RT64_GAME_FRAME_WORKLOADS) that wasn't paired with one of the frame before's draws its own as
++                // them. Left empty, their storage was uploaded as its transforms, and between the game's frames whatever it
++                // held drew: Mario Party 2's next frame, drawn into the framebuffer it hadn't shown yet as a turn began, made
++                // one frame of twice the workloads, and its background's tiles drew off the screen, leaving the black
++                // behind them.
++                if (p.prevFrame != nullptr) {
++                    lerpWorldTransforms = drawData.worldTransforms;
++                    prevWorldTransforms = drawData.worldTransforms;
++                }
++
+                 for (size_t t = 0; t < drawData.worldTransforms.size(); t++) {
+                     invMatrix = hlslpp::inverse(drawData.worldTransforms[t]);
+                     invTMatrix = hlslpp::transpose(invMatrix);
 diff --git a/src/render/rt64_vertex_processor.cpp b/src/render/rt64_vertex_processor.cpp
 index ee48dad..7ae3161 100644
 --- a/src/render/rt64_vertex_processor.cpp

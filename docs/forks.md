@@ -575,4 +575,7 @@ rt64 9a700cc           RT64_GAME_FRAME_WORKLOADS: a workload not paired with one
                        shown, one frame of twice the workloads, and uncapped its board's background drew off the
                        screen between frames, black in 6 of 60 shots, none after. A page opened with ?frame-log
                        prints RT64_FRAME_LOG's lines to the console
+rt64 4b71075           the same in process(), which fills such a workload's interpolated transforms with its own, and
+                       upload() as upstream has it: Snap64's RT64 and Jet Force Gemini's and 1080's own patches fix
+                       it on that line their own way, and the web's patch met their lines
 ```
