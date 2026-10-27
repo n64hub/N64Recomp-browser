@@ -463,7 +463,8 @@ display lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its 
 view to the window's edges and its `patches/background.c` a board's background, through the engine's `camera_view.c`
 and `board_back.c`, so the window's sides show more of the board, unstretched. The engine draws a frame in several RSP
 tasks, one a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
-each whole, where frames of a dozen tasks ended early and the board flickered without its HUD, text or characters), so
+each whole, where frames of a dozen tasks ended early and the board flickered without its HUD, text or characters, and
+5f104ed holds one that a present for the frame before would split, which drew Toad tiny and an object beside him huge), so
 Mushroom Village, the minigames' instructions and the minigames interpolate to the display's rate as the boards do. Its `tools/build_web.sh` runs a Docker image of its own, so
 `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 346 shaders in 69
 sections: the boot and the village, the rules' board, each board, each minigame and each of the village's places,

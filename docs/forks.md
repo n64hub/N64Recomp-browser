@@ -548,4 +548,8 @@ rt64 d64a926           RT64_GAME_FRAME_WORKLOADS's frames drawn whole: a workloa
                        three VIs, which miss a third framebuffer shown now and then) and the queue holds 32, so a frame
                        of up to a dozen workloads fits beside the one before and the next; each ended Mario Party's
                        frames early, and the frames between the game's showed its board without HUD, text or characters
+rt64 5f104ed           RT64_GAME_FRAME_WORKLOADS: a frame with fewer workloads that draw than the one before is held
+                       at a wait for the rest of them, up to 34 ms: a present showing the frame before came in the
+                       middle of Mario Party's next one about every 0.4 s, and each half, matched against the whole
+                       frame before, drew Toad tiny and an object beside him huge between the game's frames
 ```
