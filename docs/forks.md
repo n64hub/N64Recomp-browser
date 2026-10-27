@@ -582,4 +582,9 @@ rt64 5a80f01           with Emscripten, a block loaded from part of a framebuffe
                        it loaded, not to its row's end, which checkRowTileCopy() turned down (rt64 9b87e67): Perfect
                        Dark's IR scanner loads each row crossing its lens as three pieces, and the two that end inside
                        the row each waited for the framebuffer in RAM, at 1.9 frames a second
+rt64 e549855           RT64_GAME_FRAME_WORKLOADS: a frame of offscreen passes alone is held at a wait, as one with too
+                       few workloads is, for the workload that draws what the VI shows: Jet Force Gemini's shadow
+                       pass, the next frame's, came before the present that waits for it on a fast host, ended there
+                       as a frame of its own with one present, and the frame after was matched against it, so
+                       Goldwood showed no in-between frames, 60 presents a second uncapped
 ```
