@@ -5,18 +5,19 @@ Web support for N64 static recompilations built on [N64Recomp](https://github.co
 and [RT64](https://github.com/rt64/rt64): the game, its menus and RT64 built with Emscripten into one page that draws
 through WebGPU. It is game-agnostic. A recomp keeps its own submodules at the commits it pins and adds this repo
 beside them, and its web build patches their checkouts (Using it in a recomp). It was written for San Francisco Rush
-2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's, F-Zero X's, Mario Party's and Mario
-Party 3's are, and sixteen more recomps build a page with it (Games).
+2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's, F-Zero X's and Mario Party 1's, 2's
+and 3's are, and sixteen more recomps build a page with it (Games).
 
 > Written almost entirely by AI (Claude), like the recomp it came from.
 
 ## Games
 
 Each game's repo builds its page with this repo; a page holds no ROM, the player loads their own. Rush 2049, Perfect
-Dark, Super Mario 64, F-Zero X, Mario Party and Mario Party 3 aside, the games are here to build out and test the web
-support on more than one game: what one of them or one browser turns up is fixed in this repo or the forks unless it
-really is that game's own, so every game and both browsers get it. Those six are this project's own recomps; the first
-three also have releases of their desktop build for Windows and Linux on their repo's Releases page.
+Dark, Super Mario 64 and F-Zero X aside, the games are here to build out and test the web support on more than one
+game: what one of them or one browser turns up is fixed in this repo or the forks unless it really is that game's own,
+so every game and both browsers get it. Those four are this project's own recomps; the first three also have releases
+of their desktop build for Windows and Linux on their repo's Releases page. Mario Party 1, 2 and 3, this project's
+own recomps too, build pages that are not published until the games are released.
 
 | Game | Recomp | Repo | Page |
 |---|---|---|---|
@@ -40,8 +41,6 @@ three also have releases of their desktop build for Windows and Linux on their r
 | Perfect Dark | this project's own recomp | [perfect-dark-recomp](https://github.com/n64hub/perfect-dark-recomp) | [play](https://n64hub.com/perfect-dark/) |
 | Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) |
 | F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) |
-| Mario Party | this project's own recomp | [mario-party-recomp](https://github.com/n64hub/mario-party-recomp) | [play](https://n64hub.com/mario-party/) |
-| Mario Party 3 | this project's own recomp | [mario-party-3-recomp](https://github.com/n64hub/mario-party-3-recomp) | [play](https://n64hub.com/mario-party-3/) |
 
 ## Using it in a recomp
 
