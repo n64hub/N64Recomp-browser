@@ -529,13 +529,13 @@ rt64 839e4c6           game that loaded that line microcode had no GBI, so its l
                        address 0 and the page trapped ('function signature mismatch' in send_dl); 839e4c6 keeps its
                        data segment in an array of its own, so CBFD's and Jet Force Gemini's own rt64 changes, which
                        change dataSegments' count, still apply
-rt64 RT64SHA           RT64_GAME_FRAME_WORKLOADS, in place of 179adb8's RT64_OFFSCREEN_WORKLOADS: the workloads a game
+rt64 bce5e11           RT64_GAME_FRAME_WORKLOADS, in place of 179adb8's RT64_OFFSCREEN_WORKLOADS: the workloads a game
                        frame is drawn in (one per RSP task the game ends with a full sync), up to the present that
                        shows what they drew, are interpolated as one frame, matched against the one before as a whole
-                       and all drawn for each interpolated frame; the queue holds 16. A game that draws its frames
-                       in several tasks on three of its screens drew exactly its 30 on them (headless Chrome 155,
+                       and all drawn for each interpolated frame; the queue holds 16. Mario Party's village, a
+                       minigame's instructions and the minigame drew exactly the game's 30 (headless Chrome 155,
                        3840x2000 uncapped, RTX 2070, two interleaved pairs: 30.2 and 30.6 presents a second) and
-                       interpolates (246.1 and 238.9). A scene stays in one workload, as matching reads it through
+                       interpolate (246.1 and 238.9). A scene stays in one workload, as matching reads it through
                        that workload's maps alone; the frame's rate is read through upstream's own lines, beside which
                        Conker's own rt64 change sits
 ```

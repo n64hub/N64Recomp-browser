@@ -249,7 +249,7 @@ The page opens widescreen, at Game Frame Rate 60 and with Frame Interpolation at
 4:3 at the game's own pacing without Frame Interpolation, and moves a page's settings saved before it did to those once
 (`page_defaults` in its options file). RT64 interpolates in play since rt64 179adb8: the game draws its shadows' render
 targets in a display list of its own before each frame's, which RT64 took for a frame, so the frame after it matched
-nothing and was never interpolated (the two are one game frame since rt64 RT64SHA), and its frames take 2 and 3
+nothing and was never interpolated (the two are one game frame since rt64 bce5e11), and its frames take 2 and 3
 VIs on a page, which upstream's original rate needs equal. His runtime holds the game thread that submits a display
 list until the graphics thread has drawn it (upstream's never waits there), which held the whole game through render
 to RAM's exact copy. The game rebuilds a list's memory as soon as it has submitted it, so the page copies RDRAM's 8 MB
@@ -454,14 +454,15 @@ with its own setjmp and longjmp, which a recomp can't: its patches run each proc
 time, on the desktop and the page alike (its docs/processes.md), so the page needs no Asyncify, and load each of its
 131 overlays through its OvlLoad. RT64 interpolates a board to the display's rate with no tags in the game's display
 lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its `patches/widescreen.c` taking a camera's view
-to the window's edges. Mushroom Village, the title, the minigames' instructions and the minigames present the game's
-own 30: the engine draws a frame in several RSP tasks, one a camera and some of them empty, which RT64 interpolates as
-frames of their own. Its `tools/build_web.sh` runs a Docker image of its own, so `publish_pages.sh` runs it on the
-build host and not in rush-2049-recomp's image. Its list is 346 shaders in 69 sections: the boot and the village, the
-rules' board, each board, each minigame and each of the village's places, recorded by `tools/record_shaders.sh` and
-`tools/shader_plan.json` without anyone playing: a survey in `patches/survey.c` sends the game to each overlay the way
-the game goes there, a minigame by its instructions screen as a board opens it, and A plays it. Minigame Island's
-section holds only its start and its introduction. Its README, CLAUDE.md and docs/web.md have the rest.
+to the window's edges. The engine draws a frame in several RSP tasks, one a camera and some of them empty, which RT64
+interpolates as one game frame (rt64 bce5e11), so Mushroom Village, the minigames' instructions and the minigames
+interpolate to the display's rate as the boards do. Its `tools/build_web.sh` runs a Docker image of its own, so
+`publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 346 shaders in 69
+sections: the boot and the village, the rules' board, each board, each minigame and each of the village's places,
+recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone playing: a survey in
+`patches/survey.c` sends the game to each overlay the way the game goes there, a minigame by its instructions screen
+as a board opens it, and A plays it. Minigame Island's section holds only its start and its introduction. Its
+README, CLAUDE.md and docs/web.md have the rest.
 
 ## The games' own frame rates
 
