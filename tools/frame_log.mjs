@@ -11,8 +11,9 @@
 // workloads draw and what each draws to). A frame drawn in parts reads as a frame of fewer workloads that draw between
 // two of more; a frame matched wrongly as a frame of the same shape as its neighbours.
 //
-// With --around, the frames within --span ms (200) of each capture named (a name in captures.tsv, as flicker.txt
-// lists them), one line each: its time against the capture's, its end, and its workloads' framebuffers.
+// With --around, what came within --span ms (200) of each capture named (a name in captures.tsv, as flicker.txt
+// lists them), each against the capture's time: each frame, its end and its workloads' framebuffers, each present the
+// game queued (after which workload, showing which framebuffer) and each wait for a workload (the present thread's).
 import fs from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -28,8 +29,15 @@ if (!logPath || logPath.startsWith('--')) {
 
 // The frames, each { t, n, end, drawn, before, workloads: [{ id, shown, off, pairs: ['ADDR/W', ...] }] }.
 const frames = [];
+const events = [];
 for (const line of fs.readFileSync(logPath, 'utf8').split(/\r?\n/)) {
-    let m = line.match(/^GF t=(\d+) n=(\d+) end=(\w+) drawn=(\d+) before=(\d+)/);
+    let m = line.match(/^(PQ|WAIT) t=(\d+) wl=(\d+)(?: fb=([0-9A-F]+))?/);
+    if (m) {
+        events.push({ t: Number(m[2]), text: (m[1] === 'PQ') ? `present after ${m[3]} shows ${m[4]}` : `wait for ${m[3]}` });
+        continue;
+    }
+
+    m = line.match(/^GF t=(\d+) n=(\d+) end=(\w+) drawn=(\d+) before=(\d+)/);
     if (m) {
         frames.push({ t: Number(m[1]), n: Number(m[2]), end: m[3], drawn: Number(m[4]), before: Number(m[5]), workloads: [] });
         continue;
@@ -47,9 +55,13 @@ if (frames.length === 0) {
     process.exit(1);
 }
 
-// A frame's shape: the framebuffers each workload that draws draws to, in order.
-const shape = (f) => f.workloads.filter((w) => w.pairs.length > 0)
-    .map((w) => w.pairs.filter((p) => !p.endsWith('/empty')).map((p) => p.split('/')[0]).join('+')).join(' ');
+// A frame's shape: the framebuffers each workload that draws draws to, in order, a framebuffer the VI shows as "shown"
+// (they take turns as the game double or triple buffers).
+const shape = (f) => {
+    const shown = new Set(f.workloads.map((w) => w.shown));
+    return f.workloads.filter((w) => w.pairs.length > 0).map((w) => w.pairs.filter((p) => !p.endsWith('/empty'))
+        .map((p) => p.split('/')[0]).map((a) => shown.has(a) ? 'shown' : a).join('+')).join(' ');
+};
 
 const ends = {};
 let fewer = 0, more = 0;
@@ -98,9 +110,13 @@ if (around) {
         }
 
         console.log(`\n${name} at ${t}:`);
-        for (const f of frames.filter((f) => Math.abs(f.t - t) <= span)) {
-            console.log(`  ${String(f.t - t).padStart(5)} ms ${f.end.padEnd(7)} ${f.drawn}/${f.before} drawn  ${f.workloads.map((w) =>
-                `${w.id}${w.off ? ' off' : ''}${(w.shown !== '00000000') ? ' shows ' + w.shown : ''}[${w.pairs.join(' ')}]`).join(' ')}`);
+        const near = [
+            ...frames.filter((f) => Math.abs(f.t - t) <= span).map((f) => ({ t: f.t,
+                text: `frame, ${f.end}, ${f.drawn}/${f.before} drawn: ${f.workloads.map((w) => `${w.id}${w.off ? ' off' : ''}[${w.pairs.join(' ')}]`).join(' ')}` })),
+            ...events.filter((e) => Math.abs(e.t - t) <= span),
+        ].sort((a, b) => a.t - b.t);
+        for (const e of near) {
+            console.log(`  ${String(e.t - t).padStart(5)} ms  ${e.text}`);
         }
     }
 }

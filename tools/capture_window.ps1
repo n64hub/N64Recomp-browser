@@ -3,7 +3,7 @@
 # wrongly against the one before, an old picture shown again.
 #
 #   pwsh -File tools/capture_window.ps1 -Exe <exe> -WorkDir <dir> -Plan <plan.txt> -OutDir <dir>
-#        [-ExeArgs <args>] [-Env RT64_FRAME_LOG=1,...] [-Flag 2]
+#        [-ExeArgs <args>] [-Env RT64_FRAME_LOG=1,...] [-Scale 0.5] [-Flag 2]
 #
 # It starts the exe in -WorkDir (its stdout and stderr go to stdout.log and stderr.log in -OutDir), finds the window
 # of the process it started and plays the plan, then stops that process by its PID. Only that window is captured,
@@ -15,19 +15,24 @@
 #   <s> key <name> [ms]       press and release a key in the window (a letter, a digit, Enter, Space, Shift, Escape,
 #                             Tab, Up, Down, Left, Right), held ms (120)
 #   <s> shot <name>           one capture, <name>.png
-#   <s> burst <name> <count>  count captures back to back, <name>-00.png on; about 9 a second for a 1280x960 window,
-#                             so a flicker of one 60 Hz frame is caught now and then, one of several frames most times
+#   <s> burst <name> <count>  count captures back to back, <name>-0000.png on, the plan waiting meanwhile
+#   <s> record <name>         captures back to back from here, <name>-0000.png on, while the plan's keys go on, until
+#   <s> stop                  this: for a moment whose time varies from run to run
 #   <s> end
+# A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
+# now and then and one of several frames most times. A burst's and a record's captures are kept in memory until the
+# end, scaled by -Scale (1): 0.5 keeps a minute of them in about 3 GB.
 # A key a game reads through SDL comes from the window's messages, so keys reach it with its window behind others.
 #
 # Every capture's time, in milliseconds since 1970, is written to captures.tsv, the clock RT64_FRAME_LOG's game frames
-# are printed with (tools/frame_log.mjs puts the two together). At the end each burst is checked for frames unlike both
+# are printed with (tools/frame_log.mjs puts the two together). At the end each series is checked for frames unlike both
 # of their neighbours: the mean difference of a 160x90 grey copy of the frame to each neighbour, against the
-# neighbours' to each other. Those are printed and written to flicker.txt, as "<burst>-<n> <to before>/<to after> vs
+# neighbours' to each other. Those are printed and written to flicker.txt, as "<series>-<n> <to before>/<to after> vs
 # <before to after>"; a steady pan reads as no flicker, a frame unlike both of its neighbours does.
 param(
     [Parameter(Mandatory)][string]$Exe, [Parameter(Mandatory)][string]$WorkDir, [Parameter(Mandatory)][string]$Plan,
-    [Parameter(Mandatory)][string]$OutDir, [string]$ExeArgs = '', [string[]]$Env = @(), [int]$Flag = 2
+    [Parameter(Mandatory)][string]$OutDir, [string]$ExeArgs = '', [string[]]$Env = @(), [double]$Scale = 1,
+    [int]$Flag = 2
 )
 Add-Type -AssemblyName System.Drawing
 # The C# below uses System.Drawing, which PowerShell 7 spreads over several assemblies: a bitmap made first loads them.
@@ -120,7 +125,8 @@ function Send-Key($hwnd, $name, $ms) {
 }
 
 # Captures the window's client area (the game's picture, without the title bar and frame PrintWindow draws too). A
-# shot is saved at once; a burst's captures are kept in memory until the end so a burst isn't slowed by saving.
+# shot is saved at once; a series' captures (a burst's, a record's) are kept in memory, scaled, until the end so they
+# aren't slowed by saving.
 $script:captures = New-Object System.Collections.ArrayList
 function Capture($hwnd, $name) {
     $c = New-Object CaptureWindow+RECT; $wr = New-Object CaptureWindow+RECT; $o = New-Object CaptureWindow+POINT
@@ -134,10 +140,16 @@ function Capture($hwnd, $name) {
     $hdc = $g.GetHdc()
     [void][CaptureWindow]::PrintWindow($hwnd, $hdc, [uint32]$Flag)
     $g.ReleaseHdc($hdc); $g.Dispose()
-    $bmp = $window.Clone((New-Object System.Drawing.Rectangle ($o.X - $wr.L), ($o.Y - $wr.T), $w, $h), $window.PixelFormat)
-    $window.Dispose()
+    $series = $name -match '-\d{4}$'
+    $sw = $w; $sh = $h
+    if ($series) { $sw = [int]($w * $Scale); $sh = [int]($h * $Scale) }
+    $bmp = New-Object System.Drawing.Bitmap $sw, $sh
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.DrawImage($window, (New-Object System.Drawing.Rectangle 0, 0, $sw, $sh), ($o.X - $wr.L), ($o.Y - $wr.T), $w, $h,
+        [System.Drawing.GraphicsUnit]::Pixel)
+    $g.Dispose(); $window.Dispose()
     $capture = @($name, $bmp, [DateTimeOffset]::Now.ToUnixTimeMilliseconds(), $script:clock.Elapsed.TotalSeconds)
-    if ($name -notmatch '-\d\d$') { Save $capture }
+    if (-not $series) { Save $capture }
     [void]$script:captures.Add($capture)
 }
 
@@ -145,7 +157,7 @@ function Save($capture) {
     if ($capture[1] -eq $null) { return }
     $capture[1].Save((Join-Path $OutDir "$($capture[0]).png"), [System.Drawing.Imaging.ImageFormat]::Png)
     Add-Content -Path (Join-Path $OutDir 'captures.tsv') -Value ("{0}`t{1}`t{2:N3}" -f $capture[0], $capture[2], $capture[3])
-    if ($capture[0] -notmatch '-\d\d$') { $capture[1].Dispose(); $capture[1] = $null }
+    if ($capture[0] -notmatch '-\d{4}$') { $capture[1].Dispose(); $capture[1] = $null }
 }
 
 $psi = New-Object System.Diagnostics.ProcessStartInfo $Exe
@@ -173,19 +185,26 @@ while ($hwnd -eq [IntPtr]::Zero -and $clock.Elapsed.TotalSeconds -lt 60 -and -no
 }
 Write-Output ("window after {0:N1}s" -f $clock.Elapsed.TotalSeconds)
 
+$recording = $null; $recorded = 0
 try {
     foreach ($line in Get-Content $Plan) {
         if ($line -match '^\s*(#|$)') { continue }
         $p = $line.Trim() -split '\s+'
-        while ($clock.Elapsed.TotalSeconds -lt [double]$p[0] -and -not $proc.HasExited) { Start-Sleep -Milliseconds 20 }
+        while ($clock.Elapsed.TotalSeconds -lt [double]$p[0] -and -not $proc.HasExited) {
+            if ($recording) { Capture $hwnd ($recording + '-' + $recorded.ToString('0000')); $recorded++ }
+            else { Start-Sleep -Milliseconds 20 }
+        }
         if ($proc.HasExited) { Write-Output ("exited with {0} at {1:N1}s" -f $proc.ExitCode, $clock.Elapsed.TotalSeconds); break }
         $hwnd = [CaptureWindow]::Of([uint32]$proc.Id)
         switch ($p[1]) {
             'key' { $ms = 120; if ($p.Count -gt 3) { $ms = [int]$p[3] }; Send-Key $hwnd $p[2] $ms
                 Write-Output ("{0,6:N1}s key {1}" -f $clock.Elapsed.TotalSeconds, $p[2]) }
             'shot' { Capture $hwnd $p[2]; Write-Output ("{0,6:N1}s shot {1}" -f $clock.Elapsed.TotalSeconds, $p[2]) }
-            'burst' { for ($i = 0; $i -lt [int]$p[3]; $i++) { Capture $hwnd ($p[2] + '-' + $i.ToString('00')) }
+            'burst' { for ($i = 0; $i -lt [int]$p[3]; $i++) { Capture $hwnd ($p[2] + '-' + $i.ToString('0000')) }
                 Write-Output ("{0,6:N1}s burst {1}" -f $clock.Elapsed.TotalSeconds, $p[2]) }
+            'record' { $recording = $p[2]; $recorded = 0; Write-Output ("{0,6:N1}s record {1}" -f $clock.Elapsed.TotalSeconds, $p[2]) }
+            'stop' { Write-Output ("{0,6:N1}s stop {1} after {2} captures" -f $clock.Elapsed.TotalSeconds, $recording, $recorded)
+                $recording = $null }
             'end' { break }
             default { throw "unknown plan step: $line" }
         }
@@ -199,7 +218,7 @@ try {
 foreach ($c in $script:captures) { Save $c }
 
 $flicker = @()
-$series = $script:captures | Where-Object { $_[0] -match '-\d\d$' } | Group-Object { $_[0] -replace '-\d\d$', '' }
+$series = $script:captures | Where-Object { $_[0] -match '-\d{4}$' } | Group-Object { $_[0] -replace '-\d{4}$', '' }
 foreach ($s in $series) {
     $small = @($s.Group | ForEach-Object { ,[CaptureWindow]::Small($_[1]) })
     for ($i = 1; $i -lt $small.Count - 1; $i++) {
