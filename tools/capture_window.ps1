@@ -34,6 +34,8 @@ param(
     [Parameter(Mandatory)][string]$OutDir, [string]$ExeArgs = '', [string[]]$Env = @(), [double]$Scale = 1,
     [int]$Flag = 2
 )
+# A process that never started would leave the plan capturing nothing until its end.
+if (-not (Test-Path -LiteralPath $Exe -PathType Leaf)) { throw "no such exe: $Exe" }
 Add-Type -AssemblyName System.Drawing
 # The C# below uses System.Drawing, which PowerShell 7 spreads over several assemblies: a bitmap made first loads them.
 [System.Drawing.Bitmap]::new(1, 1).Dispose()
