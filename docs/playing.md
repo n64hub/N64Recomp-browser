@@ -25,7 +25,7 @@ options; `docs/findings.md` has what was measured this way.
   unlike both of their neighbours. With `RT64_FRAME_LOG` set, RT64 (rt64-web, RT64_GAME_FRAME_WORKLOADS on) prints
   each game frame, why it ended and what each of its workloads drew, and each present and wait; `tools/frame_log.mjs`
   reads that beside the captures' times, to tell a frame drawn in parts from one matched wrongly. Their headers say
-  how.
+  how. A page opened with `?frame-log` prints the same log to its console.
 
 ## Plans
 
