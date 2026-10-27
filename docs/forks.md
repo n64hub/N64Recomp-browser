@@ -578,4 +578,8 @@ rt64 9a700cc           RT64_GAME_FRAME_WORKLOADS: a workload not paired with one
 rt64 4b71075           the same in process(), which fills such a workload's interpolated transforms with its own, and
                        upload() as upstream has it: Snap64's RT64 and Jet Force Gemini's and 1080's own patches fix
                        it on that line their own way, and the web's patch met their lines
+rt64 5a80f01           with Emscripten, a block loaded from part of a framebuffer row has a tile copy as wide as what
+                       it loaded, not to its row's end, which checkRowTileCopy() turned down (rt64 9b87e67): Perfect
+                       Dark's IR scanner loads each row crossing its lens as three pieces, and the two that end inside
+                       the row each waited for the framebuffer in RAM, at 1.9 frames a second
 ```
