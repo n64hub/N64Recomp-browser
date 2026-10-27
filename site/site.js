@@ -16,7 +16,7 @@ const README = location.hostname === 'localhost' ? 'README.md'
   : 'https://raw.githubusercontent.com/n64hub/N64Recomp-browser/main/README.md';
 
 // The table's columns, found by their headers: Game, Recomp (the upstream recomp, "[name](url) by owner"), Repo,
-// Page; the frame rates and Played aren't shown (the page's header says how the games play).
+// Page (the page's header says how the games play).
 function parseGames(markdown) {
   const lines = markdown.split('\n');
   const start = lines.findIndex((l) => l.trim() === '## Games');
