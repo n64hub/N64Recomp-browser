@@ -166,7 +166,8 @@ $psi.WorkingDirectory = $WorkDir
 $psi.UseShellExecute = $false
 $psi.RedirectStandardOutput = $true
 $psi.RedirectStandardError = $true
-foreach ($e in $Env) { $k, $v = $e -split '=', 2; $psi.EnvironmentVariables[$k] = $v }
+# pwsh -File passes a list as one string, so each is split at its commas too.
+foreach ($e in ($Env | ForEach-Object { $_ -split ',' })) { $k, $v = $e -split '=', 2; $psi.EnvironmentVariables[$k] = $v }
 $proc = New-Object System.Diagnostics.Process
 $proc.StartInfo = $psi
 [void]$proc.Start()

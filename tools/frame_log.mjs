@@ -6,14 +6,19 @@
 //
 // It prints how many frames ended for each reason (present: a present of the framebuffer the frame drew; next: the
 // next frame's first workload; wait: something waited for one of its workloads; held: a frame with fewer workloads
-// that draw than the one before, held for the rest of them, ended at its limit; full: the queue; paused) and how many
+// that draw than the one before, held for the rest of them, ended at its limit or as the game waited for a free
+// present; full: the queue; paused) and how many
 // drew in fewer or more workloads than the frame before, and the runs of frames with the same shape (how many
 // workloads draw and what each draws to). A frame drawn in parts reads as a frame of fewer workloads that draw between
-// two of more; a frame matched wrongly as a frame of the same shape as its neighbours.
+// two of more; a frame matched wrongly as a frame of the same shape as its neighbours, whose transforms RT64 paired
+// with the frame before's far from where they were (it prints each pair whose position moved more than 0.3 of the -1
+// to 1 screen, both ends on it): fast objects and identical ones (sparkles, coins) read so too, so look at what they
+// are.
 //
 // With --around, what came within --span ms (200) of each capture named (a name in captures.tsv, as flicker.txt
 // lists them), each against the capture's time: each frame, its end and its workloads' framebuffers, each present the
-// game queued (after which workload, showing which framebuffer) and each wait for a workload (the present thread's).
+// game queued (after which workload, showing which framebuffer), each wait for a workload (the present thread's) and
+// each frame's matching.
 import fs from 'node:fs';
 
 const args = process.argv.slice(2);
