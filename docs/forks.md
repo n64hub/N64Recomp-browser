@@ -564,7 +564,7 @@ rt64 ea445cc           RT64_GAME_FRAME_WORKLOADS: a present after part of a fram
                        does, once it has fewer workloads that draw than the frame before: Mario Party's VI showed a
                        board frame's framebuffer after the first of its three or four tasks a few times a minute, and
                        the frame ended there drew its 3D alone, without characters, Toad, HUD or text, for a frame
-rt64 218f60f           RT64_GAME_FRAME_WORKLOADS: a held frame waits up to 300 ms for the rest of its workloads, or
+rt64 42069f1           RT64_GAME_FRAME_WORKLOADS: a held frame waits up to 300 ms for the rest of its workloads, or
                        until the game waits for a free present, not 34 ms: on a busy host Mario Party's board showed a
                        frame in about 60 part-drawn as the characters jumped out of the tube, its rest up to 260 ms
                        late. RT64_FRAME_LOG prints each game frame to stderr as it ends (why, its workloads, presents,

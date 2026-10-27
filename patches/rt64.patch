@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 218f60f3e9b7ceee6a0dd1abdb07e291bfcff199
+rt64: https://github.com/n64hub/rt64-web 42069f1094cd03439aaa17c706cc09617453cf67
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1852,20 +1852,28 @@ index 60b0fa4..11b7dbe 100644
          FlushReason flushReason;
  
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
-index 87392d0..0552408 100644
+index 87392d0..06008d0 100644
 --- a/src/hle/rt64_game_frame.cpp
 +++ b/src/hle/rt64_game_frame.cpp
-@@ -2,6 +2,9 @@
+@@ -2,6 +2,8 @@
  // RT64
  //
  
 +#include <algorithm>
-+#include <cstdio>
 +
  #include "common/rt64_math.h"
  
  #include "rt64_game_frame.h"
-@@ -48,6 +51,13 @@ namespace RT64 {
+@@ -9,6 +11,8 @@
+ 
+ #include "xxHash/xxh3.h"
+ 
++#include <cstdio>
++
+ namespace RT64 {
+     // GameFrame
+     
+@@ -48,6 +52,13 @@ namespace RT64 {
          const FramebufferPair &fbPair = workload.fbPairs[proj.fbPairIndex];
          const Projection &fbProj = fbPair.projections[proj.projectionIndex];
          const GameIndices::Projection &firstProj = scene.projections.front();
@@ -1879,7 +1887,7 @@ index 87392d0..0552408 100644
          if (!areFramebufferPairsCompatible(workloadQueue, { firstProj.workloadIndex, firstProj.fbPairIndex }, { proj.workloadIndex, proj.fbPairIndex })) {
              return false;
          }
-@@ -168,6 +178,72 @@ namespace RT64 {
+@@ -168,6 +179,72 @@ namespace RT64 {
          return (lhs.first < rhs.first) || ((lhs.first == rhs.first) && lhs.second < rhs.second);
      }
  
@@ -1952,7 +1960,7 @@ index 87392d0..0552408 100644
      struct MatchCandidate {
          uint32_t curIndex = 0;
          uint32_t prevIndex = 0;
-@@ -260,17 +336,37 @@ namespace RT64 {
+@@ -260,17 +337,37 @@ namespace RT64 {
          thread_local std::unordered_map<uint32_t, ModifiedBuffers> workloadsModified;
          workloadsModified.clear();
  
@@ -1995,7 +2003,7 @@ index 87392d0..0552408 100644
              const Workload &prevWorkload = workloadQueue.workloads[workloadMap.prevWorkloadIndex];
              workloadMap.viewProjections.clear();
              workloadMap.viewProjections.resize(curWorkload.drawData.viewProjTransforms.size());
-@@ -290,7 +386,7 @@ namespace RT64 {
+@@ -290,7 +387,7 @@ namespace RT64 {
              buildTransformIdMap(curWorkload, curWorkload.transformIdMap, curWorkload.transformIgnoredIds);
  
              // Retrieve the matching maps for the current and previous workload.
@@ -2004,7 +2012,7 @@ index 87392d0..0552408 100644
              const GameFrameMap::WorkloadMap *prevWorkloadMap = nullptr;
              if (prevFrame.matched && prevFrame.frameMap.workloads[workloadMap.prevWorkloadIndex].mapped) {
                  prevWorkloadMap = &prevFrame.frameMap.workloads[workloadMap.prevWorkloadIndex];
-@@ -316,7 +412,7 @@ namespace RT64 {
+@@ -316,7 +413,7 @@ namespace RT64 {
              }
  
              if (!modifiedBuffers.empty()) {
@@ -2013,7 +2021,7 @@ index 87392d0..0552408 100644
              }
  
              // Any transforms tagged with the empty ID will be instantly marked as used and skipped.
-@@ -343,6 +439,14 @@ namespace RT64 {
+@@ -343,6 +440,14 @@ namespace RT64 {
                  const hlslpp::float4x4 &curProjTransform = curWorkload.drawData.projTransforms[curProj.transformsIndex];
                  for (uint32_t j = 0; j < prevScenes.size(); j++) {
                      const GameIndices::Projection prevFirstProj = prevScenes[j].projections[0];
@@ -2028,7 +2036,7 @@ index 87392d0..0552408 100644
                      const Workload &prevWorkload = workloadQueue.workloads[prevFirstProj.workloadIndex];
                      const FramebufferPair &prevFbPair = prevWorkload.fbPairs[prevFirstProj.fbPairIndex];
                      const Projection &prevProj = prevFbPair.projections[prevFirstProj.projectionIndex];
-@@ -369,11 +473,29 @@ namespace RT64 {
+@@ -369,9 +474,19 @@ namespace RT64 {
                  matchScene(workloadQueue, prevFrame, curScenes[candidate.curIndex], prevScenes[candidate.prevIndex], workloadsModified, tileInterpolationUsed, lookAtInterpolationUsed);
                  curScenesMatched[candidate.curIndex] = true;
                  prevScenesMatched[candidate.prevIndex] = true;
@@ -2047,6 +2055,12 @@ index 87392d0..0552408 100644
 +#endif
          matchScenes(perspectiveScenes, prevFrame.perspectiveScenes);
          matchScenes(orthographicScenes, prevFrame.orthographicScenes);
+ 
+@@ -396,6 +511,15 @@ namespace RT64 {
+         else {
+             velocityUploaderUsed = false;
+         }
++
 +#if RT64_GAME_FRAME_WORKLOADS
 +        if (workloadQueue.frameLog) {
 +            fprintf(stderr, "MT t=%lld wl=%llu scenes=%u matched=%u transforms=%u far=%u farthest=%.2f\n", WorkloadQueue::logTime(),
@@ -2055,10 +2069,10 @@ index 87392d0..0552408 100644
 +            fflush(stderr);
 +        }
 +#endif
+     }
  
-         if (!workloadsModified.empty()) {
-             thread_local std::vector<BufferUploader::Upload> uploads;
-@@ -403,8 +525,10 @@ namespace RT64 {
+     void GameFrame::matchScene(WorkloadQueue &workloadQueue, const GameFrame &prevFrame, const GameScene &curScene, const GameScene &prevScene, std::unordered_map<uint32_t, ModifiedBuffers> &workloadsModified, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed) {
+@@ -403,8 +527,10 @@ namespace RT64 {
              return;
          }
  
@@ -2071,7 +2085,7 @@ index 87392d0..0552408 100644
          curCallHashMap.clear();
          prevCallHashMap.clear();
  
-@@ -509,69 +633,163 @@ namespace RT64 {
+@@ -509,69 +635,163 @@ namespace RT64 {
              buildCallHashMap(p, prevWorkload, prevProj, prevCallHashMap);
          }
  
@@ -2281,7 +2295,7 @@ index 87392d0..0552408 100644
          }
  
          // Compute all the differences between transforms and insert them into a vector that will be sorted according to the differences.
-@@ -604,6 +822,28 @@ namespace RT64 {
+@@ -604,6 +824,28 @@ namespace RT64 {
              }
  
              matchTransform(firstCurWorkload, firstPrevWorkload, firstCurWorkloadMap, firstPrevWorkloadMap, candidate.curIndex, candidate.prevIndex, modifiedBuffers);
@@ -2310,7 +2324,7 @@ index 87392d0..0552408 100644
          }
  
          if (!modifiedBuffers.empty()) {
-@@ -669,14 +909,48 @@ namespace RT64 {
+@@ -669,14 +911,48 @@ namespace RT64 {
              const bool wrappedUlt = (curTile.cmt == G_TX_WRAP) && (modulo(integerUlt, curTile.maskt * 4) == modulo(expectedUlt, curTile.maskt * 4));
              const bool wrappedLrs = (curTile.cms == G_TX_WRAP) && (modulo(integerLrs, curTile.masks * 4) == modulo(expectedLrs, curTile.masks * 4));
              const bool wrappedLrt = (curTile.cmt == G_TX_WRAP) && (modulo(integerLrt, curTile.maskt * 4) == modulo(expectedLrt, curTile.maskt * 4));
@@ -2363,7 +2377,7 @@ index 87392d0..0552408 100644
              curTileMap.mapped = true;
              firstCurWorkloadMap.prevTilesMapped[indices.second] = true;
              tileInterpolationUsed = tileInterpolationUsed || tileScrolled;
-@@ -784,7 +1058,7 @@ namespace RT64 {
+@@ -784,7 +1060,7 @@ namespace RT64 {
          }
      }
      
@@ -2372,7 +2386,7 @@ index 87392d0..0552408 100644
          for (uint32_t c = 0; c < proj.gameCallCount; c++) {
              const GameCall &call = proj.gameCalls[c];
              uint32_t matrixIdHash = 0;
-@@ -802,7 +1076,7 @@ namespace RT64 {
+@@ -802,7 +1078,7 @@ namespace RT64 {
                  doTileMatching = doTileMatching || (group.tileInterpolation == G_EX_COMPONENT_AUTO);
              }
  
