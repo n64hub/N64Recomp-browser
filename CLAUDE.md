@@ -118,10 +118,11 @@ docs line) is made in the same work like any other.
   shader, the plume device thread and hlslpp's wasm SIMD backend, and checks that `patches/` match the forks and apply
   to every recomp commit in `patches/pins.txt` and over DKR-R-web's, CBFD-Recompiled-web's,
   JetForceGemini-Recomp-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
-  BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's and f-zero-x-recomp's own
-  patches, and
-  compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui. It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands. A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play,
-  serve, read and publish pages runs only the `changes` job.
+  BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's, f-zero-x-recomp's and
+  rush-2049-recomp's own patches, and compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui.
+  It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands.
+  A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play, serve, read and publish pages runs only the
+  `changes` job.
 
 ## The forks
 
