@@ -453,16 +453,17 @@ rt64, N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on 
 N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Hudson's engine switches between dozens of small processes
 with its own setjmp and longjmp, which a recomp can't: its patches run each process on a thread of its own, one at a
 time, on the desktop and the page alike (its docs/processes.md), so the page needs no Asyncify, and load each overlay
-through its OvlLoad. It draws a board's camera to the window's edges on a picture wider than 4:3, past the scissor that
-held it inside 4:3 and the console's overscan border. Its `tools/build_web.sh` runs a Docker image of its own, so
-`publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 461 shaders: the boot
-(the launcher, the title, the file select, the mode select and a Battle Royale's setup, 52), a section for each of the
-Battle Royale map's six boards and one for every six of the 70 minigames, recorded by `tools/record_shaders.sh` and
-`tools/shader_plan.json` without anyone playing: a board's index is written where the setup reads it, and a survey in
-`patches/survey.c` takes the game from the setup's way to the first board to each minigame in turn, with the teams,
-computer players and minigame index a board sets, and four computer players play each to its end. A board's menus
-and minigames present the game's own 30, as Mario Party's do: the engine draws a frame in several RSP tasks, which
-RT64 interpolates as frames of their own. Its README and docs/web.md have the rest.
+through its OvlLoad. It draws a board's camera to the window's edges on a picture wider than 4:3, past the scissor
+that held it inside 4:3 and the console's overscan border. Its `tools/build_web.sh` runs a Docker image of its own, so
+`publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 462 shaders: the boot
+(the launcher, the title, the file select, the mode select and a Battle Royale's setup, 53, one of them a board's
+start's at a 3840x2000 canvas, added by hand), a section for each of the Battle Royale map's six boards and one for
+every six of the 70 minigames, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone
+playing: a board's index is written where the setup reads it, and a survey in `patches/survey.c` takes the game from
+the setup's way to the first board to each minigame in turn, with the teams, computer players and minigame index a
+board sets, and four computer players play each to its end. A board's menus and minigames present the game's own 30,
+as Mario Party's do: the engine draws a frame in several RSP tasks, which RT64 interpolates as frames of their own.
+Its README and docs/web.md have the rest.
 
 ## The games' own frame rates
 
