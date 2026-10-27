@@ -481,7 +481,10 @@ six of the 60 minigames that are not duels, recorded by `tools/record_shaders.sh
 anyone playing: a survey in `patches/survey.c` sends the game to each board with GwSystem's board index set as it goes,
 and to each minigame by its explanation screen as a board opens it, with four computer players. The six duels are not in
 it: opened outside a board's own duel they pick among the board's spaces and crash, so a page builds their shaders as it
-first draws them. Its README, CLAUDE.md and docs/web.md have the rest.
+first draws them. The engine draws a frame in several RSP tasks, as Mario Party's does, but its page pins a tag
+before rt64 bce5e11, which interpolates them as one game frame: built on it, the page's game stops within a minute
+when it presents uncapped. So its menus and minigames present the game's own 30. Its README, CLAUDE.md and
+docs/web.md have the rest.
 
 `n64hub/mario-party-3-recomp` is Mario Party 3 (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty3 decompilation's symbols, with RecompFrontend's launcher and menus, and Rainchus's
