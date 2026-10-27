@@ -543,4 +543,9 @@ rt64 83d4be7,          rounded up to whole pixels (Auto's 1708x960 at a 1600x900
 rt64 46f182f           picture by a third of a pixel, and Chrome's WebGPU drew no row past the viewport's last whole
                        one, so the canvas's last row stayed black; 83d4be7 rounds in fromHDtoWindow and 46f182f with
                        roundf and no include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change
+rt64 d64a926           RT64_GAME_FRAME_WORKLOADS's frames drawn whole: a workload that draws nothing isn't an offscreen
+                       pass, a shown framebuffer is any of the VI's last eight different ones (not viHistory's last
+                       three VIs, which miss a third framebuffer shown now and then) and the queue holds 32, so a frame
+                       of up to a dozen workloads fits beside the one before and the next; each ended Mario Party's
+                       frames early, and the frames between the game's showed its board without HUD, text or characters
 ```

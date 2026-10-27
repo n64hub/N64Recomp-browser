@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 46f182fc930122297d6345f9b06bb5e97408edef
+rt64: https://github.com/n64hub/rt64-web d64a926f54980ee11ffba154338ed105bc531098
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3068,7 +3068,7 @@ index 8858dac..933b80e 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..3b3517e 100644
+index 2970e71..2153691 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -3562,7 +3562,24 @@ index 2970e71..3b3517e 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1909,6 +2191,7 @@ namespace RT64 {
+@@ -1883,6 +2165,16 @@ namespace RT64 {
+                 viHistory.pushVI(newVI, screenFbSize.x);
+                 viHistory.pushFactor(lastScreenFactorCounter + 1);
+                 lastScreenFactorCounter = 0;
++
++                bool shownBefore = false;
++                for (const ShownFramebuffer &shown : shownFramebuffers) {
++                    shownBefore = shownBefore || ((shown.address == screenFbAddress) && (shown.width == screenFbSize.x) && (shown.siz == screenFbSiz));
++                }
++
++                if (!shownBefore) {
++                    shownFramebuffers[shownFramebufferCursor] = { screenFbAddress, screenFbSize.x, screenFbSiz };
++                    shownFramebufferCursor = (shownFramebufferCursor + 1) % shownFramebuffers.size();
++                }
+             }
+             else if (viVisible) {
+                 lastScreenFactorCounter++;
+@@ -1909,6 +2201,7 @@ namespace RT64 {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
@@ -3570,7 +3587,7 @@ index 2970e71..3b3517e 100644
                          {
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
-@@ -1953,6 +2236,11 @@ namespace RT64 {
+@@ -1953,6 +2246,11 @@ namespace RT64 {
              present.screenVI = newVI;
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
@@ -3582,7 +3599,7 @@ index 2970e71..3b3517e 100644
  
              // This presentation originates from screen changes being made manually by the CPU
              // or the game somehow not doing some form of buffering (instant input romhacks).
-@@ -1971,6 +2259,9 @@ namespace RT64 {
+@@ -1971,6 +2269,9 @@ namespace RT64 {
          renderTargetManager.destroyAll();
          renderTargetManager.setMultisampling(multisampling);
          dummyDepthTarget.reset();
@@ -3592,28 +3609,35 @@ index 2970e71..3b3517e 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,6 +2951,36 @@ namespace RT64 {
+@@ -2660,6 +2961,43 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
 +
-+        // Whether the workload draws to any framebuffer the VI has shown lately, for a workload a full sync ends. It's
-+        // worked out here, not where fullSync() ends, which the games' own patches of RT64 add to.
++        // Whether the workload draws to any framebuffer the VI has shown (shownFramebuffers), for a workload a full sync
++        // ends. It's worked out here, not where fullSync() ends, which the games' own patches of RT64 add to. A workload
++        // that draws nothing is no offscreen pass even where it sets a color image, as a game's RSP task that draws
++        // nothing does in the middle of its frame.
 +        if (!paused) {
 +            bool viShowsAny = false;
++            bool drawsAny = false;
 +            uint32_t lastShownPair = 0;
 +            workload.drawsShown = false;
 +            workload.shownFbAddress = 0;
-+            for (const VIHistory::Present &entry : viHistory.history) {
-+                if (!entry.vi.visible()) {
++            for (uint32_t f = 0; f < workload.fbPairCount; f++) {
++                drawsAny = drawsAny || !workload.fbPairs[f].drawColorRect.isEmpty();
++            }
++
++            for (const ShownFramebuffer &shown : shownFramebuffers) {
++                if (shown.address == 0) {
 +                    continue;
 +                }
 +
 +                viShowsAny = true;
 +                for (uint32_t f = 0; f < workload.fbPairCount; f++) {
 +                    const FramebufferPair &fbPair = workload.fbPairs[f];
-+                    const bool drawsEntry = !fbPair.drawColorRect.isEmpty() && (fbPair.colorImage.address == entry.vi.fbAddress()) &&
-+                        (fbPair.colorImage.width == entry.vi.fbSize().x) && (fbPair.colorImage.siz == entry.vi.fbSiz());
++                    const bool drawsEntry = !fbPair.drawColorRect.isEmpty() && (fbPair.colorImage.address == shown.address) &&
++                        (fbPair.colorImage.width == shown.width) && (fbPair.colorImage.siz == shown.siz);
 +
 +                    // The last of the shown framebuffers it draws to.
 +                    if (drawsEntry && (!workload.drawsShown || (f >= lastShownPair))) {
@@ -3624,12 +3648,12 @@ index 2970e71..3b3517e 100644
 +                }
 +            }
 +
-+            workload.offscreenOnly = viShowsAny && (workload.fbPairCount > 0) && !workload.drawsShown;
++            workload.offscreenOnly = viShowsAny && drawsAny && !workload.drawsShown;
 +        }
      }
  
      void State::advancePresent(Present &present, bool paused) {
-@@ -2724,6 +3045,25 @@ namespace RT64 {
+@@ -2724,6 +3062,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  
@@ -3656,7 +3680,7 @@ index 2970e71..3b3517e 100644
          extended.ditherNoiseStrength = noiseStrength;
      }
 diff --git a/src/hle/rt64_state.h b/src/hle/rt64_state.h
-index 7a8c13b..0ac1025 100644
+index 7a8c13b..87f584c 100644
 --- a/src/hle/rt64_state.h
 +++ b/src/hle/rt64_state.h
 @@ -4,6 +4,8 @@
@@ -3727,7 +3751,25 @@ index 7a8c13b..0ac1025 100644
          GameConfiguration gameConfig;
          uint32_t displayListAddress;
          uint64_t displayListCounter;
-@@ -129,6 +169,7 @@ namespace RT64 {
+@@ -100,6 +140,17 @@ namespace RT64 {
+         uint64_t lastScreenHash;
+         uint32_t lastScreenFactorCounter;
+         VIHistory viHistory;
++
++        // The last different framebuffers the VI has shown, for which a workload draws to (advanceWorkload()):
++        // viHistory keeps the last three VIs, and a game with three framebuffers can show its third only now and then.
++        struct ShownFramebuffer {
++            uint32_t address = 0;
++            uint32_t width = 0;
++            uint8_t siz = 0;
++        };
++
++        std::array<ShownFramebuffer, 8> shownFramebuffers = {};
++        uint32_t shownFramebufferCursor = 0;
+         PresetDrawCallLibrary drawCallLibrary;
+         PresetLightsLibrary lightsLibrary;
+         PresetMaterialLibrary materialLibrary;
+@@ -129,6 +180,7 @@ namespace RT64 {
              bool vertexTestZActive = false;
              float ditherNoiseStrength = 1.0f;
              bool extendRDRAM = false;
@@ -3735,7 +3777,7 @@ index 7a8c13b..0ac1025 100644
          };
  
          Extended extended;
-@@ -144,6 +185,10 @@ namespace RT64 {
+@@ -144,6 +196,10 @@ namespace RT64 {
          void flush();
          void submitFramebufferPair(FramebufferPair::FlushReason flushReason);
          void checkRDRAM();
@@ -3746,7 +3788,7 @@ index 7a8c13b..0ac1025 100644
          void fullSync();
          void fullSyncFramebufferPairTiles(Workload &workload, FramebufferPair &fbPair, uint32_t &loadOpCursor, uint32_t &rdpTileCursor);
          void listProcessBegin();
-@@ -162,6 +207,7 @@ namespace RT64 {
+@@ -162,6 +218,7 @@ namespace RT64 {
          DisplayList *popReturnAddress();
          void setRefreshRate(uint16_t refreshRate);
          void setRenderToRAM(uint8_t renderToRAM);
@@ -3853,14 +3895,14 @@ index b4c85f5..6d3d99d 100644
          commandWarnings.clear();
          spriteCommands.clear();
 diff --git a/src/hle/rt64_workload.h b/src/hle/rt64_workload.h
-index 8ea27d5..bec04f0 100644
+index 8ea27d5..589d7eb 100644
 --- a/src/hle/rt64_workload.h
 +++ b/src/hle/rt64_workload.h
 @@ -226,6 +226,12 @@ namespace RT64 {
          FramebufferStorage fbStorage;
          uint32_t viOriginalRate;
          hlslpp::uint2 viFbSize = {};
-+        // Draws only to framebuffers the VI hasn't shown lately (State::advanceWorkload): an offscreen pass. Or draws to
++        // Draws, and only to framebuffers the VI hasn't shown (State::advanceWorkload): an offscreen pass. Or draws to
 +        // one it has, shownFbAddress, the last such. With RT64_GAME_FRAME_WORKLOADS either can start a game frame of
 +        // several workloads (WorkloadQueue::endedGameFrame).
 +        bool offscreenOnly = false;
@@ -4516,10 +4558,10 @@ index 5a331aa..b28f485 100644
  
                  processCursor = -1;
 diff --git a/src/hle/rt64_workload_queue.h b/src/hle/rt64_workload_queue.h
-index bde2f03..f311f8a 100644
+index bde2f03..62594ff 100644
 --- a/src/hle/rt64_workload_queue.h
 +++ b/src/hle/rt64_workload_queue.h
-@@ -23,11 +23,28 @@
+@@ -23,11 +23,30 @@
  #   include "render/rt64_raytracing_shader_cache.h"
  #endif
  
@@ -4528,11 +4570,13 @@ index bde2f03..f311f8a 100644
 +// A game frame of several workloads is drawn once it has ended, and the one before it stays out of the writer's reach
 +// until then (WorkloadQueue::renderThreadLoop): the queue holds the frame before, the frame and the game's next one.
 +// A game can draw a frame in several, as Jet Force Gemini draws each of its frames in two (its shadows, then the
-+// frame). A frame that doesn't fit ends where the queue is full, as each workload was a frame of its own
-+// before, and with too few for the next one too the game waits for every
-+// interpolated frame to be presented: its frames take longer, its rate falls and the interpolated frames grow, down to
-+// a rate of one or two a second and a color target for each of hundreds of display frames.
-+#   define WORKLOAD_QUEUE_SIZE 16
++// frame) and Mario Party in up to a dozen (an RSP task for each microcode it draws with, and empty ones). A frame that
++// doesn't fit ends where the queue is full and is drawn in parts, the frames between the game's showing the first part
++// alone: with 16, Mario Party's board flickered without its characters, HUD and text now and then. With too few for
++// the next one too the game waits for every interpolated frame to be presented: its frames take longer, its rate falls
++// and the interpolated frames grow, down to a rate of one or two a second and a color target for each of hundreds of
++// display frames.
++#   define WORKLOAD_QUEUE_SIZE 32
 +#else
 +#   define WORKLOAD_QUEUE_SIZE 4
 +#endif
@@ -4549,7 +4593,7 @@ index bde2f03..f311f8a 100644
      struct WorkloadQueue {
          struct External {
              RenderDevice *device = nullptr;
-@@ -69,6 +86,18 @@ namespace RT64 {
+@@ -69,6 +88,18 @@ namespace RT64 {
          std::condition_variable cursorCondition;
          uint64_t workloadId;
          uint64_t lastPresentId;
@@ -4568,7 +4612,7 @@ index bde2f03..f311f8a 100644
          std::mutex workloadIdMutex;
          std::condition_variable workloadIdCondition;
          std::thread *renderThread = nullptr;
-@@ -91,6 +120,15 @@ namespace RT64 {
+@@ -91,6 +122,15 @@ namespace RT64 {
          std::unique_ptr<RSPProcessor> rspProcessor;
          std::unique_ptr<VertexProcessor> vertexProcessor;
          std::unique_ptr<RenderTarget> dummyDepthTarget;
@@ -4584,7 +4628,7 @@ index bde2f03..f311f8a 100644
          std::unique_ptr<RenderQueryPool> queryPool;
          FramebufferChangePool scratchFbChangePool;
          ProfilingTimer rendererCPUProfiler = ProfilingTimer(120);
-@@ -105,6 +143,10 @@ namespace RT64 {
+@@ -105,6 +145,10 @@ namespace RT64 {
          ~WorkloadQueue();
          void reset();
          void advanceToNextWorkload();
@@ -4595,7 +4639,7 @@ index bde2f03..f311f8a 100644
          void repeatLastWorkload();
          uint32_t previousWriteCursor() const;
          void waitForIdle();
-@@ -115,12 +157,13 @@ namespace RT64 {
+@@ -115,12 +159,13 @@ namespace RT64 {
          void threadConfigurationValidate();
          void threadRenderFrame(GameFrame &curFrame, const GameFrame &prevFrame, const WorkloadConfiguration &workloadConfig,
              const DebuggerRenderer &debuggerRenderer, const DebuggerCamera &debuggerCamera, float curFrameWeight, float prevFrameWeight,
