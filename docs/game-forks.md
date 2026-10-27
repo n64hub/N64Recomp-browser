@@ -402,8 +402,10 @@ and menus. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at the 
 too, so CI's `sm64-patches` job applies them over the patches on each PR. Its patches (MIPS C against the
 decompilation's headers) tag every matrix for RT64's interpolation, by graph node and object, widen the view, the HUD
 and the sky to the window's shape, and keep a few modern options, each with an Original value; the page keeps them all
-at the desktop's defaults (Hi-res Font Original, Draw Distance High), which cost it nothing measured. Render to RAM is
-off: the game never reads a frame it drew. IDO narrows a char or short argument in the function that takes it, so a
+at the desktop's defaults (Hi-res Font Original, Draw Distance High), which cost it nothing measured. It rumbles as
+the Japanese Shindou edition does, that edition's code patched over the USA game's functions and played at the General
+tab's Rumble Strength, which the page sends to a gamepad through the Gamepad API. Render to RAM is off: the game never
+reads a frame it drew. IDO narrows a char or short argument in the function that takes it, so a
 patch replacing a game function whose caller passes a wider value takes it as a word. Its `tools/build_web.sh` runs a
 Docker image of its own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list
 is 198 shaders, 147 pipelines: the boot (the launcher, the logo, the title's Mario head, the file select, 29) and 33
