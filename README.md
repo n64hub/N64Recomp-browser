@@ -40,7 +40,7 @@ have releases of their desktop build for Windows and Linux on their repo's Relea
 | Perfect Dark | this project's own recomp | [perfect-dark-recomp](https://github.com/n64hub/perfect-dark-recomp) | [play](https://n64hub.com/perfect-dark/) | not yet | not yet | 2026-10-26, v0.123.0 |
 | Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) | 354* | 348* | 2026-10-26, v0.123.0 |
 | F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) | 359* | 316* | 2026-10-26, v0.123.0 |
-| Mario Party | this project's own recomp | [mario-party-recomp](https://github.com/n64hub/mario-party-recomp) | [play](https://n64hub.com/mario-party/) | 130* | FFX* | 2026-10-27, v0.126.0 |
+| Mario Party | this project's own recomp | [mario-party-recomp](https://github.com/n64hub/mario-party-recomp) | [play](https://n64hub.com/mario-party/) | 130* | 119* | 2026-10-27, v0.126.0 |
 
 Median presents a second after the shader waits on a laptop's Intel UHD, maximized on its screen; * on a stand-in, newer than
 the laptop's: a desktop GPU at 3840x2000, uncapped from v0.47.0 (higher is a cheaper frame, 360 at most), Firefox's
