@@ -9,7 +9,8 @@
 # (none without: a tag that can't move speed gets only the smoke plays). <dir> holds the run: the builds
 # (<dir>/keep/<game>), each play's logs (<dir>/ab, <dir>/smoke), each step's log (<dir>/<game>.<step>.log) and a marker
 # per game and step that ended (<dir>/<game>.<step>, holding the step's exit code), so a run started again with the
-# same <dir> skips what is done and goes on where it stopped. Two loops run side by side:
+# same <dir> skips what is done and goes on where it stopped; a game whose markers are removed (its main moved during
+# the run) is built and played again. Two loops run side by side:
 # - the builds, one game after another, the --ab games first: publish_pages.sh <game> --browser <tag> --keep, which
 #   leaves a page whose files differ from what Pages serves in <dir>/keep/<game> and says when they are the same;
 # - the plays, a game behind: for a page that differs, its A/B if it is one of --ab (ab_pages.mjs, Chrome, Pages' page
@@ -117,6 +118,8 @@ move_pin() {
 
 builds() {
     for g in "${order[@]}"; do
+        # A new build's plays start over: ab_pages.mjs counts a play it finds in its --out as played.
+        [[ -f "$run/$g.build" ]] || rm -rf "$run/ab/$g" "$run/smoke/$g"
         step "$g" build q shared 40 bash "$here/publish_pages.sh" "$rush" "$g" --browser "$tag" --keep "$run/keep"
     done
 }
