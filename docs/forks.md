@@ -582,4 +582,7 @@ rt64 5a80f01           with Emscripten, a block loaded from part of a framebuffe
                        it loaded, not to its row's end, which checkRowTileCopy() turned down (rt64 9b87e67): Perfect
                        Dark's IR scanner loads each row crossing its lens as three pieces, and the two that end inside
                        the row each waited for the framebuffer in RAM, at 1.9 frames a second
+rt64 635551d           with Emscripten, a load ends its framebuffer pair only if its bytes meet one of the pair's
+                       newest 8 rects drawn or the box of the older ones, not any row of the box of them all: each
+                       IR scanner piece after a row's first ended a pair, 123 a game frame, and Perfect Dark held 30
 ```
