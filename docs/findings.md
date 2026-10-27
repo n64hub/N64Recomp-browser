@@ -1270,6 +1270,20 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   the throttled game read 53-57 with the goggles on and 52-56 off in two interleaved pairs, no worse. The goggles also
   missed 8 shaders of the list, drawn through the ubershader until built (perfect-dark-recomp's list has them now): at
   the same 43-44% busy on that GPU, and the throttled pairs read nothing either way.
+- Perfect Dark's other full-screen effects copy the view a row at a time through `bview_copy_pixels` too, and all but
+  one load each row whole, which RT64 draws from tile copies as it does the goggles': in Defection with each on from
+  the console (Chrome uncapped at 3840x2000, RTX 5080, an idle host, Pages' main 3dcd6d7 on v0.123.0, plays.jsonl's pd
+  runs of 2026-10-27 noted "screen effects" and set pd-ir-202610271900), the game held 58.5 with the X-ray scanner's
+  zoom blur and 59-60 through Infiltration's intro (the film interlace and its static, which reads random RAM as I8,
+  no framebuffer) and Air Base's horizon scanner, as with them off. CamSpy's fisheye and the Slayer's interlace copy
+  whole rows at a zoom as the X-ray blur does (a Slayer rocket's view can't be set from the console: the game puts it
+  back without a rocket). So drawing them a block of rows at a time would buy what it bought the goggles, nothing. The
+  IR scanner fell to 1.9 frames a second, the GPU 65% busy against 17%: its lens draws a row that crosses its
+  semicircle in three pieces, each loaded alone from mid-row, at an x that isn't 4-pixel aligned and after a draw into
+  that row, and RT64 found no tile copy for them, so each waited for the framebuffer in RAM, whose stale contents
+  showed (a cyan crescent at the semicircle's edge). perfect-dark-recomp's `patches/ir_lens.c` loads such a row once
+  and draws the pieces from it: 60 with the IR scanner on, the semicircle its own red as the game's combiner makes it,
+  in an A/B against Pages interleaved; which of the three loses RT64 the tile copy is still open.
 
 ## A page's thread in Chrome, throttled
 
