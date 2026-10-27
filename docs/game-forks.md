@@ -489,9 +489,9 @@ and `tools/shader_plan.json` without anyone playing: a survey in `patches/survey
 GwSystem's board index set as it goes, and to each minigame by its explanation screen as a board opens it, with four
 computer players. The six duels are not in it: opened outside a board's own duel they pick among the board's spaces
 and crash, so a page builds their shaders as it first draws them. The engine draws a frame in several RSP tasks, as
-Mario Party's does, which RT64 interpolates as one game frame and draws whole (rt64 bce5e11, d64a926, 5f104ed and
-e0f41b3, `RT64_GAME_FRAME_WORKLOADS` on in its desktop build too), so its menus and minigames interpolate to the
-display's rate as the boards do. Its README, CLAUDE.md and docs/web.md have the rest.
+Mario Party's does, which RT64 interpolates as one game frame and draws whole (rt64 bce5e11, d64a926, 5f104ed,
+e0f41b3 and ea445cc, `RT64_GAME_FRAME_WORKLOADS` on in its desktop build too), so its menus and minigames interpolate to
+the display's rate as the boards do. Its README, CLAUDE.md and docs/web.md have the rest.
 
 `n64hub/mario-party-3-recomp` is Mario Party 3 (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty3 decompilation's symbols, with RecompFrontend's launcher and menus, and Rainchus's
