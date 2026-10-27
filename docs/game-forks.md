@@ -479,9 +479,9 @@ start's at a 3840x2000 canvas, added by hand), a section for each of the Battle 
 every six of the 70 minigames, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone
 playing: a board's index is written where the setup reads it, and a survey in `patches/survey.c` takes the game from
 the setup's way to the first board to each minigame in turn, with the teams, computer players and minigame index a
-board sets, and four computer players play each to its end. A board's menus and minigames present the game's own 30,
-as Mario Party's do: the engine draws a frame in several RSP tasks, which RT64 interpolates as frames of their own.
-Its README and docs/web.md have the rest.
+board sets, and four computer players play each to its end. The engine draws a frame in several RSP tasks, as Mario
+Party's does, which RT64 interpolates as one game frame since rt64 bce5e11: a page built before it presents the game's
+own 30 in a board's menus and minigames. Its README and docs/web.md have the rest.
 
 ## The games' own frame rates
 
