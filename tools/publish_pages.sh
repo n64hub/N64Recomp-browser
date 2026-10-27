@@ -5,7 +5,7 @@
 #   bash tools/publish_pages.sh <rush-2049-recomp checkout> [<game>...] [--dry-run | --browser <commit> [--keep <dir>]]
 #       [--ref <commit>] [--played <dir>] [-- <queue command>...]
 #
-# For each game in the list below (all of them unless named):
+# For each game in the list below (all of them unless named, but those not released yet: unreleased, below):
 # 1. Syncs its repo's origin/main to a copy kept on $BUILD_HOST, with rush-2049-recomp's tools/remote_build.sh (its
 #    Docker image, a copy per name, one shared ccache): Rush 2049's is the copy named publish, as its own
 #    tools/publish_page.sh has it, and a fork's is pages-<game>, synced from a clone of it kept here in $PAGES_CACHE
@@ -133,9 +133,15 @@ mp1    n64hub/mario-party-recomp             MarioPartyRecompiled build/web mari
 mp2    n64hub/mario-party-2-recomp           MarioParty2Recompiled build/web mario-party-2
 mp3    n64hub/mario-party-3-recomp           MarioParty3Recompiled build/web mario-party-3
 "
+# Games whose pages are not published until the games are released: left out of a run that names no game, and built
+# only as a dry run (--dry-run, --browser, --ref), so their pins can still be built and played.
+unreleased=" mp1 mp2 mp3 "
 selected=("${args[@]:1}")
-[[ ${#selected[@]} -gt 0 ]] || selected=($(awk 'NF { print $1 }' <<< "$games"))
+[[ ${#selected[@]} -gt 0 ]] || selected=($(awk -v u="$unreleased" 'NF && !index(u, " " $1 " ") { print $1 }' <<< "$games"))
 for g in "${selected[@]}"; do grep -q "^$g " <<< "$games" || { echo "no game $g (one of: $(awk 'NF { printf "%s ", $1 }' <<< "$games"))"; exit 1; }; done
+for g in "${selected[@]}"; do
+    [[ $dry_run == true || $unreleased != *" $g "* ]] || { echo "$g is not released: its page is built only as a dry run"; exit 1; }
+done
 if [[ -n "$ref" ]]; then
     [[ ${#args[@]} -eq 2 ]] || { echo "--ref builds one game's commit: name the game"; exit 1; }
     [[ -n "${PAGES_COPY:-}" ]] || { echo "--ref builds in copies of its own: set PAGES_COPY"; exit 1; }

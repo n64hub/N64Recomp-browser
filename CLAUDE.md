@@ -171,9 +171,10 @@ the last one at once (docs/publishing.md): it builds each game's page on the new
 changed (each once in Firefox for crashes and errors, and an A/B in Chrome against the page Pages serves on two or three
 games that stand for the rest when the tag can move speed), and only a page that boots with no WebGPU errors and plays
 no worse than Pages moves its fork onto the tag and is published. One that plays worse stays on
-Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3
+Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X
 are retested in the same work, never filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
-that left its page's bytes alone.
+that left its page's bytes alone. Mario Party 1, 2 and 3 are not published until the games are released
+(docs/publishing.md): the retest leaves them out.
 
 A critical fix doesn't wait for the retest: a fix for a page on Pages that crashes, never boots, loses its WebGPU
 device or can't be played moves the pins of the games it fixes (this project's own recomps' by a PR), builds, plays in Chrome and

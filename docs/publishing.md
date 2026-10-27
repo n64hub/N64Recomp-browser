@@ -24,13 +24,17 @@ A run on a schedule that takes every change since the last one at once:
   N64Recomp-browser onto the tag (a commit to the fork's `main`) and is published. One that plays
   worse stays on Pages as it was, its fork on its last tag, and has work filed. So a fork's `main` is what its page was
   built from, and `git log <played>..<built>` here lists what a page took since it was last played.
-- Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3, this project's own recomps, are
+- Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X, this project's own recomps, are
   retested in the
   same work,
   built, played and recorded the same way, never filed for later; only their pins move differently, by a
   PR on each one's repo that moves `lib/N64Recomp-browser` to the tag and builds the same bytes, which the retest
   merges before it publishes the page. Rush 2049's PR also runs the desktop game, and its pin moves even to a tag that
   left its page's bytes alone, since its desktop build can take something from it. A critical fix that plays every game takes it along the same way.
+- Mario Party 1, 2 and 3, this project's own recomps too, are not published until the games are released:
+  `tools/publish_pages.sh` holds them as unreleased, builds them only as a dry run and leaves them out of a run that
+  names no game, and so does the retest. Their pages are built and played, and their pins moved by a PR, by the work
+  that changes them.
 - `tools/publish_pages.sh <rush-2049-recomp checkout> --browser <tag> --keep <dir>`, run where the ROMs are, builds
   every game's main, Rush 2049's too, with N64Recomp-browser moved to the tag (in the build host's copy only), names
   the pages whose files differ from what Pages serves and copies each of those builds into `<dir>/<game>` as it

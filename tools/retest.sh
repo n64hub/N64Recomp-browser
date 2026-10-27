@@ -22,7 +22,9 @@
 #   boots it from Pages in headless Chrome). An --ab game, and one whose repo changed more than its pin since the main
 #   Pages served, is then played from Pages in Firefox (play_pages.sh); the rest are not (docs/publishing.md, The
 #   retest). Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3 move by a PR on their own repos
-#   (CLAUDE.md, The pins): for each, the run pushes the pin commit as
+#   (CLAUDE.md, The pins), though the games publish_pages.sh holds as unreleased (Mario Party 1, 2 and 3) are left
+#   out of a run that names no game, since Pages serves no page of theirs to play against: for each, the run pushes the
+#   pin commit as
 #   branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
 #   build has run), `publish_pages.sh <checkout> <game> --played <dir>/keep` and `play_pages.sh <checkout> firefox
 #   <game>` publish and play it.
@@ -53,7 +55,8 @@ rush="$(cd "${args[0]}" && pwd)" tag="${args[1]}" selected=("${args[@]:3}")
 mkdir -p "${args[2]}" && run="$(cd "${args[2]}" && pwd)"
 node="${NODE:-node}" cache="${PAGES_CACHE:-$HOME/.cache/n64recomp-pages}"
 games="$(sed -n '/^games="/,/^"/p' "$here/publish_pages.sh" | grep -v '"')"
-[[ ${#selected[@]} -gt 0 ]] || selected=($(awk 'NF { print $1 }' <<< "$games"))
+unreleased="$(sed -n 's/^unreleased="\(.*\)"$/\1/p' "$here/publish_pages.sh")"
+[[ ${#selected[@]} -gt 0 ]] || selected=($(awk -v u=" $unreleased " 'NF && !index(u, " " $1 " ") { print $1 }' <<< "$games"))
 for g in "${selected[@]}" "${ab[@]}"; do grep -q "^$g " <<< "$games" || { echo "no game $g"; exit 1; }; done
 git -C "$here/.." fetch -q --tags origin
 tag_sha="$(git -C "$here/.." rev-parse -q --verify "$tag^{commit}")" || { echo "no tag $tag"; exit 1; }
