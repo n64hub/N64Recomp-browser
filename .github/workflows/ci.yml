@@ -516,6 +516,36 @@ jobs:
             echo "$(basename "$patch") applies"
           done
 
+  # Rush 2049's own changes over the patches (rush-2049-recomp, its main): its tools/apply_runtime_patches.sh applies
+  # each project's patch here, then its runtime-patches/<project>-<n>-*.patch, and they change lines near the forks'
+  # (rt64's GPU timings beside its workload queue, plume's queries, RecompFrontend's input). Each project is checked out
+  # at patches.txt's upstream commit, not the game's own pin, so this is what its next pin move builds; the script runs
+  # with this checkout as its lib/N64Recomp-browser. Red on a PR means one stopped applying: it is made again over the
+  # new patches in the game's repo, in that PR's work.
+  rush2049-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: rush-2049-recomp's apply over them
+        run: |
+          rush="$RUNNER_TEMP/rush2049"
+          git clone -q --depth 1 https://github.com/n64hub/rush-2049-recomp "$rush"
+          git -C "$rush" log -1 --format='rush-2049-recomp %h %s'
+          grep -v '^#' patches/patches.txt | grep . | while read -r name path fork commit; do
+            dir="$rush/lib/$path"
+            mkdir -p "$dir" && git -C "$dir" init -q
+            git -C "$dir" -c protocol.version=2 fetch -q --depth 1 "$fork" "$commit"
+            git -C "$dir" checkout -q FETCH_HEAD
+          done
+          rmdir "$rush/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$rush/lib/N64Recomp-browser"
+          bash "$rush/tools/apply_runtime_patches.sh"
+
   # Every library a page is made of, built with Emscripten (tests/build/CMakeLists.txt): from the forks, and from
   # Banjo-Kazooie's own upstream commits with the patches in.
   emscripten:
@@ -598,7 +628,7 @@ jobs:
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, snap-patches,
-      rush2-patches, snowboarding-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, emscripten]
+      rush2-patches, snowboarding-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
