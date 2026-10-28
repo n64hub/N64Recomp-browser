@@ -1487,10 +1487,10 @@ Fox 64 mid-Corneria, each fault in turn in one visit, every run in plays.jsonl:
   (754x387) and back, no error, the rate unchanged.
 - A suspended AudioContext (10 s): the game ran on, and once resumed the sound came up short for a few seconds
   (201-1,304 frames) and then played as before.
-- A lost WebGPU device (`device.destroy()`): in both browsers both pages froze on their last frame and said nothing
-  but the console's `WebGPU device lost` (plume's `device.lost` only logs), and never asked for a new device. They
-  still call `getCurrentTexture` each frame, so a count of presents doesn't show it: the screenshots do. A reload
-  brought each back.
+- A lost WebGPU device (`device.destroy()`): in both browsers both pages froze on their last frame and never asked for
+  a new device; over it the status line says the graphics stopped and asks for a reload (frontend/shell.html, since
+  v0.76.0; play_page records it as the fault's `notice`). They still call `getCurrentTexture` each frame, so a count
+  of presents doesn't show it: the screenshots do. A reload brought each back.
 - A hidden tab (30 s) in Chrome: the pages presented ~60 a second while hidden, but Star Fox 64's sound came up
   3,000-7,000 frames short every 5 s, and back in front both presented below their rate before (60, then 89 against
   147; 60 for ~80 s against 114), until plume 08f9327 and rt64 52ec88f (A page in a hidden tab). Firefox played both
