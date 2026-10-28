@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web 8c7de5e8d1f5b0eb811f1e91fe9dcce2b65028c2
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web c0c49c622c9d4be0dd53d9ed03041eacacb1fd39
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
@@ -306,10 +306,33 @@ index eb8833e..cdac768 100644
  
          std::vector<GameOption *> &get_options() { return options; }
 diff --git a/recompui/src/base/ui_state.cpp b/recompui/src/base/ui_state.cpp
-index 277a421..c50a769 100644
+index 277a421..b71a2fa 100644
 --- a/recompui/src/base/ui_state.cpp
 +++ b/recompui/src/base/ui_state.cpp
-@@ -1015,7 +1015,10 @@ void recompui::release_image(const std::string &src) {
+@@ -899,8 +899,22 @@ void deinit_hook() {
+     ui_state.reset();
+ }
+ 
++#ifdef __EMSCRIPTEN__
++// Where a page's lost WebGPU device is replaced, the menus' render interface makes what it drew with again on the new
++// one, and everything else (RmlUi, the contexts and documents, the menus open) stays as it was.
++void replace_device_hook(plume::RenderInterface* interface, plume::RenderDevice* device) {
++    std::lock_guard lock{ ui_state_mutex };
++    if (ui_state) {
++        ui_state->render_interface.replace_device(interface, device);
++    }
++}
++#endif
++
+ void recompui::set_render_hooks() {
+     RT64::SetRenderHooks(init_hook, draw_hook, deinit_hook);
++#ifdef __EMSCRIPTEN__
++    RT64::SetRenderHookReplaceDevice(replace_device_hook);
++#endif
+ }
+ 
+ void recompui::message_box(const char* msg) {
+@@ -1015,7 +1029,10 @@ void recompui::release_image(const std::string &src) {
  }
  
  void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
@@ -518,10 +541,14 @@ index a7954c7..e8bbc15 100644
      return sample_positions_supported;
  }
 diff --git a/recompui/src/renderer/ui_renderer.cpp b/recompui/src/renderer/ui_renderer.cpp
-index 5ca5349..cbf3598 100644
+index 5ca5349..170c981 100644
 --- a/recompui/src/renderer/ui_renderer.cpp
 +++ b/recompui/src/renderer/ui_renderer.cpp
-@@ -15,12 +15,19 @@
+@@ -12,15 +12,23 @@
+ #include "rt64_texture_cache.h"
+ 
+ #include "RmlUi/Core/RenderInterfaceCompatibility.h"
++#include "RmlUi/Core/Core.h"
  
  #include "ui_renderer.h"
  
@@ -542,7 +569,7 @@ index 5ca5349..cbf3598 100644
  // TODO: Forced game includes
  #   include "InterfaceVS.hlsl.dxil.h"
  // TODO: Forced game includes
-@@ -32,7 +39,12 @@
+@@ -32,7 +40,12 @@
  #   include "InterfacePS.hlsl.metal.h"
  #endif
  
@@ -556,7 +583,7 @@ index 5ca5349..cbf3598 100644
  #    define GET_SHADER_BLOB(name, format) \
          ((format) == plume::RenderShaderFormat::SPIRV ? name##BlobSPIRV : \
          (format) == plume::RenderShaderFormat::DXIL ? name##BlobDXIL : nullptr)
-@@ -107,13 +119,22 @@ class RmlRenderInterface_RT64_impl : public Rml::RenderInterfaceCompatibility {
+@@ -107,13 +120,22 @@ class RmlRenderInterface_RT64_impl : public Rml::RenderInterfaceCompatibility {
      static constexpr uint32_t initial_upload_buffer_size = 1024 * 1024;
      static constexpr uint32_t initial_vertex_buffer_size = 512 * sizeof(Rml::Vertex);
      static constexpr uint32_t initial_index_buffer_size = 1024 * sizeof(int);
@@ -580,8 +607,59 @@ index 5ca5349..cbf3598 100644
      int scissor_x_ = 0;
      int scissor_y_ = 0;
      int scissor_width_ = 0;
-@@ -160,10 +181,11 @@ public:
+@@ -158,18 +180,65 @@ class RmlRenderInterface_RT64_impl : public Rml::RenderInterfaceCompatibility {
+     std::unordered_map<std::string, ImageFromBytes> image_from_bytes_map;
+ public:
      RmlRenderInterface_RT64_impl(plume::RenderInterface* interface, plume::RenderDevice* device) {
++        vertex_buffer_.flags_ = plume::RenderBufferFlag::VERTEX;
++        index_buffer_.flags_ = plume::RenderBufferFlag::INDEX;
++        create_device_objects(interface, device);
++    }
++
++#ifdef __EMSCRIPTEN__
++    // Where RT64 replaces a lost WebGPU device (its replace device hook): destroys everything made on the old device,
++    // RmlUi's textures included, which it loads again as it next draws with them, and keeps the rest (the images
++    // queued from bytes, the documents).
++    void release_device_objects() {
++        Rml::ReleaseTextures(GetAdaptedInterface());
++        textures_.clear();
++        for (DynamicBuffer *dynamic_buffer : { &upload_buffer_, &vertex_buffer_, &index_buffer_ }) {
++            dynamic_buffer->buffer_.reset();
++            dynamic_buffer->size_ = 0;
++            dynamic_buffer->bytes_used_ = 0;
++            dynamic_buffer->mapped_data_ = nullptr;
++        }
++
++        stale_buffers_.clear();
++        copy_command_fence_.reset();
++        copy_command_list_.reset();
++        copy_command_queue_.reset();
++        copy_buffer_.reset();
++        copy_buffer_size_ = 0;
++        screen_vertex_buffer_.reset();
++        screen_descriptor_set_.reset();
++        screen_framebuffer_.reset();
++        screen_texture_.reset();
++        screen_texture_ms_.reset();
++        pipeline_ms_.reset();
++        pipeline_.reset();
++        layout_.reset();
++        texture_set_builder_.reset();
++        sampler_set_.reset();
++        pixel_shader_.reset();
++        vertex_shader_.reset();
++        linearSampler_.reset();
++        nearestSampler_.reset();
++        multisampling_ = plume::RenderMultisampling();
++        window_width_ = 0;
++        window_height_ = 0;
++        list_ = nullptr;
++        interface_ = nullptr;
++        device_ = nullptr;
++    }
++#endif
++
++    void create_device_objects(plume::RenderInterface* interface, plume::RenderDevice* device) {
          interface_ = interface;
          device_ = device;
 +        swap_chain_format_ = device->getCapabilities().preferredSwapChainFormat;
@@ -593,7 +671,13 @@ index 5ca5349..cbf3598 100644
              multisampling_.sampleCount = desired_sample_count;
          }
  
-@@ -242,7 +264,7 @@ public:
+-        vertex_buffer_.flags_ = plume::RenderBufferFlag::VERTEX;
+-        index_buffer_.flags_ = plume::RenderBufferFlag::INDEX;
+-
+         // Create the texture upload buffer, vertex buffer and index buffer
+         resize_dynamic_buffer(upload_buffer_, initial_upload_buffer_size, false);
+         resize_dynamic_buffer(vertex_buffer_, initial_vertex_buffer_size, false);
+@@ -242,7 +311,7 @@ public:
              .dstBlendAlpha = plume::RenderBlend::INV_SRC_ALPHA,
              .blendOpAlpha = plume::RenderBlendOperation::ADD,
          };
@@ -602,7 +686,7 @@ index 5ca5349..cbf3598 100644
          pipeline_desc.renderTargetCount = 1;
          pipeline_desc.cullMode = plume::RenderCullMode::NONE;
          pipeline_desc.inputSlots = &vertex_slot_;
-@@ -280,6 +302,19 @@ public:
+@@ -280,6 +349,19 @@ public:
          copy_command_fence_ = device->createCommandFence();
      }
  
@@ -622,7 +706,7 @@ index 5ca5349..cbf3598 100644
      void reset_dynamic_buffer(DynamicBuffer &dynamic_buffer) {
          assert(dynamic_buffer.mapped_data_ == nullptr);
          dynamic_buffer.bytes_used_ = 0;
-@@ -288,14 +323,14 @@ public:
+@@ -288,14 +370,14 @@ public:
  
      void end_dynamic_buffer(DynamicBuffer &dynamic_buffer) {
          assert(dynamic_buffer.mapped_data_ != nullptr);
@@ -639,7 +723,7 @@ index 5ca5349..cbf3598 100644
          }
          
          // If there's already a buffer, move it into the stale buffers so it persists until the start of next frame.
-@@ -492,66 +527,64 @@ public:
+@@ -492,66 +574,64 @@ public:
              device_->createTexture(plume::RenderTextureDesc::Texture2D(source_dimensions.x, source_dimensions.y, 1, bgra ? RmlTextureFormatBgra : RmlTextureFormat));
  
          if (texture != nullptr) {
@@ -681,15 +765,15 @@ index 5ca5349..cbf3598 100644
 +                if (uploaded_size_bytes > copy_buffer_size_) {
 +                    copy_buffer_size_ = (uploaded_size_bytes * 3) / 2;
 +                    copy_buffer_ = device_->createBuffer(plume::RenderBufferDesc::UploadBuffer(copy_buffer_size_));
-+                }
+                 }
+-                // Directly copy if no padding is needed and the image isn't flipped.
 +
 +                // Copy the source data into the upload buffer.
 +                uint8_t* dst_data = (uint8_t *)(copy_buffer_->map());
 +                if ((row_byte_padding == 0) && !flip_y) {
 +                    // Directly copy if no padding is needed and the image isn't flipped.
 +                    memcpy(dst_data, source + row_pitch * first_row, row_pitch * rows);
-                 }
--                // Directly copy if no padding is needed and the image isn't flipped.
++                }
 +                // Otherwise copy row-by-row, padding each row as necessary, from the bottom up if the image is flipped.
                  else {
 -                    memcpy(dst_data, source, image_size_bytes);
@@ -711,18 +795,18 @@ index 5ca5349..cbf3598 100644
 -                }
 -            }
 +                unmap_written(copy_buffer_.get(), uploaded_size_bytes);
- 
--            copy_buffer_->unmap();
++
 +                // Reset the command list.
 +                copy_command_list_->begin();
  
--            // Reset the command list.
--            copy_command_list_->begin();
+-            copy_buffer_->unmap();
 +                // Prepare the texture to be a destination for copying.
 +                if (first_row == 0) {
 +                    copy_command_list_->barriers(plume::RenderBarrierStage::COPY, plume::RenderTextureBarrier(texture.get(), plume::RenderTextureLayout::COPY_DEST));
 +                }
-+
+ 
+-            // Reset the command list.
+-            copy_command_list_->begin();
 +                // Copy the upload buffer into the texture's rows.
 +                copy_command_list_->copyTextureRegion(
 +                    plume::RenderTextureCopyLocation::Subresource(texture.get()),
@@ -749,7 +833,7 @@ index 5ca5349..cbf3598 100644
  
              // Create a descriptor set with this texture in it.
              std::unique_ptr<plume::RenderDescriptorSet> set = texture_set_builder_->create(device_);
-@@ -588,8 +621,8 @@ public:
+@@ -588,8 +668,8 @@ public:
          if (multisampling_.sampleCount > 1) {
              if (window_width_ != image_width || window_height_ != image_height) {
                  screen_framebuffer_.reset();
@@ -760,6 +844,42 @@ index 5ca5349..cbf3598 100644
                  const plume::RenderTexture *color_attachment = screen_texture_ms_.get();
                  screen_framebuffer_ = device_->createFramebuffer(plume::RenderFramebufferDesc(&color_attachment, 1));
                  screen_descriptor_set_->setTexture(0, screen_texture_.get(), plume::RenderTextureLayout::SHADER_READ);
+@@ -695,6 +775,19 @@ void recompui::RmlRenderInterface_RT64::init(plume::RenderInterface* interface,
+     impl = std::make_unique<RmlRenderInterface_RT64_impl>(interface, device);
+ }
+ 
++#ifdef __EMSCRIPTEN__
++void recompui::RmlRenderInterface_RT64::replace_device(plume::RenderInterface* interface, plume::RenderDevice* device) {
++    assert(static_cast<bool>(impl));
++
++    if (device == nullptr) {
++        impl->release_device_objects();
++    }
++    else {
++        impl->create_device_objects(interface, device);
++    }
++}
++#endif
++
+ Rml::RenderInterface* recompui::RmlRenderInterface_RT64::get_rml_interface() {
+     if (impl) {
+         return impl->GetAdaptedInterface();
+diff --git a/recompui/src/renderer/ui_renderer.h b/recompui/src/renderer/ui_renderer.h
+index 99912a3..50023b9 100644
+--- a/recompui/src/renderer/ui_renderer.h
++++ b/recompui/src/renderer/ui_renderer.h
+@@ -26,6 +26,11 @@ namespace recompui {
+         ~RmlRenderInterface_RT64();
+         void reset();
+         void init(plume::RenderInterface* interface, plume::RenderDevice* device);
++#ifdef __EMSCRIPTEN__
++        // With nullptrs, destroys what was made on the device, and with a new device, makes it again on that one: RT64's
++        // replace device hook, where a page's lost WebGPU device is replaced.
++        void replace_device(plume::RenderInterface* interface, plume::RenderDevice* device);
++#endif
+         Rml::RenderInterface* get_rml_interface();
+         
+         void start(plume::RenderCommandList* list, int image_width, int image_height);
 diff --git a/recompui/src/util/file.cpp b/recompui/src/util/file.cpp
 index 7ee84ed..098d3d1 100644
 --- a/recompui/src/util/file.cpp

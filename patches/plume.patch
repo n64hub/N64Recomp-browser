@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web 6109ba1df4f266b351ad9fadc667e6c5b2df7c58
+plume: https://github.com/n64hub/plume-web 21dc1de4944e532061652fcb2ed429151289763e
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -924,10 +924,10 @@ index 0000000..b4650c5
 +}
 diff --git a/plume_device_thread.cpp b/plume_device_thread.cpp
 new file mode 100644
-index 0000000..e1c3ff3
+index 0000000..05a3502
 --- /dev/null
 +++ b/plume_device_thread.cpp
-@@ -0,0 +1,1676 @@
+@@ -0,0 +1,1683 @@
 +//
 +// plume
 +//
@@ -2515,6 +2515,13 @@ index 0000000..e1c3ff3
 +            return runSync(thread, [&]() { return inner->getSampleCountsSupported(format); });
 +        }
 +
++#if defined(__EMSCRIPTEN__)
++        // The backend answers from any thread (RenderDevice::isLost()), so this doesn't wait for the device thread.
++        bool isLost() const override {
++            return inner->isLost();
++        }
++#endif
++
 +        bool beginCapture() override {
 +            return runSync(thread, [&]() { return inner->beginCapture(); });
 +        }
@@ -2696,7 +2703,7 @@ index 0000000..a188eed
 +#endif
 +};
 diff --git a/plume_render_interface.h b/plume_render_interface.h
-index 2048557..918a483 100644
+index 2048557..1764dd9 100644
 --- a/plume_render_interface.h
 +++ b/plume_render_interface.h
 @@ -7,6 +7,8 @@
@@ -2762,7 +2769,7 @@ index 2048557..918a483 100644
          virtual bool resize() = 0;
          virtual bool needsResize() const = 0;
          virtual void setVsyncEnabled(bool vsyncEnabled) = 0;
-@@ -249,6 +284,11 @@ namespace plume {
+@@ -249,6 +284,15 @@ namespace plume {
          virtual RenderSampleCounts getSampleCountsSupported(RenderFormat format) const = 0;
          virtual bool beginCapture() = 0;
          virtual bool endCapture() = 0;
@@ -2770,6 +2777,10 @@ index 2048557..918a483 100644
 +        // A backend that delivers a READBACK buffer's data asynchronously (WebGPU's) calls this back each time some
 +        // arrives, on the thread it delivers it on, so a thread waiting for isMapReady() can be answered then.
 +        virtual void setReadbackCallback(void (*callback)()) { }
++
++        // Whether the device was lost and the interface's createDevice() now makes a new one to carry on with: a
++        // WebGPU device once the page has another in its place (plume_webgpu_device.js). Any thread may ask.
++        virtual bool isLost() const { return false; }
 +#endif
      };
  
@@ -2978,10 +2989,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..29ac6a2
+index 0000000..d611914
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3552 @@
+@@ -0,0 +1,3568 @@
 +//
 +// plume
 +//
@@ -3063,6 +3074,15 @@ index 0000000..29ac6a2
 +    const size = canvas.plumeSize = { width: canvas.width, height: canvas.height };
 +    for (const name of ['width', 'height']) {
 +        Object.defineProperty(canvas, name, { configurable: true, get: () => size[name], set: (value) => { size[name] = value >>> 0; } });
++    }
++});
++
++// Sets *flag once the page's device, which emscripten_webgpu_get_device() returns, is lost and plume_webgpu_device.js has
++// put another in its place (its plumeReplaced, a promise that never settles if no new device comes).
++EM_JS(void, plume_webgpu_watch_device, (int32_t *flag), {
++    const device = Module['preinitializedWebGPUDevice'];
++    if (device && device.plumeReplaced) {
++        device.plumeReplaced.then(() => Atomics.store(HEAP32, flag >> 2, 1));
 +    }
 +});
 +
@@ -6142,6 +6162,9 @@ index 0000000..29ac6a2
 +            return;
 +        }
 +
++        lost = new std::atomic<int32_t>(0);
++        plume_webgpu_watch_device(reinterpret_cast<int32_t *>(lost));
++
 +        queue = wgpuDeviceGetQueue(device);
 +        float32Filterable = wgpuDeviceHasFeature(device, WGPUFeatureName_Float32Filterable);
 +        float32Blendable = wgpuDeviceHasFeature(device, WGPUFeatureName_Float32Blendable);
@@ -6504,6 +6527,10 @@ index 0000000..29ac6a2
 +        readbackCallback = callback;
 +    }
 +
++    bool WebGPUDevice::isLost() const {
++        return (lost != nullptr) && (lost->load() != 0);
++    }
++
 +    // WebGPUInterface
 +
 +    WebGPUInterface::WebGPUInterface() {
@@ -6536,10 +6563,10 @@ index 0000000..29ac6a2
 +};
 diff --git a/plume_webgpu.h b/plume_webgpu.h
 new file mode 100644
-index 0000000..bdc13f0
+index 0000000..35992ce
 --- /dev/null
 +++ b/plume_webgpu.h
-@@ -0,0 +1,731 @@
+@@ -0,0 +1,738 @@
 +//
 +// plume
 +//
@@ -6660,6 +6687,9 @@ index 0000000..bdc13f0
 +// plume_webgpu_device.js), because requesting one is asynchronous. Emdawnwebgpu marks emscripten_webgpu_get_device(),
 +// which returns it, as deprecated; the replacement, requesting the adapter and device here and waiting with
 +// wgpuInstanceWaitAny(), needs ASYNCIFY or JSPI. RenderWindow is the CSS selector of the canvas, such as "#canvas".
++// When that device is lost, plume_webgpu_device.js asks for another and puts it in its place, and the device made on
++// the lost one says isLost() from then on: the application destroys everything it made and starts again with a new
++// device from createDevice(), as RT64 does (Application::replaceLostDevice()).
 +//
 +// The examples build for the browser with emcmake and -DPLUME_BUILD_EXAMPLES=ON, given PLUME_DXC_EXECUTABLE (a dxc
 +// for the host) and naga-cli on the PATH or as PLUME_NAGA_EXECUTABLE; see examples/cmake/modules/PlumeWGSL.cmake.
@@ -7221,6 +7251,9 @@ index 0000000..bdc13f0
 +        std::map<std::pair<std::string, WGPUPipelineLayout>, WebGPUSharedShaderBuilds> sharedShaderBuilds;
 +        double lastPollTime = 0.0;
 +        bool workDoneAfterSubmit = false;
++        // Set from the page's main thread once the device is lost and another is in its place (isLost()). Never freed:
++        // the page may set it after the device is gone.
++        std::atomic<int32_t> *lost = nullptr;
 +
 +        WebGPUDevice(WebGPUInterface *renderInterface);
 +        ~WebGPUDevice() override;
@@ -7249,6 +7282,7 @@ index 0000000..bdc13f0
 +        bool beginCapture() override;
 +        bool endCapture() override;
 +        void setReadbackCallback(void (*callback)()) override;
++        bool isLost() const override;
 +        WGPUBindGroupLayout getBindGroupLayout(const std::string &key, const std::vector<WGPUBindGroupLayoutEntry> &entries);
 +        WGPUBindGroup getBindGroup(const std::string &key, WGPUBindGroupLayout layout, const std::vector<WGPUBindGroupEntry> &entries);
 +        WGPUPipelineLayout getPipelineLayout(const std::vector<WGPUBindGroupLayout> &layouts);
@@ -7273,10 +7307,10 @@ index 0000000..bdc13f0
 +};
 diff --git a/plume_webgpu_device.js b/plume_webgpu_device.js
 new file mode 100644
-index 0000000..760a273
+index 0000000..dc53370
 --- /dev/null
 +++ b/plume_webgpu_device.js
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,115 @@
 +// Link with --pre-js for plume's WebGPU backend. Requesting a WebGPU device is asynchronous, so this does it before
 +// main() runs and hands the device over as Module.preinitializedWebGPUDevice, which emscripten_webgpu_get_device()
 +// returns. Optional features plume can use are asked for when the adapter has them, and the adapter's own maximum for
@@ -7285,10 +7319,15 @@ index 0000000..760a273
 +// by default, where D3D12 and most adapters allow 16384). Validation errors and a lost device are logged to the
 +// console. The adapter's info (vendor, architecture) is kept as Module.plumeWebGPUAdapterInfo. At the end,
 +// setBindGroup is made to work in Firefox with a heap past 2 GB.
-+Module['preRun'] = [].concat(Module['preRun'] || []);
-+Module['preRun'].push(() => {
-+  addRunDependency('plume-webgpu-device');
-+  (async () => {
++//
++// A device is lost to a driver update or reset, the browser's GPU process crashing or a laptop switching GPUs. Then a
++// new one is asked for the same way and put in the old one's place, emscripten_webgpu_get_device() returning it from
++// then on, and the old one's plumeReplaced promise resolves: plume's device made on it says isLost(), and the
++// application makes everything again on a new one. A device lost within 10 s of being made isn't replaced, since
++// another would likely go the same way, nor one whose replacement couldn't be had: then the page's
++// Module.plumeWebGPUDeviceLostForGood(info), if it has one, tells the player (plumeReplaced never settles).
++(() => {
++  const requestDevice = async () => {
 +    if (!navigator.gpu) {
 +      throw new Error('This browser has no WebGPU (navigator.gpu is missing; the page must be a secure context).');
 +    }
@@ -7312,16 +7351,46 @@ index 0000000..760a273
 +    }
 +
 +    const device = await adapter.requestDevice({ requiredFeatures, requiredLimits });
++    const madeAt = performance.now();
 +    device.addEventListener('uncapturederror', (event) => console.error('WebGPU error: ' + event.error.message));
-+    device.lost.then((info) => console.error('WebGPU device lost: ' + info.message));
-+    Module['preinitializedWebGPUDevice'] = device;
-+    Module['plumeWebGPUAdapterInfo'] = adapter.info;
-+    removeRunDependency('plume-webgpu-device');
-+  })().catch((error) => {
-+    console.error(error);
-+    abort(error);
++    device.plumeReplaced = device.lost.then(async (info) => {
++      console.error('WebGPU device lost: ' + info.message);
++      try {
++        if (performance.now() - madeAt < 10000) {
++          throw new Error('plume: the WebGPU device was lost ' + ((performance.now() - madeAt) / 1000).toFixed(1) + ' s after it was made, so it is not replaced');
++        }
++
++        const replacement = await requestDevice();
++        Module['preinitializedWebGPUDevice'] = replacement.device;
++        Module['plumeWebGPUAdapterInfo'] = replacement.adapter.info;
++        // emscripten_webgpu_get_device() imports the device once and keeps it; this has it import the new one.
++        WebGPU.preinitializedDeviceId = undefined;
++        console.log('plume: a new WebGPU device in place of the lost one');
++      } catch (error) {
++        console.error(String(error));
++        if (Module['plumeWebGPUDeviceLostForGood']) {
++          Module['plumeWebGPUDeviceLostForGood'](info);
++        }
++        await new Promise(() => {});
++      }
++    });
++
++    return { adapter, device };
++  };
++
++  Module['preRun'] = [].concat(Module['preRun'] || []);
++  Module['preRun'].push(() => {
++    addRunDependency('plume-webgpu-device');
++    requestDevice().then(({ adapter, device }) => {
++      Module['preinitializedWebGPUDevice'] = device;
++      Module['plumeWebGPUAdapterInfo'] = adapter.info;
++      removeRunDependency('plume-webgpu-device');
++    }).catch((error) => {
++      console.error(error);
++      abort(error);
++    });
 +  });
-+});
++})();
 +
 +// emdawnwebgpu hands setBindGroup its dynamic offsets as the whole wasm heap (HEAPU32) with a start and a length.
 +// Firefox refuses any ArrayBuffer or view larger than 2 GB as an argument, so on a page whose heap has grown past that

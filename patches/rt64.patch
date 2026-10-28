@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 3313c77c4f8793416f4617dab6248766f683986c
+rt64: https://github.com/n64hub/rt64-web 42d1d65c5b53c4211d219d083cc35270646be92c
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1313,7 +1313,7 @@ index 558f1ee..40a2e09 100644
      };
  };
 diff --git a/src/hle/rt64_application.cpp b/src/hle/rt64_application.cpp
-index 785de27..ae2c936 100644
+index 785de27..52cf849 100644
 --- a/src/hle/rt64_application.cpp
 +++ b/src/hle/rt64_application.cpp
 @@ -16,12 +16,18 @@
@@ -1346,7 +1346,21 @@ index 785de27..ae2c936 100644
          return plume::CreateVulkanInterface(renderWindow);
  #else
          return plume::CreateVulkanInterface();
-@@ -139,6 +147,18 @@ namespace RT64 {
+@@ -94,8 +102,11 @@ namespace RT64 {
+         }
+ #   endif
+ 
+-        // Attempt to load the configuration. If it couldn't be loaded, save a new file instead.
+-        if (!loadConfiguration()) {
++        setupThreadId = threadId;
++
++        // Attempt to load the configuration. If it couldn't be loaded, save a new file instead. A device replaced keeps
++        // the configuration it was running with.
++        if (!replacingDevice && !loadConfiguration()) {
+             saveConfiguration();
+         }
+ 
+@@ -139,6 +150,18 @@ namespace RT64 {
          const uint32_t CreationAttempts = 1;
  #   endif
  
@@ -1365,7 +1379,7 @@ index 785de27..ae2c936 100644
          for (uint32_t creationAttempt = 0; (creationAttempt < CreationAttempts) && (device == nullptr); creationAttempt++) {
  #       ifdef _WIN64
              if (creationAttempt == 1) {
-@@ -294,6 +314,21 @@ namespace RT64 {
+@@ -294,10 +317,33 @@ namespace RT64 {
              break;
          }
  
@@ -1385,9 +1399,24 @@ index 785de27..ae2c936 100644
 +#   endif
 +
          // Call the init hook if one was attached.
-         RenderHookInit *initHook = GetRenderHookInit();
-         if (initHook != nullptr) {
-@@ -316,7 +351,7 @@ namespace RT64 {
+-        RenderHookInit *initHook = GetRenderHookInit();
+-        if (initHook != nullptr) {
+-            initHook(renderInterface.get(), device.get());
++        if (replacingDevice) {
++            RenderHookReplaceDevice *replaceHook = GetRenderHookReplaceDevice();
++            if (replaceHook != nullptr) {
++                replaceHook(renderInterface.get(), device.get());
++            }
++        }
++        else {
++            RenderHookInit *initHook = GetRenderHookInit();
++            if (initHook != nullptr) {
++                initHook(renderInterface.get(), device.get());
++            }
+         }
+ 
+         // Create all the render workers.
+@@ -316,7 +362,7 @@ namespace RT64 {
          // Create the swap chain with the texture count specified from the configuration.
          RenderSwapChainDesc swapChainDesc;
          swapChainDesc.renderWindow = appWindow->windowHandle;
@@ -1396,7 +1425,7 @@ index 785de27..ae2c936 100644
          swapChainDesc.textureCount = (userConfig.displayBuffering == UserConfiguration::DisplayBuffering::Triple) ? 3 : 2;
  
          // Enable present wait if supported by the device. We specify a max latency of 1 as we use it to wait right before the next
-@@ -350,7 +385,14 @@ namespace RT64 {
+@@ -350,7 +396,14 @@ namespace RT64 {
          // Create the shader caches.
          // Estimate the amount of shader compiler threads by trying to use about half of the system's available threads.
          // We need the ubershader pipelines done as soon as possible, so we use a different thread count that demands more of the system.
@@ -1411,7 +1440,7 @@ index 785de27..ae2c936 100644
          const uint32_t ubershaderThreads = uint32_t(std::max(int(threadsAvailable) - 2, 1));
          rasterShaderCache = std::make_unique<RasterShaderCache>(rasterShaderThreads, ubershaderThreads);
          rasterShaderCache->setup(device.get(), renderInterface->getCapabilities().shaderFormat, shaderLibrary.get(), multisampling);
-@@ -391,7 +433,12 @@ namespace RT64 {
+@@ -391,7 +444,12 @@ namespace RT64 {
          sharedQueueResources->setEmulatorConfig(emulatorConfig);
          sharedQueueResources->setEnhancementConfig(enhancementConfig);
          sharedQueueResources->setSwapChainSize(swapChain->getWidth(), swapChain->getHeight());
@@ -1424,7 +1453,7 @@ index 785de27..ae2c936 100644
          sharedQueueResources->renderTargetManager.setMultisampling(multisampling);
          sharedQueueResources->renderTargetManager.setUsesHDR(usesHDR);
  
-@@ -455,6 +502,19 @@ namespace RT64 {
+@@ -455,6 +513,19 @@ namespace RT64 {
          // Set up the RDP
          state->rdp->setGBI();
  
@@ -1444,8 +1473,75 @@ index 785de27..ae2c936 100644
          return SetupResult::Success;
      }
  
+@@ -510,6 +581,12 @@ namespace RT64 {
+     }
+ 
+     void Application::updateScreen() {
++#   if defined(__EMSCRIPTEN__)
++        if (device->isLost()) {
++            replaceLostDevice();
++        }
++#   endif
++
+         appWindow->sdlCheckFilterInstallation();
+         screenApiProfiler.logAndRestart();
+         state->updateScreen(core.decodeVI(), false);
+@@ -674,9 +751,17 @@ namespace RT64 {
+         presentQueue.reset();
+ 
+         // Call the deinit hook if one was attached.
+-        RenderHookDeinit *deinitHook = GetRenderHookDeinit();
+-        if (deinitHook != nullptr) {
+-            deinitHook();
++        if (replacingDevice) {
++            RenderHookReplaceDevice *replaceHook = GetRenderHookReplaceDevice();
++            if (replaceHook != nullptr) {
++                replaceHook(nullptr, nullptr);
++            }
++        }
++        else {
++            RenderHookDeinit *deinitHook = GetRenderHookDeinit();
++            if (deinitHook != nullptr) {
++                deinitHook();
++            }
+         }
+ 
+         drawDataUploader.reset();
+@@ -705,6 +790,32 @@ namespace RT64 {
+         FileDialog::finish();
+     }
+ 
++#   if defined(__EMSCRIPTEN__)
++    // A page's WebGPU device is lost to a driver update or reset, the browser's GPU process crashing or a laptop
++    // switching GPUs, and everything made on it with it. Once the page has a new one (RenderDevice::isLost()), the screen
++    // update before the next frame's lists destroys everything as end() does and sets it all up again on a new device as
++    // setup() does: textures, targets, pipelines and the prebuilt shaders, which the game waits for again, the swap chain.
++    // The game goes on from the same RDRAM, so nothing it has drawn has to be drawn again but what the next frames draw.
++    // The configuration is kept, and so is what a caller set on the state; a render hook's objects are made again with
++    // the replace device hook (rt64_render_hooks.h), not the deinit and init hooks.
++    void Application::replaceLostDevice() {
++        fprintf(stderr, "RT64: the WebGPU device was lost; starting again on a new one.
++");
++        std::atomic<uint32_t> *displayListReads = state->displayListReads;
++        replacingDevice = true;
++        end();
++        const SetupResult result = setup(setupThreadId);
++        replacingDevice = false;
++        if (result != SetupResult::Success) {
++            fprintf(stderr, "RT64 could not start again on a new WebGPU device (%d).
++", int(result));
++            abort();
++        }
++
++        state->displayListReads = displayListReads;
++    }
++#   endif
++
+     bool Application::loadConfiguration() {
+         if (!appConfig.useConfigurationFile || userPaths.isEmpty()) {
+             return false;
 diff --git a/src/hle/rt64_application.h b/src/hle/rt64_application.h
-index 6c83fe0..1153151 100644
+index 6c83fe0..e20f73b 100644
 --- a/src/hle/rt64_application.h
 +++ b/src/hle/rt64_application.h
 @@ -90,6 +90,11 @@ namespace RT64 {
@@ -1460,6 +1556,25 @@ index 6c83fe0..1153151 100644
              VI decodeVI() const;
          };
  
+@@ -136,6 +141,8 @@ namespace RT64 {
+         std::atomic<bool> debuggerPaused;
+         uint64_t frameCounter;
+         uint32_t threadsAvailable;
++        uint32_t setupThreadId = 0;
++        bool replacingDevice = false;
+         ProfilingTimer dlApiProfiler = ProfilingTimer(120);
+         ProfilingTimer screenApiProfiler = ProfilingTimer(120);
+ 
+@@ -159,6 +166,9 @@ namespace RT64 {
+         void destroyShaderCache();
+         void updateMultisampling();
+         void end();
++#   if defined(__EMSCRIPTEN__)
++        void replaceLostDevice();
++#   endif
+         bool loadConfiguration();
+         bool saveConfiguration();
+         bool checkDirectoryCreated(const std::filesystem::path &path);
 diff --git a/src/hle/rt64_application_window.cpp b/src/hle/rt64_application_window.cpp
 index 08f83e5..75800e1 100755
 --- a/src/hle/rt64_application_window.cpp
@@ -8744,6 +8859,56 @@ index b4ff4e9..bc37787 100644
      }
  
      void VIRenderer::render(const RenderParams &p) {
+diff --git a/src/rhi/rt64_render_hooks.cpp b/src/rhi/rt64_render_hooks.cpp
+index 2e60745..3981f76 100644
+--- a/src/rhi/rt64_render_hooks.cpp
++++ b/src/rhi/rt64_render_hooks.cpp
+@@ -8,6 +8,7 @@ namespace RT64 {
+     static RenderHookInit *init = nullptr;
+     static RenderHookDraw *draw = nullptr;
+     static RenderHookDeinit *deinit = nullptr;
++    static RenderHookReplaceDevice *replaceDevice = nullptr;
+ 
+     RenderHookInit *GetRenderHookInit() {
+         return init;
+@@ -26,4 +27,12 @@ namespace RT64 {
+         draw = draw_;
+         deinit = deinit_;
+     }
++
++    RenderHookReplaceDevice *GetRenderHookReplaceDevice() {
++        return replaceDevice;
++    }
++
++    void SetRenderHookReplaceDevice(RenderHookReplaceDevice *replaceDevice_) {
++        replaceDevice = replaceDevice_;
++    }
+ };
+\ No newline at end of file
+diff --git a/src/rhi/rt64_render_hooks.h b/src/rhi/rt64_render_hooks.h
+index be01701..ea68174 100644
+--- a/src/rhi/rt64_render_hooks.h
++++ b/src/rhi/rt64_render_hooks.h
+@@ -11,9 +11,19 @@ namespace RT64 {
+     using RenderHookDraw = void(RenderCommandList *list, RenderFramebuffer *swapChainFramebuffer);
+     using RenderHookDeinit = void();
+ 
++    // Where a lost device is replaced with a new one and RT64 makes everything again on it
++    // (Application::replaceLostDevice()), this is called in place of the deinit and init hooks: with nullptrs where the
++    // deinit hook would be, to destroy what was made on the old device and keep the rest, and with the new interface
++    // and device where the init hook would be, to make it again on them.
++    using RenderHookReplaceDevice = void(RenderInterface *rhi, RenderDevice *device);
++
+     RenderHookInit *GetRenderHookInit();
+     RenderHookDraw *GetRenderHookDraw();
+     RenderHookDeinit *GetRenderHookDeinit();
+ 
+     void SetRenderHooks(RenderHookInit *init, RenderHookDraw *draw, RenderHookDeinit *deinit);
++
++    RenderHookReplaceDevice *GetRenderHookReplaceDevice();
++
++    void SetRenderHookReplaceDevice(RenderHookReplaceDevice *replaceDevice);
+ };
 diff --git a/src/shaders/BicubicScalingCS.hlsl b/src/shaders/BicubicScalingCS.hlsl
 index 087471b..2c42302 100644
 --- a/src/shaders/BicubicScalingCS.hlsl

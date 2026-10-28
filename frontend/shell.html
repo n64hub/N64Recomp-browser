@@ -7,11 +7,13 @@
      shaders the game waits for (RasterShaderCache::startPrebuild(), a game's RT64_PREBUILT_SHADER_LIST), over the frame
      it holds meanwhile. The browser keeps them, so a later visit builds them in under a second, and the indicator shows
      only if they take longer than one.
-     A lost WebGPU device (a driver update or reset, the browser's GPU process crashing, a laptop switching GPUs) says
-     so on the status line, over the last frame, which stands still from then on while the game runs behind it: nothing
-     in plume or RT64 asks for a new device, which would mean making again everything RT64 made on the old one, and a
-     reload is the one recovery, so the line has a button for it (a phone in fullscreen has no browser bar to reload
-     from). The page itself never destroys its device.
+     A lost WebGPU device (a driver update or reset, the browser's GPU process crashing, a laptop switching GPUs) is
+     replaced with a new one (plume_webgpu_device.js), and RT64 makes everything again on it while the game carries on
+     (Application::replaceLostDevice()), the shaders' progress showing while it waits for them again. Only a device
+     that isn't replaced (lost within 10 s of being made, or no new one to be had) says so on the status line, over the
+     last frame, which stands still from then on while the game runs behind it: a reload is then the one recovery, so
+     the line has a button for it (a phone in fullscreen has no browser bar to reload from). The page itself never
+     destroys its device.
      Pointer lock asks for the mouse's raw counts (below). On a phone or tablet the page goes fullscreen in landscape at
      the first tap, and #turn asks for the phone to be turned where it stays in portrait (below), and it draws a
      controller for a phone's thumbs, which the game reads as a gamepad: touch_pad.js, from the site's top (below).
@@ -114,14 +116,13 @@
     setStatus: (text) => { if (!statusLine.style.color) statusLine.textContent = text; },
     onRuntimeInitialized: () => {
       statusLine.textContent = '';
-      // plume_webgpu_device.js has made the device by now: it holds the program back until it has.
-      Module.preinitializedWebGPUDevice?.lost.then((info) => {
-        document.exitPointerLock?.();
-        fail('The game\'s graphics stopped: the browser lost its WebGPU device' + (info.message ? ' (' + info.message.replace(/\.$/, '') + ')' : '') +
-             '.\nReload the page to carry on.');
-        statusLine.append(document.createElement('br'), Object.assign(document.createElement('button'),
-          { textContent: 'Reload', onclick: () => location.reload() }));
-      });
+    },
+    plumeWebGPUDeviceLostForGood: (info) => {
+      document.exitPointerLock?.();
+      fail('The game\'s graphics stopped: the browser lost its WebGPU device' + (info.message ? ' (' + info.message.replace(/\.$/, '') + ')' : '') +
+           '.\nReload the page to carry on.');
+      statusLine.append(document.createElement('br'), Object.assign(document.createElement('button'),
+        { textContent: 'Reload', onclick: () => location.reload() }));
     },
     onAbort: (what) => fail('Stopped: ' + what),
     rt64ShaderProgress: (done, count, fraction) => shaderProgress(done, count, fraction),
