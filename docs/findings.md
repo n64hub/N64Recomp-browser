@@ -1718,6 +1718,13 @@ The measurements behind rules CLAUDE.md and the other docs state without them.
 
 What CLAUDE.md's Ruled out rests on.
 
+- RT64's workload thread waiting for a frame's workloads once, after its last, not after each, for a frame drawn in many
+  workloads (A frame drawn in many workloads): on v0.143.0 it took Tile Driver from 45 presents a second to 75-77, and
+  on v0.145.0 it moved nothing (162-164 against 162). With Chrome's page thread throttled 4 times, with rt64 cbe7e09
+  and plume's cuts, Tile Driver drew 50.1 and 41.0 presents a second but 15.3 and 14.0 game frames, against v0.145.0's
+  29.6 and 29.7 presents at 29.3 and 29.7 game frames: half the game's own rate, where those changes alone kept it
+  (sets `mp2-many-workloads-throttled` and `mp2-rsp-copies-throttled` in plays.jsonl).
+
 - wasm SIMD for RT64's TMEM loads and CI4 hashes, the 11.5% of a phone's display list thread that fullSync's tiles
   took in Conker (docs/phones.md, Conker's Bad Fur Day on a Galaxy S21): two TMEM words in one i8x16 shuffle and a CI4
   texture's palette indices by i8x16 swizzle lookups, the same bytes and hashes in a test of random loads, made the
