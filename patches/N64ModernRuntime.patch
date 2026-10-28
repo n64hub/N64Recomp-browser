@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 8a60700e4d10f81d3a85a96aad057587e5e445ea
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web ef84cebed43641d4fcc8a5c8e250ed8f9a9c0e1f
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -1029,12 +1029,12 @@ index 0000000..be6c588
 +
 +#endif
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 17d7a47..082915e 100644
+index 17d7a47..f107b5c 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
-@@ -41,6 +41,24 @@ struct DummyWorkloadAction {
- 
- using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction, DummyWorkloadAction>;
+@@ -54,6 +54,24 @@ struct ViState {
+ #define VI_STATE_BLACK 0x20
+ #define VI_STATE_REPEATLINE 0x40
  
 +// The graphics thread's actions, taken in the order they were queued, whichever thread queued them. A moodycamel queue
 +// keeps one thread's order only: each thread queues into a list of its own, and a dequeue takes from the list that
@@ -1054,9 +1054,9 @@ index 17d7a47..082915e 100644
 +    }
 +};
 +
- struct ViState {
-     const OSViMode* mode = nullptr;
-     PTR(void) framebuffer;
+ static struct {
+     struct {
+         std::thread thread;
 @@ -137,7 +155,7 @@ static struct {
      // The same message queue may be used for multiple events, so share a mutex for all of them
      std::mutex message_mutex;
