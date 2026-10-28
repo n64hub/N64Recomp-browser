@@ -598,4 +598,8 @@ rt64 cad03e4           RT64_SCISSOR_INSIDE_FRAMEBUFFER: an extended scissor past
                        wipe draws under one aligned to the centre that reaches far past 4:3, and on each frame of a
                        wipe Mario Party 1's sprites (its HUD, a board's title card) and a star wipe's shape were
                        drawn stretched to the window's width
+rt64 d365272           RT64_GAME_FRAME_WORKLOADS: a held frame ends when the game waits for a free present, not when
+                       the present queue is full, which only says its next present will wait: the rest of the frame
+                       came before that present, and Mario Party 2 drew a frame in two 2-18 times in 5.5 minutes, its
+                       text, HUD or a rules screen's title and buttons missing for a frame (0 since)
 ```
