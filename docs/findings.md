@@ -1488,9 +1488,13 @@ Fox 64 mid-Corneria, each fault in turn in one visit, every run in plays.jsonl:
 - A suspended AudioContext (10 s): the game ran on, and once resumed the sound came up short for a few seconds
   (201-1,304 frames) and then played as before.
 - A lost WebGPU device (`device.destroy()`): in both browsers both pages froze on their last frame and never asked for
-  a new device; over it the status line says the graphics stopped and asks for a reload (frontend/shell.html, since
-  v0.76.0; play_page records it as the fault's `notice`). They still call `getCurrentTexture` each frame, so a count
-  of presents doesn't show it: the screenshots do. A reload brought each back.
+  a new device; they still call `getCurrentTexture` each frame, so a count of presents doesn't show it: the
+  screenshots do. A reload brought each back. Since plume 21dc1de, rt64 e9af13c and RecompFrontend c0c49c6 the page
+  asks for a new device and RT64 starts again on it, the game carrying on (frontend/shell.html says how; its notice to
+  reload is left for a device that isn't replaced). Mario Kart 64 mid-race on an RTX 2070, a busy host: within a
+  second of the loss a new device drew the race on, after a wait of 0.0 s (Chrome, its pipelines in the browser's
+  cache) or 0.4 s and 1.6 s (Firefox) for Luigi Raceway's prebuilt shaders, no WebGPU error and no notice, and 352
+  presents a second after against 333 before in Chrome, 241 against 179 in Firefox (plays.jsonl).
 - A hidden tab (30 s) in Chrome: the pages presented ~60 a second while hidden, but Star Fox 64's sound came up
   3,000-7,000 frames short every 5 s, and back in front both presented below their rate before (60, then 89 against
   147; 60 for ~80 s against 114), until plume 08f9327 and rt64 52ec88f (A page in a hidden tab). Firefox played both

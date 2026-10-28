@@ -1,5 +1,5 @@
 # One patch per project, <name>.patch here, made by tools/export_patches.sh from that project's fork: everything the
-# fork's main adds to the upstream commit it is on, but its README, .gitmodules and submodule pointers.
+# fork's main adds to the upstream commit it is on, but its README, COPYING, .gitmodules and submodule pointers.
 #
 # <name> <folder in a recomp, from the one holding rt64, N64ModernRuntime and RecompFrontend> <fork> <upstream commit>
 #
