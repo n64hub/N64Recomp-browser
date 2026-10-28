@@ -1485,6 +1485,11 @@ Fox 64 mid-Corneria, each fault in turn in one visit, every run in plays.jsonl:
 
 - A resized window (60% as wide and high for 10 s): both pages in both browsers drew at the new canvas size
   (754x387) and back, no error, the rate unchanged.
+  Mario Party 2's page froze for good at about one resize in 30 (headless Chrome, 3840x2000 uncapped, on a board or
+  just booted to Mario Land), presents at 0, no sound and no error: RT64_GAME_FRAME_WORKLOADS's change of size waited
+  until the current set of interpolated frame counters had been presented, which no present may do since a present
+  can take the other set, and the present that would was waiting for that very workload. Since rt64 756daf5 it waits
+  only while a present holds a set, and 63 resizes in 21 boots came through on an RTX 2070, a busy host (plays.jsonl).
 - A suspended AudioContext (10 s): the game ran on, and once resumed the sound came up short for a few seconds
   (201-1,304 frames) and then played as before.
 - A lost WebGPU device (`device.destroy()`): in both browsers both pages froze on their last frame and never asked for
