@@ -649,4 +649,9 @@ rt64 e9af13c           a lost WebGPU device that plume replaced: the next screen
                        a render hook makes its objects again through SetRenderHookReplaceDevice(), not deinit and init
 RecompFrontend c0c49c6 Emscripten: on a replaced WebGPU device the menus' render interface releases RmlUi's textures
                        and its own objects and makes them again on the new one, RmlUi and every context kept
+rt64 756daf5           RT64_GAME_FRAME_WORKLOADS: a change of the swap chain's size or the framebuffer configuration
+                       waits only while a present holds a set of interpolated frame counters, and leaves neither set
+                       with frames for a present to take from the targets it clears: it waited until the current set
+                       had been presented, which since e4f59dc no present may do, and Mario Party 2's page froze for
+                       good at a window's resize now and then
 ```
