@@ -176,7 +176,7 @@ no worse than Pages moves its fork onto the tag and is published. One that plays
 Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X
 are retested in the same work, never filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
 that left its page's bytes alone. Mario Party 1, 2 and 3 are not published until the games are released
-(docs/publishing.md): the retest leaves them out.
+(docs/publishing.md), but the retest moves their pins the same way, built and played, and publishes nothing for them.
 
 A critical fix doesn't wait for the retest: a fix for a page on Pages that crashes, never boots, loses its WebGPU
 device or can't be played moves the pins of the games it fixes (this project's own recomps' by a PR), builds, plays in Chrome and

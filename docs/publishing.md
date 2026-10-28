@@ -33,8 +33,9 @@ A run on a schedule that takes every change since the last one at once:
   left its page's bytes alone, since its desktop build can take something from it. A critical fix that plays every game takes it along the same way.
 - Mario Party 1, 2 and 3, this project's own recomps too, are not published until the games are released:
   `tools/publish_pages.sh` holds them as unreleased, builds them only as a dry run and leaves them out of a run that
-  names no game, and so does the retest. Their pages are built and played, and their pins moved by a PR, by the work
-  that changes them.
+  names no game. The retest still moves their pins as it does the other recomps' (a PR on each one's repo that moves
+  `lib/N64Recomp-browser` to the tag, its page built with `--dry-run` and played by the smoke play), merges them, and
+  publishes nothing: else nothing moves them, and the fixes made here for them never reach their builds.
 - `tools/publish_pages.sh <rush-2049-recomp checkout> --browser <tag> --keep <dir>`, run where the ROMs are, builds
   every game's main, Rush 2049's too, with N64Recomp-browser moved to the tag (in the build host's copy only), names
   the pages whose files differ from what Pages serves and copies each of those builds into `<dir>/<game>` as it
