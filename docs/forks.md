@@ -608,6 +608,11 @@ rt64 4e6ef9a           RT64_GAME_FRAME_WORKLOADS: a held frame ends when the gam
                        the present queue is full, which only says its next present will wait: the rest of the frame
                        came before that present, and Mario Party 2 drew a frame in two 2-20 times in 5.5 minutes, its
                        text, HUD or a rules screen's title and buttons missing for a frame (0 since)
+rt64 759e12a           RT64_GAME_FRAME_WORKLOADS: the workload queue holds 64, so a frame of up to 21 fits beside the
+                       one before and the next: at 32 a frame fit beside one of 16 only 15 workloads, and Mario Party
+                       2's Tile Driver, 15-17 a frame, ended 817 frames at the full queue in a 9.3-minute run, its last
+                       workload, the PAUSE window, drawn as a frame of its own. A game of one workload a frame holds 64
+                       frames' buffers, and the texture cache's ages, counted in WORKLOAD_QUEUE_SIZE, double
 N64ModernRuntime       the graphics thread takes its actions in the order they were queued, whichever thread queued
 ef84ceb                them, on every build: moodycamel's queue keeps one thread's order only, so a game's first task
                        of a frame, drawing into the framebuffer the VI's last screen update shows, could run before

@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 4e6ef9a3b8dcf5fcbcf26ff0072d01c3cb292479
+rt64: https://github.com/n64hub/rt64-web 759e12a8dd6ff49d323a367e5affd959efff1b02
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -5028,7 +5028,7 @@ index 5a331aa..06d15bf 100644
  
                  processCursor = -1;
 diff --git a/src/hle/rt64_workload_queue.h b/src/hle/rt64_workload_queue.h
-index bde2f03..52d632a 100644
+index bde2f03..c01ce99 100644
 --- a/src/hle/rt64_workload_queue.h
 +++ b/src/hle/rt64_workload_queue.h
 @@ -5,6 +5,7 @@
@@ -5039,7 +5039,7 @@ index bde2f03..52d632a 100644
  
  #include "common/rt64_enhancement_configuration.h"
  #include "common/rt64_profiling_timer.h"
-@@ -23,11 +24,48 @@
+@@ -23,11 +24,50 @@
  #   include "render/rt64_raytracing_shader_cache.h"
  #endif
  
@@ -5048,13 +5048,15 @@ index bde2f03..52d632a 100644
 +// A game frame of several workloads is drawn once it has ended, and the one before it stays out of the writer's reach
 +// until then (WorkloadQueue::renderThreadLoop): the queue holds the frame before, the frame and the game's next one.
 +// A game can draw a frame in several, as Jet Force Gemini draws each of its frames in two (its shadows, then the
-+// frame) and Mario Party in up to a dozen (an RSP task for each microcode it draws with, and empty ones). A frame that
-+// doesn't fit ends where the queue is full and is drawn in parts, the frames between the game's showing the first part
-+// alone: with 16, Mario Party's board flickered without its characters, HUD and text now and then. With too few for
-+// the next one too the game waits for every interpolated frame to be presented: its frames take longer, its rate falls
-+// and the interpolated frames grow, down to a rate of one or two a second and a color target for each of hundreds of
-+// display frames.
-+#   define WORKLOAD_QUEUE_SIZE 32
++// frame) and Mario Party in up to 17 (an RSP task for each microcode it draws with, and empty ones: a 4-player
++// minigame's field in boxes). A frame that doesn't fit ends where the queue is full and is drawn in parts, the frames
++// between the game's showing the first part alone: with 16, Mario Party's board flickered without its characters, HUD
++// and text now and then, and with 32 a minigame of 16 workloads a frame, which fit beside the frame before only 15 of
++// them, lost its last now and then, and with it the PAUSE window. With too few for the next one too the game waits for
++// every interpolated frame to be presented: its frames take longer, its rate falls and the interpolated frames grow,
++// down to a rate of one or two a second and a color target for each of hundreds of display frames. Each workload keeps
++// the buffers its biggest draws took, so a game of one workload a frame holds that many frames' vertices.
++#   define WORKLOAD_QUEUE_SIZE 64
 +#else
 +#   define WORKLOAD_QUEUE_SIZE 4
 +#endif
@@ -5089,7 +5091,7 @@ index bde2f03..52d632a 100644
      struct WorkloadQueue {
          struct External {
              RenderDevice *device = nullptr;
-@@ -69,6 +107,33 @@ namespace RT64 {
+@@ -69,6 +109,33 @@ namespace RT64 {
          std::condition_variable cursorCondition;
          uint64_t workloadId;
          uint64_t lastPresentId;
@@ -5123,7 +5125,7 @@ index bde2f03..52d632a 100644
          std::mutex workloadIdMutex;
          std::condition_variable workloadIdCondition;
          std::thread *renderThread = nullptr;
-@@ -91,6 +156,15 @@ namespace RT64 {
+@@ -91,6 +158,15 @@ namespace RT64 {
          std::unique_ptr<RSPProcessor> rspProcessor;
          std::unique_ptr<VertexProcessor> vertexProcessor;
          std::unique_ptr<RenderTarget> dummyDepthTarget;
@@ -5139,7 +5141,7 @@ index bde2f03..52d632a 100644
          std::unique_ptr<RenderQueryPool> queryPool;
          FramebufferChangePool scratchFbChangePool;
          ProfilingTimer rendererCPUProfiler = ProfilingTimer(120);
-@@ -105,6 +179,13 @@ namespace RT64 {
+@@ -105,6 +181,13 @@ namespace RT64 {
          ~WorkloadQueue();
          void reset();
          void advanceToNextWorkload();
@@ -5153,7 +5155,7 @@ index bde2f03..52d632a 100644
          void repeatLastWorkload();
          uint32_t previousWriteCursor() const;
          void waitForIdle();
-@@ -115,12 +196,13 @@ namespace RT64 {
+@@ -115,12 +198,13 @@ namespace RT64 {
          void threadConfigurationValidate();
          void threadRenderFrame(GameFrame &curFrame, const GameFrame &prevFrame, const WorkloadConfiguration &workloadConfig,
              const DebuggerRenderer &debuggerRenderer, const DebuggerCamera &debuggerCamera, float curFrameWeight, float prevFrameWeight,
