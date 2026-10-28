@@ -129,7 +129,10 @@ What changes in the game's own code (behind `__EMSCRIPTEN__`) and files:
   `recompui::renderer::set_render_to_ram(false)` if the game never reads its frames on the CPU (Banjo's frame reads
   are patched to sample RT64's framebuffer on the GPU, so it is off there too). Majora's Mask reads them: the
   Pictograph Box compresses the photo it took on the CPU, so it stays on there. Donkey Kong 64's code reads its
-  framebuffers too (a Banana Fairy photo), and it is left on there (not tried off).
+  framebuffers too (a Banana Fairy photo), and it is left on there (not tried off). The wait is per list, so it costs
+  most where a frame is drawn in many: Mario Party 2's 4-player minigames draw one in 15-17 RSP tasks, and in Chrome
+  (uncapped, a desktop GPU) Tile Driver made 8-9 game frames a second with the copy, 12 with it a list late (below)
+  and the game's own 30 without it, so it is off there.
 - A loop that waits by polling the count (`osGetCount`) or memory, with no OS call inside, holds every other game
   thread for as long as it spins: ultramodern runs one game thread at a time and switches only in an OS call.
   GoldenEye's main loop waited for its next frame that way, and its audio thread waited behind it: ~0.4 s of sound
