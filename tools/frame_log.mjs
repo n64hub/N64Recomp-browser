@@ -5,9 +5,9 @@
 //   node tools/frame_log.mjs <stderr.log> [--captures <captures.tsv>] [--around <capture>[,<capture>...]] [--span <ms>]
 //
 // It prints how many frames ended for each reason (present: a present of the framebuffer the frame drew; next: the
-// next frame's first workload; wait: something waited for one of its workloads; held: a frame with fewer or more
-// workloads that draw than the one before, held for the rest of them, ended at its limit or as the game waited for a
-// free present; full: the queue; paused), how many drew in fewer or more workloads than the frame before, how many
+// next frame's first workload; wait: something waited for one of its workloads; held: a frame with fewer workloads
+// that draw than the one before, held for the rest of them, ended at its limit or as the game waited for a free
+// present; full: the queue; paused), how many drew in fewer or more workloads than the frame before, how many
 // ended before the rest of their framebuffer's workloads (the next frame drew to it first: a frame drawn in two, each
 // part shown, when the game takes turns in two or three framebuffers) and when, and the runs of frames with the same
 // shape (how many workloads draw and what each draws to). A frame drawn in parts reads as a frame of fewer workloads
