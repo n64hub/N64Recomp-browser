@@ -10,7 +10,8 @@
      A lost WebGPU device (a driver update or reset, the browser's GPU process crashing, a laptop switching GPUs) says
      so on the status line, over the last frame, which stands still from then on while the game runs behind it: nothing
      in plume or RT64 asks for a new device, which would mean making again everything RT64 made on the old one, and a
-     reload is the one recovery. The page itself never destroys its device.
+     reload is the one recovery, so the line has a button for it (a phone in fullscreen has no browser bar to reload
+     from). The page itself never destroys its device.
      Pointer lock asks for the mouse's raw counts (below). On a phone or tablet the page goes fullscreen in landscape at
      the first tap, and #turn asks for the phone to be turned where it stays in portrait (below), and it draws a
      controller for a phone's thumbs, which the game reads as a gamepad: touch_pad.js, from the site's top (below).
@@ -26,6 +27,7 @@
   #status { position: fixed; left: 0; right: 0; top: 40%; text-align: center; color: #ccc;
             font: 18px system-ui, sans-serif; white-space: pre-line; pointer-events: none; }
   #status.failed { padding: 12px; background: #000c; }
+  #status button { margin-top: 10px; padding: 6px 18px; font: inherit; pointer-events: auto; cursor: pointer; }
   #gpu { position: fixed; left: 50%; top: 8px; transform: translateX(-50%); max-width: 46em; padding: 8px 32px 8px 12px;
          background: #222d; color: #ddd; border-radius: 6px; font: 14px/1.4 system-ui, sans-serif; }
   #gpu code { font-size: 13px; }
@@ -117,6 +119,8 @@
         document.exitPointerLock?.();
         fail('The game\'s graphics stopped: the browser lost its WebGPU device' + (info.message ? ' (' + info.message.replace(/\.$/, '') + ')' : '') +
              '.\nReload the page to carry on.');
+        statusLine.append(document.createElement('br'), Object.assign(document.createElement('button'),
+          { textContent: 'Reload', onclick: () => location.reload() }));
       });
     },
     onAbort: (what) => fail('Stopped: ' + what),
