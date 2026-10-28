@@ -613,6 +613,12 @@ rt64 759e12a           RT64_GAME_FRAME_WORKLOADS: the workload queue holds 64, s
                        2's Tile Driver, 15-17 a frame, ended 817 frames at the full queue in a 9.3-minute run, its last
                        workload, the PAUSE window, drawn as a frame of its own. A game of one workload a frame holds 64
                        frames' buffers, and the texture cache's ages, counted in WORKLOAD_QUEUE_SIZE, double
+rt64 fd000f3           RT64_GAME_FRAME_WORKLOADS: a frame cut short (a wait, its hold's limit, the full queue) and its
+                       rest count as one game frame where both draw to the framebuffer the VI shows and the game frame
+                       before drew to another: the rest alone set how many workloads that draw the next frame needed
+                       before a wait could end it, so a game whose present of a frame waits on the next frame's first
+                       workload had its frames cut in two for good once one was, Mario Party 2's page Tile Driver's
+                       for the whole minigame, two of its boxes or its PAUSE window missing every other frame
 N64ModernRuntime       the graphics thread takes its actions in the order they were queued, whichever thread queued
 ef84ceb                them, on every build: moodycamel's queue keeps one thread's order only, so a game's first task
                        of a frame, drawing into the framebuffer the VI's last screen update shows, could run before
