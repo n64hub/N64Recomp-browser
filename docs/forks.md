@@ -619,6 +619,10 @@ rt64 fd000f3           RT64_GAME_FRAME_WORKLOADS: a frame cut short (a wait, its
                        before a wait could end it, so a game whose present of a frame waits on the next frame's first
                        workload had its frames cut in two for good once one was, Mario Party 2's page Tile Driver's
                        for the whole minigame, two of its boxes or its PAUSE window missing every other frame
+rt64 e4f59dc           RT64_GAME_FRAME_WORKLOADS: a present waits for the last workload that drew the framebuffer it
+                       shows, not the newest queued: Mario Party 2's minigames queue a frame's present after the next
+                       frame's first workload, so the present's wait cut that frame in the middle, or, held, held the
+                       game too, Tile Driver's page at 5 game frames a second
 N64ModernRuntime       the graphics thread takes its actions in the order they were queued, whichever thread queued
 ef84ceb                them, on every build: moodycamel's queue keeps one thread's order only, so a game's first task
                        of a frame, drawing into the framebuffer the VI's last screen update shows, could run before

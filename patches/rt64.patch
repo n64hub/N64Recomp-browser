@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web fd000f3eaf2756a5a46956bb4726f68090b23edd
+rt64: https://github.com/n64hub/rt64-web e4f59dc55b9773dec648cab604ff719b6db983e8
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2544,8 +2544,23 @@ index dccaa87..aeae7a6 100644
                  if (func != nullptr) {
                      func(state, &dl);
                  }
+diff --git a/src/hle/rt64_present.h b/src/hle/rt64_present.h
+index e1889e5..ae1304c 100644
+--- a/src/hle/rt64_present.h
++++ b/src/hle/rt64_present.h
+@@ -23,5 +23,9 @@ namespace RT64 {
+         bool paused = false;
+         uint64_t presentId = 0;
+         uint64_t workloadId = 0;
++#   if RT64_GAME_FRAME_WORKLOADS
++        // The workload the present thread waits for: the last that drew the framebuffer it shows (State::advancePresent()).
++        uint64_t drawnWorkloadId = 0;
++#   endif
+     };
+ };
+\ No newline at end of file
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index 3227ab1..2eda300 100644
+index 3227ab1..6738b93 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -7,6 +7,10 @@
@@ -2925,7 +2940,7 @@ index 3227ab1..2eda300 100644
                  }
              }
  
-@@ -501,15 +774,49 @@ namespace RT64 {
+@@ -501,15 +774,53 @@ namespace RT64 {
                      }
                  }
  
@@ -2942,7 +2957,11 @@ index 3227ab1..2eda300 100644
 -                ext.workloadQueue->waitForWorkloadId(present.workloadId);
 +                {
 +                    PhaseTimer phaseTimer(this, PhaseWorkload);
++#               if RT64_GAME_FRAME_WORKLOADS
++                    ext.workloadQueue->waitForWorkloadId(present.drawnWorkloadId);
++#               else
 +                    ext.workloadQueue->waitForWorkloadId(present.workloadId);
++#               endif
 +                }
  
                  if (!presentThreadRunning) {
@@ -2957,7 +2976,7 @@ index 3227ab1..2eda300 100644
 +                // frames a second showing none, for good. Workloads end in order, so the next one is the one to look at.
 +                {
 +                    const std::scoped_lock cursorLock(cursorMutex);
-+                    newerQueued = (writeCursor != threadCursor) && ext.workloadQueue->isWorkloadDone(presents[threadCursor].workloadId);
++                    newerQueued = (writeCursor != threadCursor) && ext.workloadQueue->isWorkloadDone(presents[threadCursor].drawnWorkloadId);
 +                }
 +
 +                skipPresent = skipPresent || newerQueued;
@@ -3359,7 +3378,7 @@ index 8858dac..933b80e 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..df2a9af 100644
+index 2970e71..cfd8aa0 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -3905,7 +3924,7 @@ index 2970e71..df2a9af 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,6 +2965,43 @@ namespace RT64 {
+@@ -2660,12 +2965,69 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -3924,7 +3943,7 @@ index 2970e71..df2a9af 100644
 +                drawsAny = drawsAny || !workload.fbPairs[f].drawColorRect.isEmpty();
 +            }
 +
-+            for (const ShownFramebuffer &shown : shownFramebuffers) {
++            for (ShownFramebuffer &shown : shownFramebuffers) {
 +                if (shown.address == 0) {
 +                    continue;
 +                }
@@ -3934,6 +3953,10 @@ index 2970e71..df2a9af 100644
 +                    const FramebufferPair &fbPair = workload.fbPairs[f];
 +                    const bool drawsEntry = !fbPair.drawColorRect.isEmpty() && (fbPair.colorImage.address == shown.address) &&
 +                        (fbPair.colorImage.width == shown.width) && (fbPair.colorImage.siz == shown.siz);
++
++                    if (drawsEntry) {
++                        shown.workloadId = workload.workloadId;
++                    }
 +
 +                    // The last of the shown framebuffers it draws to.
 +                    if (drawsEntry && (!workload.drawsShown || (f >= lastShownPair))) {
@@ -3949,7 +3972,29 @@ index 2970e71..df2a9af 100644
      }
  
      void State::advancePresent(Present &present, bool paused) {
-@@ -2724,6 +3066,25 @@ namespace RT64 {
+         present.presentId = ++presentId;
+         present.workloadId = workloadId;
+         present.paused = paused;
++#   if RT64_GAME_FRAME_WORKLOADS
++        // A present waits for the last workload that drew the framebuffer it shows, not for the newest one queued, which
++        // can be the next frame's first: a game that queues its present after starting the next frame, as Mario Party's
++        // minigames do, had the present wait for that frame's workloads too, which ended it there at a wait in the
++        // middle (WorkloadQueue::endedGameFrame()), its rest drawn as a frame of its own, or held it and the game with
++        // it. A framebuffer no workload has drawn since the VI first showed it waits for the newest, as before.
++        present.drawnWorkloadId = workloadId;
++        const uint32_t screenFbAddress = present.screenVI.fbAddress();
++        const uint32_t screenFbWidth = present.screenVI.fbSize().x;
++        const uint8_t screenFbSiz = present.screenVI.fbSiz();
++        for (const ShownFramebuffer &shown : shownFramebuffers) {
++            if ((shown.workloadId != 0) && (shown.address == screenFbAddress) && (shown.width == screenFbWidth) && (shown.siz == screenFbSiz)) {
++                present.drawnWorkloadId = std::min(present.drawnWorkloadId, shown.workloadId);
++            }
++        }
++#   endif
+         present.debuggerFramebuffer.address = debuggerInspector.renderer.framebufferAddress;
+         present.debuggerFramebuffer.view = (debuggerInspector.renderer.framebufferIndex >= 0);
+     }
+@@ -2724,6 +3086,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  
@@ -3976,7 +4021,7 @@ index 2970e71..df2a9af 100644
          extended.ditherNoiseStrength = noiseStrength;
      }
 diff --git a/src/hle/rt64_state.h b/src/hle/rt64_state.h
-index 7a8c13b..87f584c 100644
+index 7a8c13b..7cbc85a 100644
 --- a/src/hle/rt64_state.h
 +++ b/src/hle/rt64_state.h
 @@ -4,6 +4,8 @@
@@ -4047,17 +4092,19 @@ index 7a8c13b..87f584c 100644
          GameConfiguration gameConfig;
          uint32_t displayListAddress;
          uint64_t displayListCounter;
-@@ -100,6 +140,17 @@ namespace RT64 {
+@@ -100,6 +140,19 @@ namespace RT64 {
          uint64_t lastScreenHash;
          uint32_t lastScreenFactorCounter;
          VIHistory viHistory;
 +
 +        // The last different framebuffers the VI has shown, for which a workload draws to (advanceWorkload()):
 +        // viHistory keeps the last three VIs, and a game with three framebuffers can show its third only now and then.
++        // workloadId is the last workload that drew to it, which a present of it waits for (advancePresent()).
 +        struct ShownFramebuffer {
 +            uint32_t address = 0;
 +            uint32_t width = 0;
 +            uint8_t siz = 0;
++            uint64_t workloadId = 0;
 +        };
 +
 +        std::array<ShownFramebuffer, 8> shownFramebuffers = {};
@@ -4065,7 +4112,7 @@ index 7a8c13b..87f584c 100644
          PresetDrawCallLibrary drawCallLibrary;
          PresetLightsLibrary lightsLibrary;
          PresetMaterialLibrary materialLibrary;
-@@ -129,6 +180,7 @@ namespace RT64 {
+@@ -129,6 +182,7 @@ namespace RT64 {
              bool vertexTestZActive = false;
              float ditherNoiseStrength = 1.0f;
              bool extendRDRAM = false;
@@ -4073,7 +4120,7 @@ index 7a8c13b..87f584c 100644
          };
  
          Extended extended;
-@@ -144,6 +196,10 @@ namespace RT64 {
+@@ -144,6 +198,10 @@ namespace RT64 {
          void flush();
          void submitFramebufferPair(FramebufferPair::FlushReason flushReason);
          void checkRDRAM();
@@ -4084,7 +4131,7 @@ index 7a8c13b..87f584c 100644
          void fullSync();
          void fullSyncFramebufferPairTiles(Workload &workload, FramebufferPair &fbPair, uint32_t &loadOpCursor, uint32_t &rdpTileCursor);
          void listProcessBegin();
-@@ -162,6 +218,7 @@ namespace RT64 {
+@@ -162,6 +220,7 @@ namespace RT64 {
          DisplayList *popReturnAddress();
          void setRefreshRate(uint16_t refreshRate);
          void setRenderToRAM(uint8_t renderToRAM);
