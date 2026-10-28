@@ -609,7 +609,7 @@ rt64 4e6ef9a           RT64_GAME_FRAME_WORKLOADS: a held frame ends when the gam
                        came before that present, and Mario Party 2 drew a frame in two 2-20 times in 5.5 minutes, its
                        text, HUD or a rules screen's title and buttons missing for a frame (0 since)
 N64ModernRuntime       the graphics thread takes its actions in the order they were queued, whichever thread queued
-bf049c2                them, on every build: moodycamel's queue keeps one thread's order only, so a game's first task
+8a60700                them, on every build: moodycamel's queue keeps one thread's order only, so a game's first task
                        of a frame, drawing into the framebuffer the VI's last screen update shows, could run before
                        that update, which then presented the framebuffer with the next frame's 3D in it, about one
                        present in 1,100 on a busy host (Mario Party 1's flash of a new scene before its star wipe).

@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web bf049c23cd0ad98fabac5ed063e8b960ca1b1e3e
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 8a60700e4d10f81d3a85a96aad057587e5e445ea
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -1029,10 +1029,10 @@ index 0000000..be6c588
 +
 +#endif
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 17d7a47..83395f6 100644
+index 17d7a47..082915e 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
-@@ -41,6 +41,22 @@ struct DummyWorkloadAction {
+@@ -41,6 +41,24 @@ struct DummyWorkloadAction {
  
  using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction, DummyWorkloadAction>;
  
@@ -1046,6 +1046,8 @@ index 17d7a47..83395f6 100644
 +    moodycamel::ProducerToken token{ *this };
 +    std::mutex mutex;
 +
++    ActionQueue() {}
++
 +    bool enqueue(Action action) {
 +        std::lock_guard lock{ mutex };
 +        return BlockingConcurrentQueue::enqueue(token, std::move(action));
@@ -1055,7 +1057,7 @@ index 17d7a47..83395f6 100644
  struct ViState {
      const OSViMode* mode = nullptr;
      PTR(void) framebuffer;
-@@ -137,7 +153,7 @@ static struct {
+@@ -137,7 +155,7 @@ static struct {
      // The same message queue may be used for multiple events, so share a mutex for all of them
      std::mutex message_mutex;
      uint8_t* rdram;
@@ -1064,7 +1066,7 @@ index 17d7a47..83395f6 100644
      moodycamel::BlockingConcurrentQueue<OSTask*> sp_task_queue{};
      moodycamel::ConcurrentQueue<OSThread*> deleted_threads{};
  } events_context{};
-@@ -180,6 +196,143 @@ uint64_t total_vis = 0;
+@@ -180,6 +198,143 @@ uint64_t total_vis = 0;
  
  
  extern std::atomic_bool exited;
@@ -1208,7 +1210,7 @@ index 17d7a47..83395f6 100644
  extern moodycamel::LightweightSemaphore graphics_shutdown_ready;
  
  void set_dummy_vi(bool odd);
-@@ -209,10 +362,25 @@ void vi_thread_func() {
+@@ -209,10 +364,25 @@ void vi_thread_func() {
              // printf("Skipping the next VI wait\n");
              next = std::chrono::high_resolution_clock::now();
          }
@@ -1234,7 +1236,7 @@ index 17d7a47..83395f6 100644
          if (new_total_vis > total_vis + 1) {
              //printf("Skipped % " PRId64 " frames in VI interupt thread!\n", new_total_vis - total_vis - 1);
          }
-@@ -267,6 +435,11 @@ void sp_complete() {
+@@ -267,6 +437,11 @@ void sp_complete() {
  }
  
  void dp_complete() {
