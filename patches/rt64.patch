@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web d365272fab411c0c9693af2de98b3246891d7c4e
+rt64: https://github.com/n64hub/rt64-web 2feea37ce1b231457100edd8745b51ad0cac551d
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1951,7 +1951,7 @@ index 60b0fa4..4531833 100644
          int changeProjection(uint32_t transformsIndex, Projection::Type type);
          bool isEmpty() const;
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
-index 87392d0..4bea218 100644
+index 87392d0..84e48df 100644
 --- a/src/hle/rt64_game_frame.cpp
 +++ b/src/hle/rt64_game_frame.cpp
 @@ -2,6 +2,8 @@
@@ -2033,12 +2033,103 @@ index 87392d0..4bea218 100644
      struct MatchCandidate {
          uint32_t curIndex = 0;
          uint32_t prevIndex = 0;
-@@ -260,17 +318,37 @@ namespace RT64 {
+@@ -252,6 +310,89 @@ namespace RT64 {
+         return matchResult;
+     }
+ 
++#if RT64_GAME_FRAME_WORKLOADS
++    void GameFrame::alignDrawnWorkloads(const WorkloadQueue &workloadQueue, const std::vector<uint32_t> &curDrawn, const std::vector<uint32_t> &prevDrawn, std::vector<std::pair<uint32_t, uint32_t>> &drawnPairs) {
++        // Two frames with as many drawn workloads pair them in order. When one draws more (a close-up in a corner that
++        // comes or goes), pairing in order would match every workload after the one that is missing with another's,
++        // and what it draws would be interpolated from another camera's place for a frame. So the longer list's extra
++        // workloads are left out where the cameras of the pairs that are left differ the least, still in order.
++        //
++        // A workload's camera is its first perspective projection's, or its first orthographic one's if it has none.
++        auto workloadCamera = [&](uint32_t workloadIndex) -> const Projection * {
++            const Workload &workload = workloadQueue.workloads[workloadIndex];
++            const Projection *orthographic = nullptr;
++            for (uint32_t f = 0; f < workload.fbPairCount; f++) {
++                const FramebufferPair &fbPair = workload.fbPairs[f];
++                for (uint32_t p = 0; p < fbPair.projectionCount; p++) {
++                    const Projection &proj = fbPair.projections[p];
++                    if (proj.type == Projection::Type::Perspective) {
++                        return &proj;
++                    }
++                    else if ((proj.type == Projection::Type::Orthographic) && (orthographic == nullptr)) {
++                        orthographic = &proj;
++                    }
++                }
++            }
++
++            return orthographic;
++        };
++
++        auto cameraDifference = [&](uint32_t curIndex, uint32_t prevIndex) -> double {
++            const Projection *curProj = workloadCamera(curIndex);
++            const Projection *prevProj = workloadCamera(prevIndex);
++            if ((curProj == nullptr) || (prevProj == nullptr)) {
++                return (curProj == prevProj) ? 0.0 : 1e12;
++            }
++            else if (curProj->type != prevProj->type) {
++                return 1e12;
++            }
++
++            const Workload &curWorkload = workloadQueue.workloads[curIndex];
++            const Workload &prevWorkload = workloadQueue.workloads[prevIndex];
++            return double(matrixDifference(curWorkload.drawData.viewTransforms[curProj->transformsIndex], prevWorkload.drawData.viewTransforms[prevProj->transformsIndex])) +
++                double(matrixDifference(curWorkload.drawData.projTransforms[curProj->transformsIndex], prevWorkload.drawData.projTransforms[prevProj->transformsIndex]));
++        };
++
++        // Every workload of the shorter list is paired with one of the longer's, in order, for the least difference in
++        // all: cost(i, j) is the least for the longer's first i and the shorter's first j.
++        const bool curLonger = curDrawn.size() > prevDrawn.size();
++        const std::vector<uint32_t> &longer = curLonger ? curDrawn : prevDrawn;
++        const std::vector<uint32_t> &shorter = curLonger ? prevDrawn : curDrawn;
++        const size_t n = longer.size();
++        const size_t m = shorter.size();
++        auto pairDifference = [&](size_t i, size_t j) {
++            return curLonger ? cameraDifference(longer[i], shorter[j]) : cameraDifference(shorter[j], longer[i]);
++        };
++
++        thread_local std::vector<double> costs;
++        costs.assign((n + 1) * (m + 1), 0.0);
++        auto cost = [&](size_t i, size_t j) -> double & { return costs[i * (m + 1) + j]; };
++        for (size_t i = 1; i <= n; i++) {
++            for (size_t j = 1; (j <= m) && (j <= i); j++) {
++                const double paired = cost(i - 1, j - 1) + pairDifference(i - 1, j - 1);
++                cost(i, j) = (j < i) ? std::min(paired, cost(i - 1, j)) : paired;
++            }
++        }
++
++        // Walked back from the end, a tie leaves out the later workload, so lists whose cameras all agree keep the
++        // pairing in order.
++        size_t i = n;
++        size_t j = m;
++        while (j > 0) {
++            if ((j < i) && (cost(i - 1, j) <= cost(i, j))) {
++                i--;
++                continue;
++            }
++
++            drawnPairs.emplace_back(curLonger ? longer[i - 1] : shorter[j - 1], curLonger ? shorter[j - 1] : longer[i - 1]);
++            i--;
++            j--;
++        }
++
++        std::reverse(drawnPairs.begin(), drawnPairs.end());
++    }
++#endif
++
+     void GameFrame::match(RenderWorker *worker, WorkloadQueue &workloadQueue, const GameFrame &prevFrame, BufferUploader *velocityUploader, bool &velocityUploaderUsed, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed) {
+         tileInterpolationUsed = false;
+         lookAtInterpolationUsed = false;
+@@ -260,17 +401,49 @@ namespace RT64 {
          thread_local std::unordered_map<uint32_t, ModifiedBuffers> workloadsModified;
          workloadsModified.clear();
  
 -        for (uint32_t w = 0; w < workloads.size(); w++) {
 -            if (w >= prevFrame.workloads.size()) {
+-                continue;
 +#if RT64_GAME_FRAME_WORKLOADS
 +        // The workloads of a frame that draw are paired with the frame before's in their order, and one that draws
 +        // nothing (a task of the game's that isn't a display list) is left out, so it can't shift the rest.
@@ -2050,7 +2141,7 @@ index 87392d0..4bea218 100644
 +                if (workloadQueue.workloads[workloadIndex].fbPairCount > 0) {
 +                    drawn.emplace_back(workloadIndex);
 +                }
-+            }
+             }
 +        };
 +
 +        drawnWorkloads(workloads, curDrawn);
@@ -2059,42 +2150,54 @@ index 87392d0..4bea218 100644
 +        const std::vector<uint32_t> &curDrawn = workloads;
 +        const std::vector<uint32_t> &prevDrawn = prevFrame.workloads;
 +#endif
-+        for (uint32_t w = 0; w < curDrawn.size(); w++) {
-+            if (w >= prevDrawn.size()) {
-                 continue;
-             }
++        thread_local std::vector<std::pair<uint32_t, uint32_t>> drawnPairs;
++        drawnPairs.clear();
++#if RT64_GAME_FRAME_WORKLOADS
++        if (curDrawn.size() != prevDrawn.size()) {
++            alignDrawnWorkloads(workloadQueue, curDrawn, prevDrawn, drawnPairs);
++        }
++        else
++#endif
++        {
++            for (uint32_t w = 0; (w < curDrawn.size()) && (w < prevDrawn.size()); w++) {
++                drawnPairs.emplace_back(curDrawn[w], prevDrawn[w]);
++            }
++        }
++
++        for (const std::pair<uint32_t, uint32_t> &drawnPair : drawnPairs) {
++            const uint32_t curWorkloadIndex = drawnPair.first;
  
              // We assume the workloads will be detected in the same order between frames.
 -            GameFrameMap::WorkloadMap &workloadMap = frameMap.workloads[workloads[w]];
 -            workloadMap.prevWorkloadIndex = prevFrame.workloads[w];
-+            GameFrameMap::WorkloadMap &workloadMap = frameMap.workloads[curDrawn[w]];
-+            workloadMap.prevWorkloadIndex = prevDrawn[w];
++            GameFrameMap::WorkloadMap &workloadMap = frameMap.workloads[curWorkloadIndex];
++            workloadMap.prevWorkloadIndex = drawnPair.second;
              workloadMap.mapped = true;
  
 -            Workload &curWorkload = workloadQueue.workloads[workloads[w]];
-+            Workload &curWorkload = workloadQueue.workloads[curDrawn[w]];
++            Workload &curWorkload = workloadQueue.workloads[curWorkloadIndex];
              const Workload &prevWorkload = workloadQueue.workloads[workloadMap.prevWorkloadIndex];
              workloadMap.viewProjections.clear();
              workloadMap.viewProjections.resize(curWorkload.drawData.viewProjTransforms.size());
-@@ -290,7 +368,7 @@ namespace RT64 {
+@@ -290,7 +463,7 @@ namespace RT64 {
              buildTransformIdMap(curWorkload, curWorkload.transformIdMap, curWorkload.transformIgnoredIds);
  
              // Retrieve the matching maps for the current and previous workload.
 -            GameFrameMap::WorkloadMap &curWorkloadMap = frameMap.workloads[workloads[w]];
-+            GameFrameMap::WorkloadMap &curWorkloadMap = frameMap.workloads[curDrawn[w]];
++            GameFrameMap::WorkloadMap &curWorkloadMap = frameMap.workloads[curWorkloadIndex];
              const GameFrameMap::WorkloadMap *prevWorkloadMap = nullptr;
              if (prevFrame.matched && prevFrame.frameMap.workloads[workloadMap.prevWorkloadIndex].mapped) {
                  prevWorkloadMap = &prevFrame.frameMap.workloads[workloadMap.prevWorkloadIndex];
-@@ -316,7 +394,7 @@ namespace RT64 {
+@@ -316,7 +489,7 @@ namespace RT64 {
              }
  
              if (!modifiedBuffers.empty()) {
 -                workloadsModified[workloads[w]].merge(modifiedBuffers);
-+                workloadsModified[curDrawn[w]].merge(modifiedBuffers);
++                workloadsModified[curWorkloadIndex].merge(modifiedBuffers);
              }
  
              // Any transforms tagged with the empty ID will be instantly marked as used and skipped.
-@@ -343,6 +421,14 @@ namespace RT64 {
+@@ -343,6 +516,14 @@ namespace RT64 {
                  const hlslpp::float4x4 &curProjTransform = curWorkload.drawData.projTransforms[curProj.transformsIndex];
                  for (uint32_t j = 0; j < prevScenes.size(); j++) {
                      const GameIndices::Projection prevFirstProj = prevScenes[j].projections[0];
@@ -2109,7 +2212,7 @@ index 87392d0..4bea218 100644
                      const Workload &prevWorkload = workloadQueue.workloads[prevFirstProj.workloadIndex];
                      const FramebufferPair &prevFbPair = prevWorkload.fbPairs[prevFirstProj.fbPairIndex];
                      const Projection &prevProj = prevFbPair.projections[prevFirstProj.projectionIndex];
-@@ -403,8 +489,10 @@ namespace RT64 {
+@@ -403,8 +584,10 @@ namespace RT64 {
              return;
          }
  
@@ -2122,7 +2225,7 @@ index 87392d0..4bea218 100644
          curCallHashMap.clear();
          prevCallHashMap.clear();
  
-@@ -509,69 +597,163 @@ namespace RT64 {
+@@ -509,69 +692,163 @@ namespace RT64 {
              buildCallHashMap(p, prevWorkload, prevProj, prevCallHashMap);
          }
  
@@ -2332,7 +2435,7 @@ index 87392d0..4bea218 100644
          }
  
          // Compute all the differences between transforms and insert them into a vector that will be sorted according to the differences.
-@@ -669,14 +851,48 @@ namespace RT64 {
+@@ -669,14 +946,48 @@ namespace RT64 {
              const bool wrappedUlt = (curTile.cmt == G_TX_WRAP) && (modulo(integerUlt, curTile.maskt * 4) == modulo(expectedUlt, curTile.maskt * 4));
              const bool wrappedLrs = (curTile.cms == G_TX_WRAP) && (modulo(integerLrs, curTile.masks * 4) == modulo(expectedLrs, curTile.masks * 4));
              const bool wrappedLrt = (curTile.cmt == G_TX_WRAP) && (modulo(integerLrt, curTile.maskt * 4) == modulo(expectedLrt, curTile.maskt * 4));
@@ -2385,7 +2488,7 @@ index 87392d0..4bea218 100644
              curTileMap.mapped = true;
              firstCurWorkloadMap.prevTilesMapped[indices.second] = true;
              tileInterpolationUsed = tileInterpolationUsed || tileScrolled;
-@@ -784,7 +1000,7 @@ namespace RT64 {
+@@ -784,7 +1095,7 @@ namespace RT64 {
          }
      }
      
@@ -2394,7 +2497,7 @@ index 87392d0..4bea218 100644
          for (uint32_t c = 0; c < proj.gameCallCount; c++) {
              const GameCall &call = proj.gameCalls[c];
              uint32_t matrixIdHash = 0;
-@@ -802,7 +1018,7 @@ namespace RT64 {
+@@ -802,7 +1113,7 @@ namespace RT64 {
                  doTileMatching = doTileMatching || (group.tileInterpolation == G_EX_COMPONENT_AUTO);
              }
  
@@ -2404,11 +2507,16 @@ index 87392d0..4bea218 100644
      }
  
 diff --git a/src/hle/rt64_game_frame.h b/src/hle/rt64_game_frame.h
-index 00a72f6..cfa769a 100644
+index 00a72f6..49e9402 100644
 --- a/src/hle/rt64_game_frame.h
 +++ b/src/hle/rt64_game_frame.h
-@@ -128,7 +128,7 @@ namespace RT64 {
+@@ -126,9 +126,12 @@ namespace RT64 {
+         bool isSceneCompatible(const WorkloadQueue &workloadQueue, const GameScene &scene, const GameIndices::Projection &proj);
+         void set(WorkloadQueue &workloadQueue, const uint32_t *workloadIndices, uint32_t indicesCount);
          void match(RenderWorker *worker, WorkloadQueue &workloadQueue, const GameFrame &prevFrame, BufferUploader *velocityUploader, bool &velocityUploaderUsed, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed);
++#if RT64_GAME_FRAME_WORKLOADS
++        static void alignDrawnWorkloads(const WorkloadQueue &workloadQueue, const std::vector<uint32_t> &curDrawn, const std::vector<uint32_t> &prevDrawn, std::vector<std::pair<uint32_t, uint32_t>> &drawnPairs);
++#endif
          void matchScene(WorkloadQueue &workloadQueue, const GameFrame &prevFrame, const GameScene &curScene, const GameScene &prevScene, std::unordered_map<uint32_t, ModifiedBuffers> &workloadsModified, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed);
          void matchTransform(Workload &curWorkload, const Workload &prevWorkload, GameFrameMap::WorkloadMap &curWorkloadMap, const GameFrameMap::WorkloadMap *prevWorkloadMap, uint32_t curTransformIndex, uint32_t prevTransformIndex, ModifiedBuffers &modifiedBuffers);
 -        void buildCallHashMap(uint32_t sceneProjIndex, const Workload &workload, const Projection &proj, std::multimap<uint64_t, GameCallMap> &hashMap) const;

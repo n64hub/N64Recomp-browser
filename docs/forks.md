@@ -598,7 +598,13 @@ rt64 cad03e4           RT64_SCISSOR_INSIDE_FRAMEBUFFER: an extended scissor past
                        wipe draws under one aligned to the centre that reaches far past 4:3, and on each frame of a
                        wipe Mario Party 1's sprites (its HUD, a board's title card) and a star wipe's shape were
                        drawn stretched to the window's width
-rt64 d365272           RT64_GAME_FRAME_WORKLOADS: a held frame ends when the game waits for a free present, not when
+rt64 87037a9           RT64_GAME_FRAME_WORKLOADS: two frames with different counts of workloads that draw pair them by
+                       camera, leaving out the longer list's extras where the pairs' cameras differ the least, still
+                       in order, not by position: Mario Party's Toad in his corner of the board is a workload of its
+                       own camera that comes and goes, and at each change every workload after his was paired with
+                       another's, Toad's with the board's (1951.75 apart), so Toad on his cloud was drawn huge in the
+                       middle of the board between frames. Frames with as many keep the pairing in order
+rt64 2feea37           RT64_GAME_FRAME_WORKLOADS: a held frame ends when the game waits for a free present, not when
                        the present queue is full, which only says its next present will wait: the rest of the frame
                        came before that present, and Mario Party 2 drew a frame in two 2-18 times in 5.5 minutes, its
                        text, HUD or a rules screen's title and buttons missing for a frame (0 since)
