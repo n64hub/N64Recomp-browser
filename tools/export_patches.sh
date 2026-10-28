@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Writes patches/<name>.patch for every project in patches/patches.txt: the diff from the upstream commit its fork is
 # on to the fork commit forks.txt names (for plume, hlslpp and N64Recomp, the one rt64's or N64ModernRuntime's fork
-# commit points at), without the fork's README, .gitmodules and submodule pointers. Run it after every change to
-# forks.txt or to an upstream commit in patches.txt; CI checks that the patches match.
+# commit points at), without the fork's README, COPYING (an upstream license merged in), .gitmodules and submodule
+# pointers. Run it after every change to forks.txt or to an upstream commit in patches.txt; CI checks that the patches
+# match.
 #
 #   bash tools/export_patches.sh [<work dir>]      fetches into <work dir> (default: a temporary one)
 set -euo pipefail
@@ -33,7 +34,7 @@ grep -v '^#' "$root/patches/patches.txt" | grep . | while read -r name path fork
         echo "on upstream $base (tools/export_patches.sh)"
         echo
         git -C "$work/$name" diff --binary --no-renames --ignore-submodules=all "$base" "$tip" -- . \
-            ':(exclude)README.md' ':(exclude)Readme.md' ':(exclude).gitmodules' ':(exclude).github'
+            ':(exclude)README.md' ':(exclude)Readme.md' ':(exclude)COPYING' ':(exclude).gitmodules' ':(exclude).github'
     } > "$root/patches/$name.patch"
     echo "$name: $(grep -c '^diff --git' "$root/patches/$name.patch") files, $base..$tip"
 done

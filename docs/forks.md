@@ -641,4 +641,12 @@ c700131 f491ca7        the framebuffer the game gave it, right behind the worklo
                        RT64_GAME_FRAME_WORKLOADS ended most frames at a wait for a workload instead of their present
                        and a frame still drawing was shown in parts (Mario Party 1's new scene for a frame inside a
                        star wipe, as the first frame stalls on the wipe's mask load)
+plume 21dc1de          WebGPU: a lost device is replaced with a new one (plume_webgpu_device.js), and the device made
+                       on it says isLost(), a new RenderDevice method; one lost within 10 s of being made isn't, nor
+                       one whose replacement can't be had, and the page's plumeWebGPUDeviceLostForGood() says so
+rt64 e9af13c           a lost WebGPU device that plume replaced: the next screen update ends RT64 and sets it up again
+                       on the new device (Application::replaceLostDevice()), the game carrying on from the same RDRAM;
+                       a render hook makes its objects again through SetRenderHookReplaceDevice(), not deinit and init
+RecompFrontend c0c49c6 Emscripten: on a replaced WebGPU device the menus' render interface releases RmlUi's textures
+                       and its own objects and makes them again on the new one, RmlUi and every context kept
 ```
