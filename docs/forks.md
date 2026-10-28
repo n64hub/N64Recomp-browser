@@ -623,6 +623,10 @@ rt64 e4f59dc           RT64_GAME_FRAME_WORKLOADS: a present waits for the last w
                        shows, not the newest queued: Mario Party 2's minigames queue a frame's present after the next
                        frame's first workload, so the present's wait cut that frame in the middle, or, held, held the
                        game too, Tile Driver's page at 5 game frames a second
+rt64 65a5757           RT64_GAME_FRAME_WORKLOADS: a frame switching to the other set of interpolated frame counters
+                       waits for the set before to be shown only while a present holds it: a present that waits for
+                       the workload that drew its framebuffer can start after the next frame switched and take the
+                       newer set, no present then shows the older, and Mario Party 2's page stopped 3 s into its boot
 N64ModernRuntime       the graphics thread takes its actions in the order they were queued, whichever thread queued
 ef84ceb                them, on every build: moodycamel's queue keeps one thread's order only, so a game's first task
                        of a frame, drawing into the framebuffer the VI's last screen update shows, could run before
