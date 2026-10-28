@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 67c31394e2844004b44a3923bbe3e76d990203d8
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web bf049c23cd0ad98fabac5ed063e8b960ca1b1e3e
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -1029,10 +1029,42 @@ index 0000000..be6c588
 +
 +#endif
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 17d7a47..4442cc7 100644
+index 17d7a47..83395f6 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
-@@ -180,6 +180,143 @@ uint64_t total_vis = 0;
+@@ -41,6 +41,22 @@ struct DummyWorkloadAction {
+ 
+ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction, DummyWorkloadAction>;
+ 
++// The graphics thread's actions, taken in the order they were queued, whichever thread queued them. A moodycamel queue
++// keeps one thread's order only: each thread queues into a list of its own, and a dequeue takes from the list that
++// holds the most. The VI thread queues its ScreenUpdateAction for the framebuffer it showed before it moves on to the
++// next one, and a game then draws its next frame into that framebuffer: its graphics task could run first, and the
++// screen showed the framebuffer with the next frame's first lists drawn into it (Mario Party 1's flash of a new scene
++// before its star wipe opens, 9 presents in 12,225 on a busy host). Every thread queues through one producer token.
++struct ActionQueue : moodycamel::BlockingConcurrentQueue<Action> {
++    moodycamel::ProducerToken token{ *this };
++    std::mutex mutex;
++
++    bool enqueue(Action action) {
++        std::lock_guard lock{ mutex };
++        return BlockingConcurrentQueue::enqueue(token, std::move(action));
++    }
++};
++
+ struct ViState {
+     const OSViMode* mode = nullptr;
+     PTR(void) framebuffer;
+@@ -137,7 +153,7 @@ static struct {
+     // The same message queue may be used for multiple events, so share a mutex for all of them
+     std::mutex message_mutex;
+     uint8_t* rdram;
+-    moodycamel::BlockingConcurrentQueue<Action> action_queue{};
++    ActionQueue action_queue{};
+     moodycamel::BlockingConcurrentQueue<OSTask*> sp_task_queue{};
+     moodycamel::ConcurrentQueue<OSThread*> deleted_threads{};
+ } events_context{};
+@@ -180,6 +196,143 @@ uint64_t total_vis = 0;
  
  
  extern std::atomic_bool exited;
@@ -1176,7 +1208,7 @@ index 17d7a47..4442cc7 100644
  extern moodycamel::LightweightSemaphore graphics_shutdown_ready;
  
  void set_dummy_vi(bool odd);
-@@ -209,10 +346,25 @@ void vi_thread_func() {
+@@ -209,10 +362,25 @@ void vi_thread_func() {
              // printf("Skipping the next VI wait\n");
              next = std::chrono::high_resolution_clock::now();
          }
@@ -1202,7 +1234,7 @@ index 17d7a47..4442cc7 100644
          if (new_total_vis > total_vis + 1) {
              //printf("Skipped % " PRId64 " frames in VI interupt thread!\n", new_total_vis - total_vis - 1);
          }
-@@ -267,6 +419,11 @@ void sp_complete() {
+@@ -267,6 +435,11 @@ void sp_complete() {
  }
  
  void dp_complete() {
