@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web c7001313367e543ba466bf60fd04417a9fd1ba5d
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web f491ca79891bddaef7d21a944935d48c7fd7d354
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -754,7 +754,7 @@ index ae0f44f..97d8e7e 100644
  }
  
 diff --git a/ultramodern/CMakeLists.txt b/ultramodern/CMakeLists.txt
-index 5593172..46f35c8 100644
+index 5593172..eee7f00 100644
 --- a/ultramodern/CMakeLists.txt
 +++ b/ultramodern/CMakeLists.txt
 @@ -39,3 +39,38 @@ target_compile_options(ultramodern PRIVATE
@@ -783,18 +783,18 @@ index 5593172..46f35c8 100644
 +    target_compile_definitions(ultramodern PRIVATE ULTRAMODERN_RSP_TASKS_COPIED=1)
 +endif()
 +
-+# The VI thread queues a VI's screen update after it swaps in the framebuffer the game gave it, not before
-+# (src/events.cpp, vi_thread_func).
-+option(ULTRAMODERN_SCREEN_UPDATE_AFTER_VI "A VI's screen update queued after its framebuffer swap (always on with Emscripten)" OFF)
-+if (ULTRAMODERN_SCREEN_UPDATE_AFTER_VI OR EMSCRIPTEN)
-+    target_compile_definitions(ultramodern PRIVATE ULTRAMODERN_SCREEN_UPDATE_AFTER_VI=1)
-+endif()
-+
 +# A load from ROM onto display list commands the renderer may not have read yet waits until it has (src/displaylists.cpp).
 +target_sources(ultramodern PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/displaylists.cpp")
 +option(ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS "A load from ROM onto display list commands the renderer may not have read yet waits for it (always on with Emscripten)" OFF)
 +if (ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS OR EMSCRIPTEN)
 +    target_compile_definitions(ultramodern PRIVATE ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS=1)
++endif()
++
++# The VI thread queues a VI's screen update after it swaps in the framebuffer the game gave it, not before
++# (src/events.cpp, vi_thread_func).
++option(ULTRAMODERN_SCREEN_UPDATE_AFTER_VI "A VI's screen update queued after its framebuffer swap (always on with Emscripten)" OFF)
++if (ULTRAMODERN_SCREEN_UPDATE_AFTER_VI OR EMSCRIPTEN)
++    target_compile_definitions(ultramodern PRIVATE ULTRAMODERN_SCREEN_UPDATE_AFTER_VI=1)
 +endif()
 diff --git a/ultramodern/include/ultramodern/displaylists.hpp b/ultramodern/include/ultramodern/displaylists.hpp
 new file mode 100644

@@ -615,7 +615,7 @@ ef84ceb                them, on every build: moodycamel's queue keeps one thread
                        present in 1,100 on a busy host (Mario Party 1's flash of a new scene before its star wipe).
                        DKR-R-web's runtime-host-task-lifetime.patch takes no context from the line it changes
 N64ModernRuntime       ULTRAMODERN_SCREEN_UPDATE_AFTER_VI: the VI thread queues a VI's screen update after it swaps in
-c700131                the framebuffer the game gave it, right behind the workloads that drew it: queued before the
+c700131 f491ca7        the framebuffer the game gave it, right behind the workloads that drew it: queued before the
                        swap, it showed the framebuffer a VI late, after the next frame's first workloads, so
                        RT64_GAME_FRAME_WORKLOADS ended most frames at a wait for a workload instead of their present
                        and a frame still drawing was shown in parts (Mario Party 1's new scene for a frame inside a
