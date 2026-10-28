@@ -606,6 +606,6 @@ rt64 87037a9           RT64_GAME_FRAME_WORKLOADS: two frames with different coun
                        middle of the board between frames. Frames with as many keep the pairing in order
 rt64 4e6ef9a           RT64_GAME_FRAME_WORKLOADS: a held frame ends when the game waits for a free present, not when
                        the present queue is full, which only says its next present will wait: the rest of the frame
-                       came before that present, and Mario Party 2 drew a frame in two 2-18 times in 5.5 minutes, its
+                       came before that present, and Mario Party 2 drew a frame in two 2-20 times in 5.5 minutes, its
                        text, HUD or a rules screen's title and buttons missing for a frame (0 since)
 ```
