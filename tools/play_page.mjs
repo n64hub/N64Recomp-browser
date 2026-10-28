@@ -72,7 +72,8 @@
 // a build dir is served uncached) and runs the plan's load and start steps, its setup's ROM kept: a player's way back
 // from a lost device, after one. For each it prints and records (in "faults") the presents a second before it (the last
 // 3 samples), during and after, the WebGPU errors, exceptions and sound frames short after, the console's first 10
-// lines from it on (whether the page told the player), the canvas's size, the visibility, the AudioContext's state,
+// lines from it on, what the page's status line says once it has run 30 s more ("notice", null where it says nothing:
+// what frontend/shell.html tells the player, a lost device included), the canvas's size, the visibility, the AudioContext's state,
 // whether the picture stood still (two screenshots a second apart the same: a page whose device is gone still calls
 // getCurrentTexture), for reload both boots (seconds to the end of the load steps and to the first present: cold, then
 // warm), and whether the page came through: presenting at half the rate before or more after, a picture that moves, no
@@ -739,7 +740,7 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
     await page.run([['wait', 30000]]);
     await sample();
     Object.assign(faultResult, await page.evaluate(`({ visibility: document.visibilityState, audio: ${audioContext}?.state ?? null,
-      canvas: ${canvas}, devices: window.__devices.length })`));
+      canvas: ${canvas}, devices: window.__devices.length, notice: document.getElementById('status')?.innerText.trim() || null })`));
     // A page whose device is gone still calls getCurrentTexture each frame, so presents can't say it stopped drawing:
     // two screenshots a second apart can.
     const shot = await page.screenshot();
