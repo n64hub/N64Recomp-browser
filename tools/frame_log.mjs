@@ -5,13 +5,14 @@
 //   node tools/frame_log.mjs <stderr.log> [--captures <captures.tsv>] [--around <capture>[,<capture>...]] [--span <ms>]
 //
 // It prints how many frames ended for each reason (present: a present of the framebuffer the frame drew; next: the
-// next frame's first workload; wait: something waited for one of its workloads; held: a frame with fewer workloads
-// that draw than the one before, held for the rest of them, ended at its limit or as the game waited for a free
-// present; full: the queue; paused) and how many
-// drew in fewer or more workloads than the frame before, and the runs of frames with the same shape (how many
-// workloads draw and what each draws to). A frame drawn in parts reads as a frame of fewer workloads that draw between
-// two of more; a frame matched wrongly against the one before (interpolation pairing the wrong objects) as a frame of
-// the same shape as its neighbours.
+// next frame's first workload; wait: something waited for one of its workloads; held: a frame with fewer or more
+// workloads that draw than the one before, held for the rest of them, ended at its limit or as the game waited for a
+// free present; full: the queue; paused), how many drew in fewer or more workloads than the frame before, how many
+// ended before the rest of their framebuffer's workloads (the next frame drew to it first: a frame drawn in two, each
+// part shown, when the game takes turns in two or three framebuffers) and when, and the runs of frames with the same
+// shape (how many workloads draw and what each draws to). A frame drawn in parts reads as a frame of fewer workloads
+// that draw between two of more; a frame matched wrongly against the one before (interpolation pairing the wrong
+// objects) as a frame of the same shape as its neighbours.
 //
 // With --around, what came within --span ms (200) of each capture named (a name in captures.tsv, as flicker.txt
 // lists them), each against the capture's time: each frame, its end and its workloads' framebuffers, each present the
@@ -76,6 +77,15 @@ for (const f of frames) {
 const seconds = (frames[frames.length - 1].t - frames[0].t) / 1000;
 console.log(`${frames.length} game frames in ${seconds.toFixed(1)} s; ended by ${Object.entries(ends).map(([k, v]) => `${k} ${v}`).join(', ')}`);
 console.log(`${fewer} drew in fewer workloads than the frame before, ${more} in more`);
+
+// A frame drawn in two: one whose next frame draws first to the framebuffer the VI shows that it drew to last, where a
+// game's next frame draws to its next framebuffer (one that draws to one framebuffer alone shows each of its frames).
+const shownOf = (f) => f.workloads.map((w) => w.shown).filter((a) => !/^0+$/.test(a));
+const split = frames.filter((f, i) => (i + 1 < frames.length) && (shownOf(f).length > 0) &&
+    (shownOf(frames[i + 1])[0] === shownOf(f).at(-1)));
+console.log(`${split.length} ended before the rest of their framebuffer's workloads (the next frame drew to it first)` +
+    (split.length > 0 ? `, at ${split.slice(0, 20).map((f) => `${((f.t - frames[0].t) / 1000).toFixed(3)} s`).join(', ')}` +
+        `${split.length > 20 ? ', ...' : ''}` : ''));
 
 const runs = [];
 for (const f of frames) {
