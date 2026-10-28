@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 42d1d65c5b53c4211d219d083cc35270646be92c
+rt64: https://github.com/n64hub/rt64-web e9af13c0e20ad6a6defa5fbc00255bef5455df3a
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1313,7 +1313,7 @@ index 558f1ee..40a2e09 100644
      };
  };
 diff --git a/src/hle/rt64_application.cpp b/src/hle/rt64_application.cpp
-index 785de27..52cf849 100644
+index 785de27..28357c0 100644
 --- a/src/hle/rt64_application.cpp
 +++ b/src/hle/rt64_application.cpp
 @@ -16,12 +16,18 @@
@@ -1507,7 +1507,7 @@ index 785de27..52cf849 100644
          }
  
          drawDataUploader.reset();
-@@ -705,6 +790,32 @@ namespace RT64 {
+@@ -705,6 +790,30 @@ namespace RT64 {
          FileDialog::finish();
      }
  
@@ -1520,16 +1520,14 @@ index 785de27..52cf849 100644
 +    // The configuration is kept, and so is what a caller set on the state; a render hook's objects are made again with
 +    // the replace device hook (rt64_render_hooks.h), not the deinit and init hooks.
 +    void Application::replaceLostDevice() {
-+        fprintf(stderr, "RT64: the WebGPU device was lost; starting again on a new one.
-+");
++        fprintf(stderr, "RT64: the WebGPU device was lost; starting again on a new one.\n");
 +        std::atomic<uint32_t> *displayListReads = state->displayListReads;
 +        replacingDevice = true;
 +        end();
 +        const SetupResult result = setup(setupThreadId);
 +        replacingDevice = false;
 +        if (result != SetupResult::Success) {
-+            fprintf(stderr, "RT64 could not start again on a new WebGPU device (%d).
-+", int(result));
++            fprintf(stderr, "RT64 could not start again on a new WebGPU device (%d).\n", int(result));
 +            abort();
 +        }
 +

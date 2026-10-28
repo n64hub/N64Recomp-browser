@@ -77,7 +77,8 @@
 // whether the picture stood still (two screenshots a second apart the same: a page whose device is gone still calls
 // getCurrentTexture), for reload both boots (seconds to the end of the load steps and to the first present: cold, then
 // warm), and whether the page came through: presenting at half the rate before or more after, a picture that moves, no
-// error or exception, and after a lost device with a new one. One that fails the run (the game stopped) ends the list
+// error or exception (the lost device's own "WebGPU device lost" line aside), and after a lost device with a new one and
+// no notice. One that fails the run (the game stopped) ends the list
 // there. --shot takes a screenshot after each too, <file>-<n>-<fault>.png. The note starts "fault <list>", so the run
 // is compared with nothing; the play's own numbers leave the faults out; and a page that didn't come through one exits
 // 4.
