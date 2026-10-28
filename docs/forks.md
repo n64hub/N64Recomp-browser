@@ -608,6 +608,11 @@ rt64 4e6ef9a           RT64_GAME_FRAME_WORKLOADS: a held frame ends when the gam
                        the present queue is full, which only says its next present will wait: the rest of the frame
                        came before that present, and Mario Party 2 drew a frame in two 2-20 times in 5.5 minutes, its
                        text, HUD or a rules screen's title and buttons missing for a frame (0 since)
+rt64 86f0092           RT64_GAME_FRAME_WORKLOADS: a frame with more workloads that draw than the one before is held
+                       at a wait as one with fewer is: a new scene's first frame can draw in more than the old one's
+                       last, and Mario Party 1's after its star wipe closed (four RSP tasks after the wipe's one)
+                       ended at a present of the frame before after two of them, drawing the new scene without the
+                       wipe's white for a frame. A frame cut at as many as the frame before still isn't held
 N64ModernRuntime       the graphics thread takes its actions in the order they were queued, whichever thread queued
 ef84ceb                them, on every build: moodycamel's queue keeps one thread's order only, so a game's first task
                        of a frame, drawing into the framebuffer the VI's last screen update shows, could run before
