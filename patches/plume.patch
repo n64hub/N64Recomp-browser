@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web 0a7027e05f3fbd3673d88d2d19cb9e82e693eaea
+plume: https://github.com/n64hub/plume-web 8618d6628e1b413e39e9c6a121c6102453c8e999
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -924,7 +924,7 @@ index 0000000..b4650c5
 +}
 diff --git a/plume_device_thread.cpp b/plume_device_thread.cpp
 new file mode 100644
-index 0000000..7870305
+index 0000000..3b226b3
 --- /dev/null
 +++ b/plume_device_thread.cpp
 @@ -0,0 +1,1710 @@
@@ -1279,10 +1279,10 @@ index 0000000..7870305
 +            // WebGPUBuffer::shadow), what it holds at map() is undefined, and a caller writes all it unmaps. Not one of
 +            // CopiedUploadMaxSize or more: its memory here and the backend's at unmap() would be two of it in the heap at
 +            // once, and the heap's break, which never comes down, keeps the peak (RecompFrontend's buffer for its images,
-+            // 1.5 times the largest yet, an SVG drawn at 4K among them, took GoldenEye's page past its heap at boot, and
-+            // Diddy Kong Racing's break rose 60 MB). One that big is mapped now and then, so it maps the backend's on the
-+            // device thread below, which runs every unmap queued before, and unmap() is queued: the caller writes into
-+            // the backend's memory once the last data went out.
++            // 1.5 times the largest yet, an SVG drawn at 4K among them, took GoldenEye's page past its heap at boot). One
++            // that big is mapped now and then, so it maps the backend's on the device thread below, which runs every unmap
++            // queued before, and unmap() is queued: the caller writes into the backend's memory once the last data went
++            // out.
 +            if (uploadHeap && (subresource == 0) && (size < CopiedUploadMaxSize)) {
 +                if (uploadCopy == nullptr) {
 +                    uploadCopy.reset(new uint8_t[size]);

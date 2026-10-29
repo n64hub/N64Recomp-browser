@@ -686,8 +686,8 @@ rt64 9e86102           an alpha compare under ALPHA_CVG_SEL without CVG_X_ALPHA 
                        engine draws a minigame's background picture (Honeycomb Havoc's sky, tree and ground) so with a
                        combiner alpha of 0, which RT64 drew none of, black on the desktop and the web; such a draw takes
                        a threshold of 0, its shader unchanged
-plume 0a7027e,         an UPLOAD buffer's memory in the heap lives only while it's mapped: WebGPU's shadow of it and
-rt64 fae38e7           the device thread's copy on the calling side are made at map() and freed once unmap()'s data is
+plume 8618d66,         an UPLOAD buffer's memory in the heap lives only while it's mapped: WebGPU's shadow of it and
+rt64 11940aa           the device thread's copy on the calling side are made at map() and freed once unmap()'s data is
                        written, where each was the buffer's whole size for its whole life, two copies of every buffer
                        pair RT64 keeps in each of its 64 workloads (docs/findings.md, Memory); one of 16 MB or more
                        still maps the backend's on the device thread (f3cb1a7)
