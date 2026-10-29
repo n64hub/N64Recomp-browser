@@ -461,8 +461,10 @@ the desktop and the page alike (that repo's docs/processes.md), so the page need
 of its 131 overlays through its OvlLoad. RT64 interpolates a board to the display's rate with no tags in the game's
 display lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its `patches/widescreen.c` taking a camera's
 view to the window's edges and its `patches/background.c` a board's background, through the engine's `camera_view.c`
-and `board_back.c`, so the window's sides show more of the board, unstretched. The engine draws a frame in several RSP
-tasks, one a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
+and `board_back.c`, so the window's sides show more of the board, unstretched; a camera whose scissor is the whole
+screen, to 320 or to 319 as Bowl Over's and three more scenes' are, reaches the window's edges. A scene it draws at 4:3
+(Chance Time, its `patches/widescreen.c` lists them) keeps its camera's view and its HUD inside 4:3. The engine draws a
+frame in several RSP tasks, one a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
 each whole, where frames of a dozen tasks ended early and the board flickered without its HUD, text or characters, and
 5f104ed holds one that a present for the frame before would split, which drew Toad tiny and an object beside him huge), so
 Mushroom Village, the minigames' instructions and the minigames interpolate to the display's rate as the boards do. Its `tools/build_web.sh` runs a Docker image of its own, so
