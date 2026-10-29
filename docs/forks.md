@@ -691,4 +691,7 @@ rt64 11940aa           the device thread's copy on the calling side are made at 
                        written, where each was the buffer's whole size for its whole life, two copies of every buffer
                        pair RT64 keeps in each of its 64 workloads (docs/findings.md, Memory); one of 16 MB or more
                        still maps the backend's on the device thread (f3cb1a7)
+plume 73a6625,         Vulkan: a scissor or clear rect past the target's edges is clamped to it, as a GPU clips it (a
+rt64 138edee           wide window's extended scissor starts left of 0); Mesa's lavapipe wrote past the image into the
+                       heap, and Mario Party 3's Linux build crashed seconds into its opening. Desktop only
 ```
