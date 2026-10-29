@@ -481,7 +481,9 @@ with the same scheduler from its `lib/mario-party-engine`, so the page needs no 
 patches load each overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a
 picture wider than 4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background
 zoomed and mirrored as the game draws it, and a hook keeps the scissor its text sets inside the picture as Mario Party
-3's does. Its `tools/build_web.sh` runs a Docker image of its own, so
+3's does. A scene it draws at 4:3 (Crazy Cutters and four more minigames, its `patches/widescreen.c` lists
+them) keeps black at the window's sides, the engine's `wipe.cpp` drawing it over what the scene's 3D reaches past 4:3.
+Its `tools/build_web.sh` runs a Docker image of its own, so
 `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 452 shaders: the boot
 (the launcher, the opening, the title and Mario Land, 40, four of them added by hand), the rules' board, each of the
 six boards and a section for every six of the 60 minigames that are not duels, recorded by `tools/record_shaders.sh`
@@ -503,7 +505,8 @@ its own setjmp and longjmp, which a recomp can't: the patches and natives the Ma
 the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own patches load each
 overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a picture wider than
 4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background zoomed and mirrored
-as the game draws it. Its `tools/build_web.sh` runs a Docker image of its
+as the game draws it. A scene it draws at 4:3 (a board's results on the star stage, Thwomp Pull, Vine With Me) keeps
+black at the window's sides as Mario Party 2's does. Its `tools/build_web.sh` runs a Docker image of its
 own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 462 shaders: the
 boot (the launcher, the title, the file select, the mode select and a Battle Royale's setup, 53, one of them a board's
 start's at a 3840x2000 canvas, added by hand), a section for each of the Battle Royale map's six boards and one for
