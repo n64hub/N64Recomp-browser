@@ -1,8 +1,8 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web c0c49c622c9d4be0dd53d9ed03041eacacb1fd39
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web bf01590a8644eab9b8586558f1edfe39127f3745
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
-index 899372b..9cd1199 100644
+index 899372b..e7e177a 100644
 --- a/recompinput/CMakeLists.txt
 +++ b/recompinput/CMakeLists.txt
 @@ -44,6 +44,10 @@ if (WIN32)
@@ -16,8 +16,20 @@ index 899372b..9cd1199 100644
  endif()
  
  target_compile_options(recompinput PRIVATE
+@@ -55,3 +59,11 @@ if (WIN32)
+ endif()
+ 
+ target_link_libraries(recompinput PUBLIC)
++
++# A game that turns single-player mode off (set_single_player_mode(false)) plays as single-player mode does, every
++# controller and the keyboard as player 1, until players are assigned (src/players.cpp, is_single_player_mode), and an
++# assigned player then reads only their own device (src/profiles.cpp, get_n64_input).
++option(RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED "A multiplayer game plays as single-player mode until players are assigned, and an assigned player reads only their own device (always on with Emscripten)" OFF)
++if (RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED OR EMSCRIPTEN)
++    target_compile_definitions(recompinput PRIVATE RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED=1)
++endif()
 diff --git a/recompinput/src/input_events.cpp b/recompinput/src/input_events.cpp
-index c76a1dc..a4a5430 100644
+index c76a1dc..345d3fa 100644
 --- a/recompinput/src/input_events.cpp
 +++ b/recompinput/src/input_events.cpp
 @@ -5,6 +5,11 @@
@@ -95,7 +107,18 @@ index c76a1dc..a4a5430 100644
  bool sdl_event_filter(void* userdata, SDL_Event* event) {
      switch (event->type) {
      case SDL_EventType::SDL_KEYDOWN:
-@@ -250,6 +311,9 @@ void handle_events() {
+@@ -88,7 +149,9 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
+         
+         ControllerGUID guid = profiles::get_guid_from_sdl_controller(controller);
+         if (profiles::get_controller_by_guid(guid) < 0) {
+-            if (players::is_single_player_mode()) {
++            // A game that allows more players makes a controller's profile at once, as the controls page's player
++            // cards list them, though it may play as single-player mode until players are assigned (players.cpp).
++            if (players::get_max_number_of_players() == 1) {
+                 deferred_controller_profiles[guid.hash] = guid;
+             } else {
+                 int profile_index = get_or_create_controller_profile_index(guid);
+@@ -250,6 +313,9 @@ void handle_events() {
      SDL_Event cur_event;
      static bool started = false;
      static bool exited = false;
@@ -189,11 +212,78 @@ index 03ed871..ebbc5c7 100644
          if (err != 0) {
              state.rumble_failed = true;
          }
+diff --git a/recompinput/src/players.cpp b/recompinput/src/players.cpp
+index 08cb3f3..9ed2add 100644
+--- a/recompinput/src/players.cpp
++++ b/recompinput/src/players.cpp
+@@ -74,7 +74,15 @@ size_t players::get_max_number_of_players() {
+ }
+ 
+ bool players::is_single_player_mode() {
++#ifdef RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED
++    // Until players are assigned a multiplayer game plays as single-player mode: every controller and the keyboard are
++    // player 1, with the single-player profiles, and the controls page shows them with its Assign players button
++    // (get_max_number_of_players stays the game's). Upstream's port 1 had only the keyboard then, and no controller
++    // reached the game until one was assigned: a game played alone needed the assignment first, a pad on its own too.
++    return PlayerState.single_player_mode || PlayerState.players.get_count() == 0;
++#else
+     return PlayerState.single_player_mode;
++#endif
+ }
+ 
+ void players::set_single_player_mode(bool single_player) {
+@@ -153,6 +161,9 @@ void playerassignment::commit_player_assignment() {
+     stop_and_close_modal();
+ 
+     PlayerState.players = PlayerState.temp_players;
++#ifdef RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED
++    bool sp_keyboard_taken = false;
++#endif
+     for (int i = 0; i < players::get_number_of_assigned_players(); i++) {
+         Player &player = PlayerState.players[i];
+         if (player.controller != nullptr) {
+@@ -161,6 +172,15 @@ void playerassignment::commit_player_assignment() {
+                 profiles::set_input_profile_for_player(i, cont_profile_index, InputDevice::Controller);
+             }
+         } else {
++#ifdef RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED
++            // The first keyboard player plays with the keys single-player mode has, where upstream gave them a new profile
++            // with no keys bound. Any other gets one of those, to bind keys of their own.
++            if (!sp_keyboard_taken) {
++                sp_keyboard_taken = true;
++                profiles::set_input_profile_for_player(i, profiles::get_sp_keyboard_profile_index(), InputDevice::Keyboard);
++                continue;
++            }
++#endif
+             profiles::set_input_profile_for_player(i, profiles::get_or_create_mp_keyboard_profile_index(i), InputDevice::Keyboard);
+         }
+     }
 diff --git a/recompinput/src/profiles.cpp b/recompinput/src/profiles.cpp
-index c89956e..39e46f2 100644
+index c89956e..1f0bd01 100644
 --- a/recompinput/src/profiles.cpp
 +++ b/recompinput/src/profiles.cpp
-@@ -415,6 +415,21 @@ namespace recompinput {
+@@ -399,6 +399,20 @@ namespace recompinput {
+             
+             int profile_index_cont = players::is_single_player_mode() ? profiles::get_sp_controller_profile_index() : players_input_profile_indices[player_index].first;
+             int profile_index_kb = players::is_single_player_mode() ? profiles::get_sp_keyboard_profile_index() : players_input_profile_indices[player_index].second;
++#ifdef RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED
++            // An assigned player reads only the device they were assigned. Upstream read both of a player's profiles, and
++            // a controller player's keyboard one was still player 1's single-player keys (or profile 0, those same keys,
++            // for players 2-4), so the keyboard played every controller player at once.
++            if (!players::is_single_player_mode()) {
++                InputDevice device = players::get_player_input_device(player_index);
++                if (device != InputDevice::Controller) {
++                    profile_index_cont = -1;
++                }
++                if (device != InputDevice::Keyboard) {
++                    profile_index_kb = -1;
++                }
++            }
++#endif
+             check_buttons(profile_index_cont);
+             check_buttons(profile_index_kb);
+ 
+@@ -415,6 +429,21 @@ namespace recompinput {
      }
  
      static void add_input_bindings(json& out, int profile_index, GameInput input) {
@@ -215,7 +305,7 @@ index c89956e..39e46f2 100644
          const std::string& input_name = recompinput::get_game_input_enum_name(input);
          json& out_array = out[input_name];
          out_array = json::array();
-@@ -439,6 +454,9 @@ namespace recompinput {
+@@ -439,6 +468,9 @@ namespace recompinput {
              profile["device"] = profiles::get_input_profile_device(i);
              profile["custom"] = profiles::is_input_profile_custom(i);
              profile["mappings"] = json();
@@ -393,6 +483,87 @@ index 6c84c05..1e857c3 100644
          auto close_button = config_modal->modal_root_context.create_element<IconButton>(header_right, "icons/X.svg", ButtonStyle::Basic);
          close_button->add_pressed_callback([]() {
              config::close();
+diff --git a/recompui/src/config/ui_config_page_controls.cpp b/recompui/src/config/ui_config_page_controls.cpp
+index f379a6f..072219f 100644
+--- a/recompui/src/config/ui_config_page_controls.cpp
++++ b/recompui/src/config/ui_config_page_controls.cpp
+@@ -170,9 +170,7 @@ void GameInputRow::focus_on_first_binding() {
+ ConfigPageControls::ConfigPageControls(ResourceId rid, Element *parent) : ConfigPage(rid, parent) {
+     controls_page = this;
+ 
+-    multiplayer_enabled = recompinput::players::is_single_player_mode() == false;
+-    this->max_num_players = multiplayer_enabled ? recompinput::players::get_max_number_of_players() : 1;
+-    multiplayer_view_mappings = !multiplayer_enabled;
++    update_multiplayer_enabled();
+ 
+     set_selected_player(selected_player);
+ 
+@@ -240,7 +238,19 @@ void ConfigPageControls::force_update() {
+     update_index++;
+ }
+ 
++// Single-player mode can change while the page exists: a game that plays as it until players are assigned
++// (recompinput's RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED) leaves it when they are.
++void ConfigPageControls::update_multiplayer_enabled() {
++    multiplayer_enabled = recompinput::players::is_single_player_mode() == false;
++    this->max_num_players = multiplayer_enabled ? recompinput::players::get_max_number_of_players() : 1;
++    multiplayer_view_mappings = !multiplayer_enabled;
++}
++
+ void ConfigPageControls::render_all() {
++    if (multiplayer_enabled != !recompinput::players::is_single_player_mode()) {
++        update_multiplayer_enabled();
++        selected_player = 0;
++    }
+     render_header();
+     render_body();
+     render_footer();
+@@ -259,10 +269,14 @@ static void show_or_hide_if_exists(Element* element, bool show) {
+ void ConfigPageControls::render_header() {
+     // Header attempts to not re-render elements if not necessary, instead swapping visibility / updating text.
+ 
+-    if (!multiplayer_enabled) {
++    // A game that allows more players shows Assign players in single-player mode too.
++    bool can_assign_players = recompinput::players::get_max_number_of_players() > 1;
++    if (!multiplayer_enabled && !can_assign_players) {
+         hide_header();
+         return;
+     }
++    // The player cards show the header's Assign players, editing a player's profile its Go back.
++    bool editing_profile = multiplayer_enabled && multiplayer_view_mappings;
+ 
+     recompui::ContextId context = get_current_context();
+     add_header();
+@@ -272,7 +286,7 @@ void ConfigPageControls::render_header() {
+     {
+         auto header_left = header->get_left();
+ 
+-        if (multiplayer_view_mappings) {
++        if (editing_profile) {
+             std::string profile_name = "Editing: " + recompinput::profiles::get_input_profile_name(selected_profile_index);
+             if (header_elements.left.profile_name_label == nullptr) {
+                 header_elements.left.profile_name_label = context.create_element<Label>(
+@@ -295,7 +309,7 @@ void ConfigPageControls::render_header() {
+     {
+         auto header_right = header->get_right();
+ 
+-        if (multiplayer_view_mappings) {
++        if (editing_profile) {
+             if (header_elements.right.go_back_button == nullptr) {
+                 header_elements.right.go_back_button = context.create_element<Button>(header_right, "Go back", ButtonStyle::Tertiary);
+                 header_elements.right.go_back_button->add_pressed_callback([this]() {
+diff --git a/recompui/src/config/ui_config_page_controls.h b/recompui/src/config/ui_config_page_controls.h
+index dd8ff24..66cfeae 100644
+--- a/recompui/src/config/ui_config_page_controls.h
++++ b/recompui/src/config/ui_config_page_controls.h
+@@ -185,6 +185,7 @@ private:
+ 
+     void set_current_profile_index();
+ 
++    void update_multiplayer_enabled();
+     void render_all();
+ 
+     void render_header();
 diff --git a/recompui/src/config/ui_config_tab_mods.cpp b/recompui/src/config/ui_config_tab_mods.cpp
 index 227e06d..10d95fe 100644
 --- a/recompui/src/config/ui_config_tab_mods.cpp

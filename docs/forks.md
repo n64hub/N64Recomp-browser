@@ -667,4 +667,9 @@ rt64 35fd6cd           scale of 0, a matrix of zeros) is never paired with one t
                        next: Mario Party 2's board hides the star Toad hands out with matrices of zeros, which were paired
                        with the frame before's, and the frames between drew its triangles across the view in front of the
                        board, a flat light grey; 35fd6cd puts back the line endings f6a01be changed
+RecompFrontend bf01590 RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED: a game that turns single-player mode off (four players,
+                       each pad its own port) plays as single-player mode until players are assigned, every pad and the
+                       keyboard player 1, the controls page with Assign players in its header; an assigned player reads
+                       only their own device (the keyboard played every pad's player), and the first keyboard player
+                       has single-player mode's keys (a new profile had none)
 ```
