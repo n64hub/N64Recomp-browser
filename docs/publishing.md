@@ -24,7 +24,7 @@ A run on a schedule that takes every change since the last one at once:
   N64Recomp-browser onto the tag (a commit to the fork's `main`) and is published. One that plays
   worse stays on Pages as it was, its fork on its last tag, and has work filed. So a fork's `main` is what its page was
   built from, and `git log <played>..<built>` here lists what a page took since it was last played.
-- Rush 2049, Perfect Dark, Super Mario 64 and F-Zero X, this project's own recomps, are
+- Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3, this project's own recomps, are
   retested in the
   same work,
   built, played and recorded the same way, never filed for later; only their pins move differently, by a
@@ -32,11 +32,12 @@ A run on a schedule that takes every change since the last one at once:
   `lib/N64ModernRuntime`, `lib/RecompFrontend`) to the commits the tag's `patches/patches.txt` names, as its CI
   checks, and builds the same bytes, which the retest merges before it publishes the page. Rush 2049's PR also runs the desktop game, and its pin moves even to a tag that
   left its page's bytes alone, since its desktop build can take something from it. A critical fix that plays every game takes it along the same way.
-- Mario Party 1, 2 and 3, this project's own recomps too, are not published until the games are released:
-  `tools/publish_pages.sh` holds them as unreleased, builds them only as a dry run and leaves them out of a run that
-  names no game. The retest still moves their pins as it does the other recomps' (a PR on each one's repo that moves
-  `lib/N64Recomp-browser` to the tag, its page built with `--dry-run` and played by the smoke play), merges them, and
-  publishes nothing: else nothing moves them, and the fixes made here for them never reach their builds.
+- A recomp of the project's own is not published until its game is released (none is held now): its line in
+  `tools/publish_pages.sh`'s `unreleased` holds it, builds it only as a dry run and leaves it out of a run that names
+  no game. The retest still moves its pin as it does the other recomps' (a PR on its repo that moves
+  `lib/N64Recomp-browser` to the tag, its page built with `--dry-run` and played by the smoke play), merges it, and
+  publishes nothing: else nothing moves it, and the fixes made here for it never reach its builds. The work that
+  releases the game takes it off the list, publishes its page and adds its row to the README's Games table.
 - `tools/publish_pages.sh <rush-2049-recomp checkout> --browser <tag> --keep <dir>`, run where the ROMs are, builds
   every game's main, Rush 2049's too, with its pin moved to the tag as that PR or commit moves it (in the build host's
   copy only), names
