@@ -681,4 +681,9 @@ rt64 89abe33           RT64_PARTIAL_SCREEN_PAIRS: a framebuffer pair that draws 
                        to the window's edge, and Fridged Bridges three of its quarters widened to the window's edges,
                        while the view drawn in the task with the frame's clear stopped at 4:3; one under an extended
                        scissor (a widescreen patch's, as Mario Party 3's board wipe is) is left as it was
+rt64 9e86102           an alpha compare under ALPHA_CVG_SEL without CVG_X_ALPHA keeps every covered pixel, on every
+                       build: the RDP's tests the pixel's coverage then, not the combiner's alpha, and Mario Party 2's
+                       engine draws a minigame's background picture (Honeycomb Havoc's sky, tree and ground) so with a
+                       combiner alpha of 0, which RT64 drew none of, black on the desktop and the web; such a draw takes
+                       a threshold of 0, its shader unchanged
 ```
