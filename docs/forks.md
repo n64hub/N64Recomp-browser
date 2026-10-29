@@ -662,4 +662,9 @@ plume 1e0acca          WebGPU: a buffer's size kept, and the bind group keys and
 plume 2688f88          plume_device_thread: a command list records into a recording the device thread is done with,
                        so its commands are freed on the recording thread, not on the page's after their replay
 rt64 f323a44
+rt64 f6a01be,          RT64_SKIP_COLLAPSED_MATCHES: a transform that collapses what it draws (a zero determinant: a
+rt64 35fd6cd           scale of 0, a matrix of zeros) is never paired with one that doesn't from one game frame to the
+                       next: Mario Party 2's board hides the star Toad hands out with matrices of zeros, which were paired
+                       with the frame before's, and the frames between drew its triangles across the view in front of the
+                       board, a flat light grey; 35fd6cd puts back the line endings f6a01be changed
 ```
