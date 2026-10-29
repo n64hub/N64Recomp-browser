@@ -25,8 +25,8 @@
 #   retest). Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3 move by a PR on their own repos
 #   (CLAUDE.md, The pins), though the games publish_pages.sh holds as unreleased (Mario Party 1, 2 and 3) are left
 #   out of a run that names no game, since Pages serves no page of theirs to play against: for each, the run pushes the
-#   pin commit as
-#   branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
+#   pin commit, which also moves its submodules of upstream's to the commits the tag's patches/patches.txt names, as
+#   the build did (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
 #   build has run), `publish_pages.sh <checkout> <game> --played <dir>/keep` and `play_pages.sh <checkout> firefox
 #   <game>` publish and play it.
 # --cpu-throttle is ab_pages.mjs's for the A/B (a desktop GPU's Chrome reads the same ceiling for every build
@@ -61,7 +61,7 @@ unreleased="$(sed -n 's/^unreleased="\(.*\)"$/\1/p' "$here/publish_pages.sh")"
 for g in "${selected[@]}" "${ab[@]}"; do grep -q "^$g " <<< "$games" || { echo "no game $g"; exit 1; }; done
 git -C "$here/.." fetch -q --tags origin
 tag_sha="$(git -C "$here/.." rev-parse -q --verify "$tag^{commit}")" || { echo "no tag $tag"; exit 1; }
-own=" rush pd sm64 fzx mp1 mp2 mp3 "
+own=" $(sed -n 's/^own="\(.*\)"$/\1/p' "$here/publish_pages.sh") "
 # The --ab games first, then the rest in the order given.
 order=("${ab[@]}")
 for g in "${selected[@]}"; do [[ " ${ab[*]} " == *" $g "* ]] || order+=("$g"); done
@@ -80,23 +80,33 @@ step() {
 }
 clone_of() { [[ $1 == rush ]] && echo "$rush" || echo "$cache/$1"; }
 rom_of() { [[ $1 == rush ]] && echo "$rush/roms/rush2049.us.z64" || echo "${ROMS:?set ROMS}/$1.z64"; }
-# pin_commit <game>: the built main with N64Recomp-browser moved to the tag, as a commit in the game's clone.
+# moved_subs <game>: the submodules besides N64Recomp-browser that the build's pin commit moves (an own recomp's of
+# upstream's), as a list for a sentence.
+moved_subs() {
+    local was tree
+    read -r was _ tree < "$run/keep/$1/built"
+    git -C "$(clone_of "$1")" diff-tree -r --name-only "$was" "$tree" | grep -v 'N64Recomp-browser$' | paste -sd, - |
+        sed 's/,/, /g'
+}
+# pin_commit <game>: the commit the build was built as, the built main with its pin moved (the tree in `built`), in the
+# game's clone.
 pin_commit() {
-    local clone was pin b index="$run/$1.index"
+    local clone was pin tree b msg moved
     clone="$(clone_of "$1")"
-    read -r was pin < "$run/keep/$1/built"
+    read -r was pin tree < "$run/keep/$1/built"
+    [[ -n $tree ]] || { echo "$run/keep/$1/built names no tree: build it again" >&2; return 1; }
     b=lib/N64Recomp-browser
     [[ -n "$(git -C "$clone" ls-tree "$was" $b)" ]] || b=tools/N64Recomp-browser
-    GIT_INDEX_FILE="$index" git -C "$clone" read-tree "$was" &&
-        GIT_INDEX_FILE="$index" git -C "$clone" update-index --cacheinfo "160000,$pin,$b" &&
-        git -C "$clone" commit-tree "$(GIT_INDEX_FILE="$index" git -C "$clone" write-tree)" -p "$was" \
-            -m "$b at N64Recomp-browser $tag (${pin:0:7})" \
-            -m "N64Recomp-browser's retest: the page built on $tag played clean in Firefox$([[ ${#ab[@]} -gt 0 ]] &&
-                echo ", and Chrome's A/B against Pages on ${ab[*]} read no worse")."
+    msg=(-m "$b at N64Recomp-browser $tag (${pin:0:7})")
+    moved="$(moved_subs "$1")"
+    [[ -z $moved ]] || msg+=(-m "With $moved at the upstream commits $tag's patches/patches.txt names, which its patches are made on.")
+    git -C "$clone" commit-tree "$tree" -p "$was" "${msg[@]}" \
+        -m "N64Recomp-browser's retest: the page built on $tag played clean in Firefox$([[ ${#ab[@]} -gt 0 ]] &&
+            echo ", and Chrome's A/B against Pages on ${ab[*]} read no worse")."
 }
 # move_pin <game>: a fork's main fast-forwarded to the pin commit; an own recomp's PR opened with it.
 move_pin() {
-    local g=$1 clone repo commit branch="n64recomp-browser-$tag"
+    local g=$1 clone repo commit moved branch="n64recomp-browser-$tag"
     clone="$(clone_of "$g")" repo="$(awk -v g="$g" '$1 == g { print $2 }' <<< "$games")"
     git -C "$clone" fetch -q origin main
     read -r was _ < "$run/keep/$g/built"
@@ -107,8 +117,10 @@ move_pin() {
         return
     fi
     git -C "$clone" push -f origin "$commit:refs/heads/$branch" || return 1
+    moved="$(moved_subs "$g")"
     local body="Moves the N64Recomp-browser pin to $tag, the tag N64Recomp-browser's retest builds every page on: what it"
-    body+=" brings is \`git log <the old pin>..$tag\` there. Only the pin changes. The page built from this commit played"
+    body+=" brings is \`git log <the old pin>..$tag\` there. Only the pin changes$([[ -z $moved ]] ||
+        echo ", and with it $moved, to the upstream commits $tag's patches/patches.txt names"). The page built from this commit played"
     body+=" clean in Firefox (N64Recomp-browser's plays.jsonl); once this merges, \`publish_pages.sh --played\` publishes"
     body+=" the files that were played."
     gh pr view "$branch" -R "$repo" --json url --jq .url 2> /dev/null ||
