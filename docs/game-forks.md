@@ -466,7 +466,9 @@ screen, to 320 or to 319 as Bowl Over's and three more scenes' are, reaches the 
 (Chance Time and Tipsy Tourney, its `patches/widescreen.c` lists them) keeps its camera's view and its HUD inside 4:3,
 black beside it. A sprite as wide as the screen is drawn stretched over the window wherever the game puts it
 (Piranha's Pursuit's jungle, which scrolls), as Mario Party 2's is, its sprite hook giving the engine's `hud.cpp` each
-sprite's width (its sprite lays its frame and scale out its own way). The engine draws a frame in several RSP tasks,
+sprite's width (its sprite lays its frame and scale out its own way). Piranha's Pursuit's ground, one mesh the game
+moves with the track and only a little wider than 4:3's view, is widened by as much as the picture is wider than 4:3
+(`patches/widescreen.c`), its texture stretched with it, so it reaches the window's lower left. The engine draws a frame in several RSP tasks,
 one a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
 each whole, where frames of a dozen tasks ended early and the board flickered without its HUD, text or characters, and
 5f104ed holds one that a present for the frame before would split, which drew Toad tiny and an object beside him huge), so
