@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web 21dc1de4944e532061652fcb2ed429151289763e
+plume: https://github.com/n64hub/plume-web 2688f8886d421fc7abe35b7be618f21152b17f43
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -924,10 +924,10 @@ index 0000000..b4650c5
 +}
 diff --git a/plume_device_thread.cpp b/plume_device_thread.cpp
 new file mode 100644
-index 0000000..05a3502
+index 0000000..3f03353
 --- /dev/null
 +++ b/plume_device_thread.cpp
-@@ -0,0 +1,1683 @@
+@@ -0,0 +1,1701 @@
 +//
 +// plume
 +//
@@ -1685,6 +1685,7 @@ index 0000000..05a3502
 +        RenderCommandList *inner = nullptr;
 +        std::shared_ptr<Recording> recording;
 +        std::shared_ptr<const Recording> recorded;
++        std::vector<std::shared_ptr<Recording>> spares;
 +        std::vector<std::shared_ptr<DTMapState>> readbacks;
 +        std::vector<std::shared_ptr<DTMapState>> recordedReadbacks;
 +        uint64_t openSerial = 0;
@@ -1740,7 +1741,24 @@ index 0000000..05a3502
 +
 +        void begin() override {
 +            setCommandListOpen(openSerial, false);
-+            recording = std::make_shared<Recording>();
++
++            // A recording the device thread is done with is cleared and recorded into again here, so its commands are
++            // freed on this thread and its storage kept: a new one each time was freed on the page's thread after its
++            // replay, thousands of commands a frame in a frame drawn in many workloads.
++            recording.reset();
++            for (const std::shared_ptr<Recording> &spare : spares) {
++                if (spare.use_count() == 1) {
++                    recording = spare;
++                    recording->clear();
++                    break;
++                }
++            }
++
++            if (recording == nullptr) {
++                recording = std::make_shared<Recording>();
++                spares.emplace_back(recording);
++            }
++
 +            readbacks.clear();
 +            computeLayout = nullptr;
 +            graphicsLayout = nullptr;
@@ -2989,10 +3007,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..d611914
+index 0000000..927d078
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3568 @@
+@@ -0,0 +1,3577 @@
 +//
 +// plume
 +//
@@ -3439,6 +3457,7 @@ index 0000000..d611914
 +        }
 +
 +        buffer = wgpuDeviceCreateBuffer(device->device, &bufferDesc);
++        size = bufferDesc.size;
 +        handleSerial = newHandleSerial();
 +        device->liveBufferSerials.insert(handleSerial);
 +        if ((desc.heapType == RenderHeapType::UPLOAD) || (desc.heapType == RenderHeapType::GPU_UPLOAD) || (desc.heapType == RenderHeapType::READBACK)) {
@@ -3964,8 +3983,13 @@ index 0000000..d611914
 +
 +        layoutEntries.clear();
 +        groupEntries.clear();
-+        std::string key;
-+        std::string entriesKey;
++
++        // Built in the same strings every time, on the device thread: an RT64 frame drawn in many workloads rebuilds
++        // its texture sets for each of them, and new strings grown to a key's length took most of this.
++        static thread_local std::string key;
++        static thread_local std::string entriesKey;
++        key.clear();
++        entriesKey.clear();
 +        for (const Binding &binding : bindings) {
 +            WGPUBindGroupLayoutEntry layoutEntry = WGPU_BIND_GROUP_LAYOUT_ENTRY_INIT;
 +            WGPUBindGroupEntry groupEntry = WGPU_BIND_GROUP_ENTRY_INIT;
@@ -4020,7 +4044,7 @@ index 0000000..d611914
 +                    // A storage binding is a multiple of 4 bytes long, and a uniform one of 16. Buffers are made that
 +                    // way, so the padding is there.
 +                    const uint64_t sizeAlignment = (layoutEntry.buffer.type == WGPUBufferBindingType_Uniform) ? 16 : 4;
-+                    groupEntry.size = std::min<uint64_t>(alignUp(groupEntry.size, sizeAlignment), wgpuBufferGetSize(groupEntry.buffer) - groupEntry.offset);
++                    groupEntry.size = std::min<uint64_t>(alignUp(groupEntry.size, sizeAlignment), binding.buffer->size - groupEntry.offset);
 +                }
 +
 +                appendKey(key, 'b', uint32_t(binding.binding), int32_t(layoutEntry.buffer.type), int32_t(0), int32_t(0));
@@ -4155,7 +4179,9 @@ index 0000000..d611914
 +            entry.buffer = buffer;
 +            entry.size = bindingSize;
 +            entries.emplace_back(entry);
-+            const std::string key = groupKey + "pushConstants:" + std::to_string(chunkId) + ":" + std::to_string(bindingSize);
++            static thread_local std::string key;
++            key.assign(groupKey);
++            appendKey(key, 'c', uint64_t(chunkId), uint32_t(bindingSize));
 +            group = device->getBindGroup(key, getLayoutWithPushConstants(), entries);
 +        }
 +
@@ -5315,7 +5341,8 @@ index 0000000..d611914
 +        }
 +
 +        const bool pushConstants = state.layout->pushConstantsSize > 0;
-+        std::vector<WGPUBindGroupLayout> layouts;
++        static thread_local std::vector<WGPUBindGroupLayout> layouts;
++        layouts.clear();
 +        for (uint32_t i = 0; i < state.layout->descriptorSetCount; i++) {
 +            WebGPUDescriptorSet *descriptorSet = state.descriptorSets[i];
 +            const bool sharesPushConstants = pushConstants && (i == PushConstantsGroup);
@@ -5906,7 +5933,7 @@ index 0000000..d611914
 +        const uint64_t srcOffset = srcBuffer.offset - before;
 +        const uint64_t dstOffset = dstBuffer.offset - before;
 +        uint64_t wordSize = alignUp(size + before, 4);
-+        wordSize = std::min({ wordSize, wgpuBufferGetSize(src->buffer) - srcOffset, wgpuBufferGetSize(dst->buffer) - dstOffset });
++        wordSize = std::min({ wordSize, src->size - srcOffset, dst->size - dstOffset });
 +        assert((((srcOffset | dstOffset | wordSize) & 3) == 0) && "Both ends of a buffer copy must be equally misaligned.");
 +        wgpuCommandEncoderCopyBufferToBuffer(encoder, src->buffer, srcOffset, dst->buffer, dstOffset, wordSize);
 +        copiedInto(dst);
@@ -6563,10 +6590,10 @@ index 0000000..d611914
 +};
 diff --git a/plume_webgpu.h b/plume_webgpu.h
 new file mode 100644
-index 0000000..35992ce
+index 0000000..6751067
 --- /dev/null
 +++ b/plume_webgpu.h
-@@ -0,0 +1,738 @@
+@@ -0,0 +1,739 @@
 +//
 +// plume
 +//
@@ -6740,6 +6767,7 @@ index 0000000..35992ce
 +
 +    struct WebGPUBuffer : RenderBuffer {
 +        WGPUBuffer buffer = nullptr;
++        uint64_t size = 0;
 +        uint64_t handleSerial = 0;
 +        WebGPUDevice *device = nullptr;
 +        RenderBufferDesc desc;
