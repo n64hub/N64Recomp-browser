@@ -485,8 +485,10 @@ picture wider than 4:3, through the engine's `camera_view.c` and `board_back.c` 
 zoomed and mirrored as the game draws it, and a hook keeps the scissor its text sets inside the picture as Mario Party
 3's does. A scene it draws at 4:3 (Crazy Cutters and four more minigames, its `patches/widescreen.c` lists
 them) keeps black at the window's sides, the engine's `wipe.cpp` drawing it over what the scene's 3D reaches past 4:3.
-Its `tools/build_web.sh` runs a Docker image of its own, so
-`publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 452 shaders: the boot
+A sprite as wide as the screen (Abandon Ship's sky) is drawn stretched over the window wherever the game puts it, its
+sprite hook giving the engine's `hud.cpp` each sprite's width: RT64 stretches one only while it covers 0-320, and the
+sky the game moves with the camera in the finish shot dropped into 4:3. Its `tools/build_web.sh` runs a Docker image
+of its own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 452 shaders: the boot
 (the launcher, the opening, the title and Mario Land, 40, four of them added by hand), the rules' board, each of the
 six boards and a section for every six of the 60 minigames that are not duels, recorded by `tools/record_shaders.sh`
 and `tools/shader_plan.json` without anyone playing: a survey in `patches/survey.c` sends the game to each board with
