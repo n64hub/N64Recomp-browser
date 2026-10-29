@@ -464,7 +464,8 @@ view to the window's edges and its `patches/background.c` a board's background, 
 and `board_back.c`, so the window's sides show more of the board, unstretched; a camera whose scissor is the whole
 screen, to 320 or to 319 as Bowl Over's and three more scenes' are, reaches the window's edges. A scene it draws at 4:3
 (Chance Time, its `patches/widescreen.c` lists them) keeps its camera's view and its HUD inside 4:3. A sprite as wide
-as the screen is drawn stretched over the window wherever the game puts it, as Mario Party 2's is, its sprite hook
+as the screen is drawn stretched over the window wherever the game puts it (Piranha's Pursuit's jungle, which scrolls),
+as Mario Party 2's is, its sprite hook
 giving the engine's `hud.cpp` each sprite's width (its sprite lays its frame and scale out its own way). The engine draws a
 frame in several RSP tasks, one a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
 each whole, where frames of a dozen tasks ended early and the board flickered without its HUD, text or characters, and
