@@ -289,5 +289,7 @@ The measurements behind each are in docs/findings.md (Ruled out, measured).
   tenth of a game page's timed waits end 4-16 ms late, on the system timer's tick, with a 1 ms timer kept pending too.
 - wasm SIMD for RT64's TMEM loads and CI4 hashes: up to 9 times as fast alone, and no page drew faster, on a phone or
   a desktop GPU.
+- RT64 waiting for a frame drawn in many workloads once, after its last, not after each: with the page's thread
+  slow, the game ran at half its rate.
 - Skipping or batching the device thread's round trips to keep a hidden page's game running in Chrome: Chrome idles a
   silent hidden tab's process (a muted test's too), and the trips were a small part of the time its game lost.

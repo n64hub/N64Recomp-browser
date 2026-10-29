@@ -641,4 +641,25 @@ c700131 f491ca7        the framebuffer the game gave it, right behind the worklo
                        RT64_GAME_FRAME_WORKLOADS ended most frames at a wait for a workload instead of their present
                        and a frame still drawing was shown in parts (Mario Party 1's new scene for a frame inside a
                        star wipe, as the first frame stalls on the wipe's mask load)
+plume 21dc1de          WebGPU: a lost device is replaced with a new one (plume_webgpu_device.js), and the device made
+                       on it says isLost(), a new RenderDevice method; one lost within 10 s of being made isn't, nor
+                       one whose replacement can't be had, and the page's plumeWebGPUDeviceLostForGood() says so
+rt64 e9af13c           a lost WebGPU device that plume replaced: the next screen update ends RT64 and sets it up again
+                       on the new device (Application::replaceLostDevice()), the game carrying on from the same RDRAM;
+                       a render hook makes its objects again through SetRenderHookReplaceDevice(), not deinit and init
+RecompFrontend c0c49c6 Emscripten: on a replaced WebGPU device the menus' render interface releases RmlUi's textures
+                       and its own objects and makes them again on the new one, RmlUi and every context kept
+rt64 756daf5           RT64_GAME_FRAME_WORKLOADS: a change of the swap chain's size or the framebuffer configuration
+                       waits only while a present holds a set of interpolated frame counters, and leaves neither set
+                       with frames for a present to take from the targets it clears: it waited until the current set
+                       had been presented, which since e4f59dc no present may do, and Mario Party 2's page froze for
+                       good at a window's resize now and then
+rt64 cbe7e09           RT64_PACKED_RSP_INPUTS: a packed input buffer for each workload slot of a frame, an input copied
+                       into it only when its BufferPair's uploadSerial changed: an interpolated frame copied every
+                       input of every workload again, a third of Mario Party 2's Tile Driver's WebGPU commands
+plume 1e0acca          WebGPU: a buffer's size kept, and the bind group keys and layouts built in reused thread_local
+                       strings and vectors, not new ones thousands of times a frame drawn in many workloads
+plume 2688f88          plume_device_thread: a command list records into a recording the device thread is done with,
+                       so its commands are freed on the recording thread, not on the page's after their replay
+rt64 f323a44
 ```

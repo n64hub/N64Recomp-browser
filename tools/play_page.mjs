@@ -77,7 +77,8 @@
 // whether the picture stood still (two screenshots a second apart the same: a page whose device is gone still calls
 // getCurrentTexture), for reload both boots (seconds to the end of the load steps and to the first present: cold, then
 // warm), and whether the page came through: presenting at half the rate before or more after, a picture that moves, no
-// error or exception, and after a lost device with a new one. One that fails the run (the game stopped) ends the list
+// error or exception (the lost device's own "WebGPU device lost" line aside), and after a lost device with a new one and
+// no notice. One that fails the run (the game stopped) ends the list
 // there. --shot takes a screenshot after each too, <file>-<n>-<fault>.png. The note starts "fault <list>", so the run
 // is compared with nothing; the play's own numbers leave the faults out; and a page that didn't come through one exits
 // 4.
@@ -753,18 +754,20 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
   }
   faultPhase = null;
   const faultSamples = (phase) => samples.filter((s) => s.fault === `${i} ${phase}`);
+  // The device fault's own loss is logged as an error ("WebGPU device lost") and isn't one of the fault's.
+  const faultErrors = errors.slice(errorsFrom).filter((text) => name !== 'device' || !/^WebGPU device lost/.test(text));
   Object.assign(faultResult, {
     presentsDuring: median(faultSamples('during').map((s) => s.presents)),
     presentsAfter: median(faultSamples('after').map((s) => s.presents)),
     audioShortAfter: faultSamples('after').reduce((t, s) => t + (s.short ?? 0), 0),
-    webgpuErrors: errors.length - errorsFrom, firstErrors: [...new Set(errors.slice(errorsFrom))].slice(0, 3),
+    webgpuErrors: faultErrors.length, firstErrors: [...new Set(faultErrors)].slice(0, 3),
     exceptions: exceptions - exceptionsFrom, lines: [...faultLines],
   });
   // Through it: presenting at half the rate before it or more, a picture that moves, no WebGPU error or exception since, and after a lost
-  // device a new one (the page's own are in window.__devices; one it asks for again comes after them).
+  // device a new one (the page's own are in window.__devices; one it asks for again comes after them) and no notice that it stopped.
   faultResult.recovered = !faultResult.failed && !faultResult.still && faultResult.exceptions === 0 && faultResult.webgpuErrors === 0 &&
     faultResult.presentsAfter !== null && faultResult.presentsAfter >= 0.5 * (faultResult.presentsBefore ?? 0) &&
-    (name !== 'device' || (faultResult.devices ?? 0) > devices);
+    (name !== 'device' || ((faultResult.devices ?? 0) > devices && !faultResult.notice));
   const r1 = (x) => x?.toFixed(1) ?? '-';
   console.log(`fault ${name}: ${faultResult.recovered ? 'came through' : 'did not come through'}, presents/s ${r1(faultResult.presentsBefore)} ` +
     `before, ${r1(faultResult.presentsDuring)} during, ${r1(faultResult.presentsAfter)} after; ${faultResult.webgpuErrors} WebGPU errors, ` +

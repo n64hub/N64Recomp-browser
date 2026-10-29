@@ -1477,6 +1477,26 @@ with too few workloads, and Goldwood then presented 346-356, every frame interpo
 Pages' 62.5, its p99 gap 4.6 ms against 18.2, and Banjo-Kazooie's 360 against 359 (whole GPU turns, a host shared
 with other plays; plays.jsonl).
 
+## A frame drawn in many workloads
+
+Mario Party 2's Tile Driver (minigame 0x46, its overlay 0x37) draws each game frame in 16 workloads, and
+RT64_GAME_FRAME_WORKLOADS draws all 16 again for each interpolated frame. Chrome 155 on an RTX 2070, 3840x2000
+uncapped, a present counter preloaded, whole GPU turns on an idle host (plays.jsonl, sets `mp2-many-workloads-*` and
+`mp2-rsp-copies-throttled`):
+
+- v0.143.0 presented 45 a second there, at the game's 30 frames. v0.145.0 presents 162-176 (rt64 e4f59dc and 3313c77):
+  past that, the wall is Chrome's GPU process, whose main thread runs the page's WebGPU commands, about 1.3 cores, the
+  page waiting about 600 ms a second for fewer than 4 presents in flight. Fewer calls from the page don't move it: rt64
+  cbe7e09 with plume 1e0acca and 2688f88, which take out a third of the page's WebGPU commands there, presented 162-165
+  either way.
+- With Chrome's page thread throttled 4 times the page's thread is the limit. There those changes drew Tile Driver at
+  31.4 and 31.7 presents a second and 29.8 game frames against 29.2 and 29.5, and the whole play's median at 124 and 128
+  against 92 and 101.
+- The other screens are past 100: on v0.145.0 Mario Party 1's village 350, Memory Match 323, Bumper Balls 263, minigame
+  0x2A 319 and a board's rules 231, and Mario Party 3's Chilly Waters 194 and minigames 0x01 281, 0x0D 341 and 0x25
+  246; Mario Party 2's Mario Land 322-326 and minigames 0x05 358, 0x0B 299-338 and 0x13 340 on v0.143.0 and the test
+  builds of these changes.
+
 ## Faults
 
 `play_page.mjs --fault resize,hidden,audio,device,reload` (its header), played from Pages on an RTX 5080 (headless
@@ -1485,12 +1505,28 @@ Fox 64 mid-Corneria, each fault in turn in one visit, every run in plays.jsonl:
 
 - A resized window (60% as wide and high for 10 s): both pages in both browsers drew at the new canvas size
   (754x387) and back, no error, the rate unchanged.
+  Mario Party 2's page froze for good at about one resize in 30 (headless Chrome, 3840x2000 uncapped, on a board or
+  just booted to Mario Land), presents at 0, no sound and no error: RT64_GAME_FRAME_WORKLOADS's change of size waited
+  until the current set of interpolated frame counters had been presented, which no present may do since a present
+  can take the other set, and the present that would was waiting for that very workload. Since rt64 756daf5 it waits
+  only while a present holds a set, and 63 resizes in 21 boots came through on an RTX 2070, a busy host (plays.jsonl).
+  The same page froze the same way at about one boot in 25 with no fault at all, 5-10 s after Start Game: the game's
+  own race, not RT64's. Its controllers' setup has the thread that reads them start the reads at each retrace before
+  it makes the lock they take, and a retrace between the two leaves that thread waiting for good on a queue that
+  osCreateMesgQueue then empties of its waiters, as libultra's does. A console gets there in microseconds; the
+  runtime runs the setup's thread, the game's lowest in priority, only once every other has waited. With the setup
+  made to wait 50 ms between the two, 3 boots of 3 froze, and 4 of 4 came through with the lock made first, which is
+  mario-party-engine's `patches/pad.c` in all three Mario Party games (its README).
 - A suspended AudioContext (10 s): the game ran on, and once resumed the sound came up short for a few seconds
   (201-1,304 frames) and then played as before.
 - A lost WebGPU device (`device.destroy()`): in both browsers both pages froze on their last frame and never asked for
-  a new device; over it the status line says the graphics stopped and asks for a reload (frontend/shell.html, since
-  v0.76.0; play_page records it as the fault's `notice`). They still call `getCurrentTexture` each frame, so a count
-  of presents doesn't show it: the screenshots do. A reload brought each back.
+  a new device; they still call `getCurrentTexture` each frame, so a count of presents doesn't show it: the
+  screenshots do. A reload brought each back. Since plume 21dc1de, rt64 e9af13c and RecompFrontend c0c49c6 the page
+  asks for a new device and RT64 starts again on it, the game carrying on (frontend/shell.html says how; its notice to
+  reload is left for a device that isn't replaced). Mario Kart 64 mid-race on an RTX 2070, a busy host: within a
+  second of the loss a new device drew the race on, after a wait of 0.0 s (Chrome, its pipelines in the browser's
+  cache) or 0.4 s and 1.6 s (Firefox) for Luigi Raceway's prebuilt shaders, no WebGPU error and no notice, and 352
+  presents a second after against 333 before in Chrome, 241 against 179 in Firefox (plays.jsonl).
 - A hidden tab (30 s) in Chrome: the pages presented ~60 a second while hidden, but Star Fox 64's sound came up
   3,000-7,000 frames short every 5 s, and back in front both presented below their rate before (60, then 89 against
   147; 60 for ~80 s against 114), until plume 08f9327 and rt64 52ec88f (A page in a hidden tab). Firefox played both
@@ -1681,6 +1717,13 @@ The measurements behind rules CLAUDE.md and the other docs state without them.
 ## Ruled out, measured
 
 What CLAUDE.md's Ruled out rests on.
+
+- RT64's workload thread waiting for a frame's workloads once, after its last, not after each, for a frame drawn in many
+  workloads (A frame drawn in many workloads): on v0.143.0 it took Tile Driver from 45 presents a second to 75-77, and
+  on v0.145.0 it moved nothing (162-164 against 162). With Chrome's page thread throttled 4 times, with rt64 cbe7e09
+  and plume's cuts, Tile Driver drew 50.1 and 41.0 presents a second but 15.3 and 14.0 game frames, against v0.145.0's
+  29.6 and 29.7 presents at 29.3 and 29.7 game frames: half the game's own rate, where those changes alone kept it
+  (sets `mp2-many-workloads-throttled` and `mp2-rsp-copies-throttled` in plays.jsonl).
 
 - wasm SIMD for RT64's TMEM loads and CI4 hashes, the 11.5% of a phone's display list thread that fullSync's tiles
   took in Conker (docs/phones.md, Conker's Bad Fur Day on a Galaxy S21): two TMEM words in one i8x16 shuffle and a CI4
