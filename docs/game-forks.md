@@ -505,17 +505,17 @@ its own setjmp and longjmp, which a recomp can't: the patches and natives the Ma
 the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own patches load each
 overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a picture wider than
 4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background zoomed and mirrored
-as the game draws it. A scene it draws at 4:3 (a board's results on the star stage, Thwomp Pull, Vine With Me) keeps
-black at the window's sides as Mario Party 2's does. Its `tools/build_web.sh` runs a Docker image of its
-own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 462 shaders: the
-boot (the launcher, the title, the file select, the mode select and a Battle Royale's setup, 53, one of them a board's
-start's at a 3840x2000 canvas, added by hand), a section for each of the Battle Royale map's six boards and one for
-every six of the 70 minigames, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone
-playing: a board's index is written where the setup reads it, and a survey in `patches/survey.c` takes the game from the
-setup's way to the first board to each minigame in turn, with the teams, computer players and minigame index a board
-sets, and four computer players play each to its end. The engine draws a frame in several RSP tasks, as Mario Party's
-does, which RT64 interpolates as one game frame since rt64 bce5e11: a page built before it presents the game's own 30 in
-a board's menus and minigames. Its README and docs/web.md have the rest.
+as the game draws it. A scene it draws at 4:3 (a board's results on the star stage, Ridiculous Relay, Thwomp Pull,
+Vine With Me) keeps black at the window's sides as Mario Party 2's does. Its `tools/build_web.sh` runs a Docker image
+of its own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 462
+shaders: the boot (the launcher, the title, the file select, the mode select and a Battle Royale's setup, 53, one of
+them a board's start's at a 3840x2000 canvas, added by hand), a section for each of the Battle Royale map's six boards
+and one for every six of the 70 minigames, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without
+anyone playing: a board's index is written where the setup reads it, and a survey in `patches/survey.c` takes the game
+from the setup's way to the first board to each minigame in turn, with the teams, computer players and minigame index
+a board sets, and four computer players play each to its end. The engine draws a frame in several RSP tasks, as Mario
+Party's does, which RT64 interpolates as one game frame since rt64 bce5e11: a page built before it presents the game's
+own 30 in a board's menus and minigames. Its README and docs/web.md have the rest.
 
 ## The games' own frame rates
 
