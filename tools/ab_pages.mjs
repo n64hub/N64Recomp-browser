@@ -4,7 +4,7 @@
 //
 //   node tools/ab_pages.mjs <game> <Pages URL> <build dir or its .html> <rom> <plan.json> --pages-build <label>
 //     --build <label> [--smoke] [--record <file>] [--note <text>] [--size <w>x<h>] [--cpu-throttle <rate>] [--port <n>]
-//     [--firefox <path>] [--out <dir>] [-- <queue command>...]
+//     [--firefox <path>] [--preload <file>] [--out <dir>] [-- <queue command>...]
 //
 // <game> is publish_pages.sh's name (play_page.mjs's --game), the Pages URL the fork's page (index.html is played
 // there, as publish_page.sh puts it up), the build one publish_pages.sh left: its dir if the plan's page is in it,
@@ -24,12 +24,14 @@
 // failed run, WebGPU errors and exceptions, never for presents. A run's line in --record (plays.jsonl) carries a --note
 // saying it was one of these (the --note given added), so play_page compares it with nothing: this does. Its --set is
 // <game>-<build>-<out's name>, its --role baseline for Pages and candidate for the build. --port is play_page's (a free
-// one without). A queue command after -- goes in front of every play, so each takes its own turn on a shared GPU
-// (CLAUDE.md, Playing a page): the A/B's a whole turn, the smoke play's a shared one (docs/playing.md, What a change
-// plays). Each play's output goes to <out>/<n>-<browser>-<pages|build>.log, its summary beside it as .json, and the
-// plan's shot steps write into <out> (its cwd); --out is a new temporary dir without it, kept and named at the end. Run
-// again with the same --out, it reads the plays that have a summary there and plays the rest: queue waits can add up to
-// hours, longer than what started it may live, and a play stopped part way records nothing.
+// one without). --preload is play_page's, for every play with its --interval 1, and goes into the note: an A/B of how
+// much heap a build takes (tools/heap_probe.js), each play's `heap` lines in its log. A queue command after -- goes in
+// front of every play, so each takes its own turn on a shared GPU (CLAUDE.md, Playing a page): the A/B's a whole turn,
+// the smoke play's a shared one (docs/playing.md, What a change plays). Each play's output goes to
+// <out>/<n>-<browser>-<pages|build>.log, its summary beside it as .json, and the plan's shot steps write into <out>
+// (its cwd); --out is a new temporary dir without it, kept and named at the end. Run again with the same --out, it
+// reads the plays that have a summary there and plays the rest: queue waits can add up to hours, longer than what
+// started it may live, and a play stopped part way records nothing.
 //
 // A Chrome build run is worse when it fails where a Pages run didn't, has WebGPU errors where none of those had any, or
 // presents a second more than 10% below the lowest of theirs, play_page's own noise for an uncapped run. The build plays
@@ -59,11 +61,12 @@ const throttle = Number(option(args, '--cpu-throttle', '0'));
 const port = option(args, '--port', null);
 const outOption = option(args, '--out', null);
 const firefox = option(args, '--firefox', null);
+const preload = option(args, '--preload', null);
 const smoke = args.includes('--smoke');
 if (smoke) args.splice(args.indexOf('--smoke'), 1);
 if (args.length !== 5 || !pagesBuild || !build) {
   console.error('usage: node tools/ab_pages.mjs <game> <Pages URL> <build dir or its .html> <rom> <plan.json> --pages-build <label> ' +
-    '--build <label> [--smoke] [--record <file>] [--note <text>] [--size <w>x<h>] [--cpu-throttle <rate>] [--port <n>] [--firefox <path>] [--out <dir>] [-- <queue command>...]');
+    '--build <label> [--smoke] [--record <file>] [--note <text>] [--size <w>x<h>] [--cpu-throttle <rate>] [--port <n>] [--firefox <path>] [--preload <file>] [--out <dir>] [-- <queue command>...]');
   process.exit(1);
 }
 const [game, pagesUrl, buildPath, rom, planFile] = args.map((a, i) => (i >= 2 && !/^https?:/.test(a) ? path.resolve(a) : a));
@@ -100,9 +103,11 @@ const playOnce = async (condition, which) => {
   const done = fs.existsSync(json);
   const runNote = [smoke ? (which === 'P' ? `the page Pages serves, a smoke play after the ${build} build's wasn't clean` :
     `the ${build} build served locally, a smoke play`) : which === 'P' ? `the page Pages serves, interleaved with the ${build} build` :
-    `the ${build} build served locally, interleaved with Pages' ${pagesBuild}`, 'tools/ab_pages.mjs', note].filter(Boolean).join('; ');
+    `the ${build} build served locally, interleaved with Pages' ${pagesBuild}`, 'tools/ab_pages.mjs',
+    preload && `--preload ${path.basename(preload)}`, note].filter(Boolean).join('; ');
   const command = [...queue, process.execPath, playPage, condition.browser, which === 'P' ? pagesWhere : buildPath, rom, planFile,
     '--uncapped', '--size', size, ...(port ? ['--port', port] : []), '--json', json, ...(firefox && condition.browser === 'firefox' ? ['--browser', firefox] : []), ...(condition.throttle > 1 ? ['--cpu-throttle', String(condition.throttle)] : []),
+    ...(preload ? ['--preload', path.resolve(preload), '--interval', '1'] : []),
     ...(record ? ['--record', record, '--game', game, '--build', which === 'P' ? pagesBuild : build, '--note', runNote,
       '--set', `${game}-${build}-${path.basename(out)}`, '--role', which === 'P' ? 'baseline' : 'candidate'] : [])];
   process.stdout.write(`${new Date().toISOString().slice(11, 19)} ${n}. ${condition.name}, ${which === 'P' ? `Pages (${pagesBuild})` : `the build (${build})`}: ` +
