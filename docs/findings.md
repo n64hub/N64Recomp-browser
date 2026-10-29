@@ -1477,6 +1477,26 @@ with too few workloads, and Goldwood then presented 346-356, every frame interpo
 Pages' 62.5, its p99 gap 4.6 ms against 18.2, and Banjo-Kazooie's 360 against 359 (whole GPU turns, a host shared
 with other plays; plays.jsonl).
 
+## A frame drawn in many workloads
+
+Mario Party 2's Tile Driver (minigame 0x46, its overlay 0x37) draws each game frame in 16 workloads, and
+RT64_GAME_FRAME_WORKLOADS draws all 16 again for each interpolated frame. Chrome 155 on an RTX 2070, 3840x2000
+uncapped, a present counter preloaded, whole GPU turns on an idle host (plays.jsonl, sets `mp2-many-workloads-*` and
+`mp2-rsp-copies-throttled`):
+
+- v0.143.0 presented 45 a second there, at the game's 30 frames. v0.145.0 presents 162-176 (rt64 e4f59dc and 3313c77):
+  past that, the wall is Chrome's GPU process, whose main thread runs the page's WebGPU commands, about 1.3 cores, the
+  page waiting about 600 ms a second for fewer than 4 presents in flight. Fewer calls from the page don't move it: rt64
+  cbe7e09 with plume 1e0acca and 2688f88, which take out a third of the page's WebGPU commands there, presented 162-165
+  either way.
+- With Chrome's page thread throttled 4 times the page's thread is the limit. There those changes drew Tile Driver at
+  31.4 and 31.7 presents a second and 29.8 game frames against 29.2 and 29.5, and the whole play's median at 124 and 128
+  against 92 and 101.
+- The other screens are past 100: on v0.145.0 Mario Party 1's village 350, Memory Match 323, Bumper Balls 263, minigame
+  0x2A 319 and a board's rules 231, and Mario Party 3's Chilly Waters 194 and minigames 0x01 281, 0x0D 341 and 0x25
+  246; Mario Party 2's Mario Land 322-326 and minigames 0x05 358, 0x0B 299-338 and 0x13 340 on v0.143.0 and the test
+  builds of these changes.
+
 ## Faults
 
 `play_page.mjs --fault resize,hidden,audio,device,reload` (its header), played from Pages on an RTX 5080 (headless
@@ -1697,6 +1717,13 @@ The measurements behind rules CLAUDE.md and the other docs state without them.
 ## Ruled out, measured
 
 What CLAUDE.md's Ruled out rests on.
+
+- RT64's workload thread waiting for a frame's workloads once, after its last, not after each, for a frame drawn in many
+  workloads (A frame drawn in many workloads): on v0.143.0 it took Tile Driver from 45 presents a second to 75-77, and
+  on v0.145.0 it moved nothing (162-164 against 162). With Chrome's page thread throttled 4 times, with rt64 cbe7e09
+  and plume's cuts, Tile Driver drew 50.1 and 41.0 presents a second but 15.3 and 14.0 game frames, against v0.145.0's
+  29.6 and 29.7 presents at 29.3 and 29.7 game frames: half the game's own rate, where those changes alone kept it
+  (sets `mp2-many-workloads-throttled` and `mp2-rsp-copies-throttled` in plays.jsonl).
 
 - wasm SIMD for RT64's TMEM loads and CI4 hashes, the 11.5% of a phone's display list thread that fullSync's tiles
   took in Conker (docs/phones.md, Conker's Bad Fur Day on a Galaxy S21): two TMEM words in one i8x16 shuffle and a CI4
