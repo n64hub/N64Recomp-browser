@@ -2,3 +2,6 @@
 /tests/build/lib/
 /build*/
 /tests/depfile/value.inl
+
+# A play's shots, which play_page.mjs writes where it runs: they go in no commit.
+/*.png
