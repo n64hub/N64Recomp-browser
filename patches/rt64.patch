@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web bb49956dbdc79d11f62332a0e7893fb400161527
+rt64: https://github.com/n64hub/rt64-web 89abe33e93221defa50662edb6c27a76828713b9
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3556,7 +3556,7 @@ index 8858dac..a9417c7 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..55e8b3a 100644
+index 2970e71..6ada88d 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -4102,7 +4102,7 @@ index 2970e71..55e8b3a 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,12 +2965,88 @@ namespace RT64 {
+@@ -2660,12 +2965,101 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -4146,12 +4146,25 @@ index 2970e71..55e8b3a 100644
 +                    // enough 4:3) widened to the window's edges as a screen of its own, while the views drawn in the same
 +                    // task as the frame's clear stopped at 4:3. A pair that draws into a framebuffer the VI shows and
 +                    // whose scissors leave out more than a tenth of its width is judged by the whole screen instead, as it
-+                    // is beside the rest of the screen in one task. Offscreen targets, and a pair whose scissors span the
-+                    // screen's width (a letterbox, a horizontal split's view), are judged as before.
++                    // is beside the rest of the screen in one task. Offscreen targets, a pair whose scissors span the
++                    // screen's width (a letterbox, a horizontal split's view), and a pair that drew under an extended
++                    // scissor (gEXSetScissor with an origin: a widescreen patch placing it itself, as mario-party-engine's
++                    // board camera is through Mario Party 3's sideways wipe) are judged as before.
 +                    const int32_t screenWidth = int32_t(fbPair.colorImage.width) << 2;
 +                    const int32_t screenHeight = int32_t(workload.viFbSize.y) << 2;
 +                    if (drawsEntry && (screenHeight > 0) && !fbPair.scissorRect.isNull() && ((fbPair.scissorRect.lrx - fbPair.scissorRect.ulx) * 10 < screenWidth * 9)) {
-+                        fbPair.scissorRect.merge(FixedRect(0, 0, screenWidth, screenHeight));
++                        bool extendedScissor = false;
++                        for (uint32_t p = 0; (p < fbPair.projectionCount) && !extendedScissor; p++) {
++                            const Projection &proj = fbPair.projections[p];
++                            for (uint32_t c = 0; (c < proj.gameCallCount) && !extendedScissor; c++) {
++                                const DrawCall &callDesc = proj.gameCalls[c].callDesc;
++                                extendedScissor = (callDesc.scissorLeftOrigin != G_EX_ORIGIN_NONE) || (callDesc.scissorRightOrigin != G_EX_ORIGIN_NONE);
++                            }
++                        }
++
++                        if (!extendedScissor) {
++                            fbPair.scissorRect.merge(FixedRect(0, 0, screenWidth, screenHeight));
++                        }
 +                    }
 +#               endif
 +
@@ -4191,7 +4204,7 @@ index 2970e71..55e8b3a 100644
          present.debuggerFramebuffer.address = debuggerInspector.renderer.framebufferAddress;
          present.debuggerFramebuffer.view = (debuggerInspector.renderer.framebufferIndex >= 0);
      }
-@@ -2724,6 +3105,25 @@ namespace RT64 {
+@@ -2724,6 +3118,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  

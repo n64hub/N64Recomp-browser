@@ -674,10 +674,11 @@ RecompFrontend 30b24c7 RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED: once players ar
                        player, or player 1 while nobody has it (it played every pad's player), and a keyboard player's
                        own profile with no keys gets single-player mode's; off the lines a game's join-on-first-press
                        patch and upstream's newer RecompFrontend change
-rt64 bb49956           RT64_PARTIAL_SCREEN_PAIRS: a framebuffer pair that draws into a framebuffer the VI shows and
+rt64 89abe33           RT64_PARTIAL_SCREEN_PAIRS: a framebuffer pair that draws into a framebuffer the VI shows and
                        whose scissors leave out more than a tenth of its width is judged by the whole screen in a wide
                        window: a game that sends a view of a split screen in an RSP task of its own made a pair of
                        that view alone, and Mario Party 3's Motor Rooter drew its right view's tunnel unnarrowed out
                        to the window's edge, and Fridged Bridges three of its quarters widened to the window's edges,
-                       while the view drawn in the task with the frame's clear stopped at 4:3
+                       while the view drawn in the task with the frame's clear stopped at 4:3; one under an extended
+                       scissor (a widescreen patch's, as Mario Party 3's board wipe is) is left as it was
 ```
