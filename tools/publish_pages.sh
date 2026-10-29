@@ -477,7 +477,8 @@ same_files() {
         [[ "$(GIT_INDEX_FILE="$work/same.index" git -C "$1" write-tree)" == "$(git -C "$1" rev-parse "$4^{tree}")" ]]
 }
 work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
+# A browser that has just quit can still hold a file in it on Windows: a folder left in TMPDIR fails no publish.
+trap 'rm -rf "$work" || true' EXIT
 published=() differ=() failed=()
 for g in "${selected[@]}"; do
     read -r _ repo name dir folder <<< "$(grep "^$g " <<< "$games")"
