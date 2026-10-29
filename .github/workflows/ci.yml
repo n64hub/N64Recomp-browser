@@ -188,21 +188,34 @@ jobs:
           done
       # A recomp that leaves files out and makes the web's change to them its own way takes what the web has changed in
       # them since its merge with apply.cmake --since. On a recomp pinned at upstream's own commits: rt64 and the
-      # runtime as the oldest commit on those commits patched them, every file merged forward, are patched as now.
+      # runtime as the oldest commit on those commits patched them, every file merged forward, are patched as now. On a
+      # recomp still pinned at an upstream commit patches.txt has moved from, merged forward from the last commit on it,
+      # too: upstream's change between the two is taken out of the merge, or it would bring lines the recomp's own
+      # runtime doesn't have (a signature, a member) and fail to compile, which no step here does.
       - name: Files left out take the web's later change to them
         run: |
-          for name in rt64 N64ModernRuntime; do
-            base=$(awk -v n=$name '$1 == n { print $4 }' patches/patches.txt)
-            recomp=$(awk -v n=$name -v b=$base '$2 == n && $4 == b { print $1; exit }' patches/pins.txt)
-            from=$(git log --reverse --format=%H -S"$base" -- patches/patches.txt | head -1)
-            files=$( (git show "$from:patches/$name.patch"; cat patches/$name.patch) | sed -n 's|^diff --git a/\([^ ]*\) .*|\1|p' | sort -u)
-            patched="$RUNNER_TEMP/pins/$recomp/$name" since="$RUNNER_TEMP/since/$name"
+          merge() {   # <name> <upstream commit a recomp pins> <commit whose patch it was patched with>
+            local name=$1 on=$2 from=$3
+            local recomp=$(awk -v n=$name -v b=$on '$2 == n && $4 == b { print $1; exit }' patches/pins.txt)
+            local files=$( (git show "$from:patches/$name.patch"; cat patches/$name.patch) | sed -n 's|^diff --git a/\([^ ]*\) .*|\1|p' | sort -u)
+            local patched="$RUNNER_TEMP/pins/$recomp/$name" since="$RUNNER_TEMP/since/$name-$on"
+            echo "$name at ${on:0:7} ($recomp), merged since ${from:0:7}"
             mkdir -p "$RUNNER_TEMP/since" && cp -r "$patched" "$since"
             git -C "$since" reset -q --hard && git -C "$since" clean -fdq
             git show "$from:patches/$name.patch" | git -C "$since" apply --whitespace=nowarn
             cmake -P patches/apply.cmake $name "$since" --since "$from" $files
             cmake -P patches/apply.cmake $name "$since" --since "$from" $files   # a second time changes nothing
-            diff <(git -C "$patched" diff) <(git -C "$since" diff) > /dev/null || { echo "$name: merged since ${from:0:7} isn't patched as now"; exit 1; }
+            diff <(git -C "$patched" diff) <(git -C "$since" diff) || { echo "$name: merged since ${from:0:7} isn't patched as now"; exit 1; }
+          }
+          for name in rt64 N64ModernRuntime; do
+            base=$(awk -v n=$name '$1 == n { print $4 }' patches/patches.txt)
+            merge $name $base $(git log --reverse --format=%H -S"$base" -- patches/patches.txt | head -1)
+            for old in $(awk -v n=$name -v b=$base '$2 == n && $4 != b { print $4 }' patches/pins.txt | sort -u); do
+              moved=$(git log -1 --format=%H -S"$old" -- patches/patches.txt)
+              if [[ -n $moved ]] && git show "$moved^:patches/patches.txt" | awk -v n=$name -v o=$old '$1 == n && $4 == o { f = 1 } END { exit !f }'; then
+                merge $name $old $(git rev-parse "$moved^")
+              fi
+            done
           done
 
   # The patches over Diddy Kong Racing's web fork's own patches (DKR-R-web, its main): its build applies DKR-R's patches
