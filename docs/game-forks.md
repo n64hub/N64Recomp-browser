@@ -468,8 +468,10 @@ black beside it. A sprite as wide as the screen is drawn stretched over the wind
 (Piranha's Pursuit's jungle, which scrolls), as Mario Party 2's is, its sprite hook giving the engine's `hud.cpp` each
 sprite's width (its sprite lays its frame and scale out its own way). Piranha's Pursuit's ground, one mesh the game
 moves with the track and only a little wider than 4:3's view, is widened by as much as the picture is wider than 4:3
-(`patches/widescreen.c`), its texture stretched with it, so it reaches the window's lower left. The engine draws a frame in several RSP tasks,
-one a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
+(`patches/widescreen.c`), its texture stretched with it, so it reaches the window's lower left. Its trees and bushes,
+which the game keeps within 1500 of the track's scroll and moves on by 3000 as they fall behind, have a copy each 3000
+to either side, which carries them past a 32:9 picture's left edge. The engine draws a frame in several RSP tasks, one
+a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
 each whole, where frames of a dozen tasks ended early and the board flickered without its HUD, text or characters, and
 5f104ed holds one that a present for the frame before would split, which drew Toad tiny and an object beside him huge), so
 Mushroom Village, the minigames' instructions and the minigames interpolate to the display's rate as the boards do. Its `tools/build_web.sh` runs a Docker image of its own, so

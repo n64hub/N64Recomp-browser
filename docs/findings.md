@@ -249,6 +249,40 @@ the breaks fell to 1113.9 MB on GoldenEye and 748.3 MB on Banjo (from 841.0), th
 heapband-ge-5080-20261025 and heapband-banjo-5080-20261025). So a page whose heap is short is walked before its
 INITIAL_MEMORY is raised: GoldenEye's own -sINITIAL_MEMORY=2GB would have hidden a buffer every page keeps.
 
+Every page also kept each of RT64's upload buffers in its heap twice, before plume 8618d66: plume's WebGPU backend a
+shadow of the buffer's whole size (what map() handed out) and plume_device_thread a copy on the calling side of each
+one under 16 MB, both for the buffer's whole life, besides the GPU's own two. RT64's BufferUploader keeps a pair for
+each draw input in each workload at 1.5 times the largest data it has carried, and RT64_GAME_FRAME_WORKLOADS queues 64
+workloads (4 on the desktop; rt64 759e12a raised it from 32), so a game that draws a frame in one kept 64 frames of its
+biggest draws, twice. Rush 2049's page with all of a track's scenery drawn went from about 1180 to 2270 MB once a race
+began, past its 1536 MB, its abort's stack (a float4x4 vector's assign in WorkloadQueue::threadRenderFrame) only the
+last allocation; that game keeps 16 workloads now (its docs/web.md). With both copies made at map() and freed once
+unmap()'s data is written, every page's break fell, and none played worse. Chrome uncapped at 3840x2000 on an
+RTX 2070, each page's regular plan, whole GPU turns, the page Pages serves and the build played in turn with
+`tools/heap_probe.js` (ab_pages.mjs --preload; plays.jsonl, notes "an upload buffer's heap memory only while mapped"),
+the break in MB, Pages' build first (Mario Party's, which Pages has none of, v0.151.0's built the same way; Conker's
+heap grows, -sALLOW_MEMORY_GROWTH, so its break can pass 1536):
+
+```
+banjo  938 -> 778    mk64   894 -> 788    snap  1146 -> 960
+bt     932 -> 796    mm    1071 -> 883    rush2 1510 -> 1128
+cbfd  2717 -> 2607   oot    853 -> 788    1080   956 -> 814
+dk64  1016 -> 837    pw     950 -> 778    pd    1156 -> 1060
+dkr   1439 -> 1100   rush   820 -> 723    sm64   826 -> 702
+ge    1187 -> 1104   sf64  1138 -> 878    fzx    981 -> 854
+jfg   1054 -> 882    wr    1100 -> 958    mp1    830 -> 738
+mp2    778 -> 712    mp3    807 -> 726
+```
+
+Diddy Kong Racing's is its v0.151.0 build's against the change: Pages serves its page from v0.130.0, before the queue
+was 64, at 1047 MB. So the 64 workloads had taken it to within 100 MB of an abort, and what is left of their cost
+there, about 50 MB, is the queue's own: each workload's draw data on the CPU (Workload's vectors, kept at their
+largest). Banjo-Kazooie's v0.151.0 build took the 938 MB its page from Pages (v0.147.0) does, so the other pages'
+pairs, Pages on v0.147.0-v0.149.0, read the change. Firefox's plays of Rush 2049, Banjo-Kazooie and Diddy Kong
+Racing's builds were clean, at 725, 781 and 1086 MB. An upload buffer of 16 MB or more still maps the backend's
+memory on the device thread: with a copy on the calling side too, both would be in the heap at its unmap, and the
+break keeps the peak.
+
 Perfect Dark's mission targets reach 1854x960 where its passes draw 1286x660 (2.1x the pixels) through RT64's own
 code, the desktop build's included. Measured at 1256x645 on rt64-web d19fdcc with every `RenderTarget::resize` logged
 with its caller: the page's regular plan in headless Chrome, and the Windows desktop build in a 1256x645 window on an

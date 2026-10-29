@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 9e8610218c3d6418a376fb7933effcc1716c0ea7
+rt64: https://github.com/n64hub/rt64-web 11940aab3c725c0c61470ec4ee21beae75643437
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
