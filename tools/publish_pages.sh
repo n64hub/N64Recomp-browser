@@ -31,8 +31,10 @@
 #    The games table): that needs Firefox in a window.
 # --dry-run stops after 3, saying which pages differ.
 # --browser <commit> is the retest before the pins move (CLAUDE.md, "The pins"): a dry run of every game with its
-# N64Recomp-browser moved to <commit> (a tag, or a commit this checkout has) in its copy only, Rush 2049's by a
-# commit of its own on top of main that is synced there and pushed nowhere. It names the pages that build differently
+# N64Recomp-browser moved to <commit> (a tag, or a commit this checkout has) in its copy only. An own recomp's (own,
+# below) is a commit of its own on top of main, made here (pin_tree), synced there and pushed nowhere, which also moves
+# the submodules N64Recomp-browser patches to the upstream commits <commit>'s patches/patches.txt names, as each one's
+# CI checks: the commit its pin's pull request then has. It names the pages that build differently
 # from what Pages serves, and their builds stay in the copies to fetch with remote_build.sh -n <copy> get and play.
 # Once the pins are moved there (a fork's main, Rush 2049's by a pull request on its repo), a run without it builds
 # the same bytes and publishes them. PAGES_COPY=<prefix> builds in copies of its own, <prefix>-<game> (Rush 2049's
@@ -51,10 +53,11 @@
 # GitHub: the build host clones from origin's URL, and the sync sends the commit as a bundle on top of origin/main.
 # Every line names the commit built ("commit <sha>", not "main <sha>").
 # --keep <dir> (with --browser) copies each build that differs into <dir>/<game>, with a file `built` naming the main
-# and the N64Recomp-browser commit it was built from: what the retest plays, which another run's build in the same
-# copy can't overwrite. --played <dir> then publishes those files as they were played, without building again: once a
-# game's pin has moved, its origin/main has to be the built main with only N64Recomp-browser moved to that commit (the
-# same files, so the same bytes), or the game fails and is left alone. That spares the retest a second build of
+# and the N64Recomp-browser commit it was built from and the tree its pin commit has (pin_tree): what the retest plays,
+# which another run's build in the same copy can't overwrite, and the tree retest.sh's pin commit takes. --played <dir>
+# then publishes those files as they were played, without building again: once a game's pin has moved, its
+# origin/main has to have that tree (the same files, so the same bytes), or the game fails and is left alone. That
+# spares the retest a second build of
 # every page (a minute or more each) between its plays and its publish.
 # A copy whose N64Recomp-browser moved since its last build puts the checkouts it patches back first, since
 # apply.cmake can't take a checkout from one version of the patches to another.
@@ -90,11 +93,11 @@ done
 [[ ! $browser =~ ^[0-9a-f]{4,39}$ ]] || browser="$(git -C "$here/.." rev-parse --verify "$browser^{commit}")"
 [[ -z $keep || -n $browser ]] || { echo "--keep keeps a --browser run's builds"; exit 1; }
 [[ -z $played_dir || -z "$browser$ref$keep" ]] || { echo "--played publishes builds already made: no --browser, --ref or --keep"; exit 1; }
-if [[ -n $keep ]]; then
-    mkdir -p "$keep" && keep="$(cd "$keep" && pwd)"
-    browser_sha="$(git -C "$here/.." rev-parse -q --verify "$browser^{commit}" ||
-        git -C "$here/.." ls-remote origin "refs/tags/$browser^{}" | cut -f1)"
-    [[ -n $browser_sha ]] || { echo "no commit $browser here or at origin"; exit 1; }
+[[ -z $keep ]] || { mkdir -p "$keep" && keep="$(cd "$keep" && pwd)"; }
+if [[ -n $browser ]]; then
+    # From origin, as the build host fetches it, and here for its patches.txt (pin_tree).
+    git -C "$here/.." fetch -q origin "$browser" || { echo "origin has no commit $browser"; exit 1; }
+    browser_sha="$(git -C "$here/.." rev-parse "FETCH_HEAD^{commit}")"
 fi
 [[ -z $played_dir ]] || played_dir="$(cd "$played_dir" && pwd)"
 rush="$(cd "${args[0]}" && pwd)"
@@ -137,6 +140,9 @@ mp3    n64hub/mario-party-3-recomp           MarioParty3Recompiled build/web mar
 # Games whose pages are not published until the games are released: left out of a run that names no game, and built
 # only as a dry run (--dry-run, --browser, --ref), so their pins can still be built and played.
 unreleased=" mp1 mp2 mp3 "
+# This project's own recomps, whose pins move by a pull request on their repos (CLAUDE.md, The pins), and which pin
+# upstream's own commits of what N64Recomp-browser patches as submodules (pin_tree). retest.sh reads this list.
+own=" rush pd sm64 fzx mp1 mp2 mp3 "
 selected=("${args[@]:1}")
 [[ ${#selected[@]} -gt 0 ]] || selected=($(awk -v u="$unreleased" 'NF && !index(u, " " $1 " ") { print $1 }' <<< "$games"))
 for g in "${selected[@]}"; do grep -q "^$g " <<< "$games" || { echo "no game $g (one of: $(awk 'NF { printf "%s ", $1 }' <<< "$games"))"; exit 1; }; done
@@ -172,7 +178,8 @@ exclude() {
         printf '%s\n' '# publish_pages.sh' '/build*/' '/host/build-web/' '/N64Recomp' '/RSPRecomp' '/OfflineModRecomp' \
             '*.z64' '/RecompiledFuncs/' '/RecompiledPatches/' '/reference/' '/.venv/' >> .git/info/exclude
 }
-# browser_at <commit>: N64Recomp-browser moved to <commit> in a commit of the copy's own, for a retest: the build is
+# browser_at <commit>: N64Recomp-browser moved to <commit> in a commit of the copy's own, for a game fork's retest (an
+# own recomp's is a commit made here, pin_tree): the build is
 # then what main builds once the fork's pin is moved there, which a run after the move checks (the same bytes).
 browser_at() {
     local b=lib/N64Recomp-browser
@@ -467,14 +474,24 @@ EOF
     echo "   build.ninja stayed dirty (an input dated ahead of the host's clock): building again"
     "$@" > "$log" 2>&1
 }
-# same_files <clone> <main> <pin> <commit>: whether <commit>'s files are <main>'s with N64Recomp-browser at <pin>,
-# checked in a scratch index, so a merge or a squash of the pin's PR passes too.
-same_files() {
-    local b=lib/N64Recomp-browser
+# pin_tree <clone> <main> <game>: the tree of the commit that moves <main>'s pin to --browser's commit, written in a
+# scratch index of <clone>: N64Recomp-browser (lib/, a game fork's tools/) at that commit, and in an own recomp the
+# submodules N64Recomp-browser patches (lib/rt64, lib/N64ModernRuntime, lib/RecompFrontend: plume, hlslpp and N64Recomp
+# are theirs) at the upstream commits that commit's patches/patches.txt names, which each one's CI checks it pins. A
+# game fork pins its recomp's own upstream commits and keeps them. A tree, not a commit, so a merge or a squash of the
+# pin's pull request passes --played's check too.
+pin_tree() {
+    local index="$work/pin.index" b=lib/N64Recomp-browser name path base
     [[ -n "$(git -C "$1" ls-tree "$2" $b)" ]] || b=tools/N64Recomp-browser
-    GIT_INDEX_FILE="$work/same.index" git -C "$1" read-tree "$2" &&
-        GIT_INDEX_FILE="$work/same.index" git -C "$1" update-index --cacheinfo "160000,$3,$b" &&
-        [[ "$(GIT_INDEX_FILE="$work/same.index" git -C "$1" write-tree)" == "$(git -C "$1" rev-parse "$4^{tree}")" ]]
+    GIT_INDEX_FILE="$index" git -C "$1" read-tree "$2" &&
+        GIT_INDEX_FILE="$index" git -C "$1" update-index --cacheinfo "160000,$browser_sha,$b" || return 1
+    if [[ $own == *" $3 "* ]]; then
+        while read -r name path _ base; do
+            [[ -n $path && $path != */* && "$(git -C "$1" ls-tree "$2" "lib/$path")" == 160000* ]] || continue
+            GIT_INDEX_FILE="$index" git -C "$1" update-index --cacheinfo "160000,$base,lib/$path" || return 1
+        done < <(git -C "$here/.." show "$browser_sha:patches/patches.txt" | grep -v '^#')
+    fi
+    GIT_INDEX_FILE="$index" git -C "$1" write-tree
 }
 work="$(mktemp -d)"
 # A browser that has just quit can still hold a file in it on Windows: a folder left in TMPDIR fails no publish.
@@ -488,24 +505,23 @@ for g in "${selected[@]}"; do
         clone="$rush" copy="${PAGES_COPY:+$PAGES_COPY-rush}" copy="${copy:-publish}" usual=publish
         git -C "$clone" fetch -q origin main
         from="$(base "$clone")" || { failed+=("$g"); continue; }
-        target=$from
-        if [[ -n "$browser" ]]; then
-            # main with lib/N64Recomp-browser at <commit>, made in a scratch index: the checkout's files and branches
-            # stay as they are, and remote_build.sh's sync moves the submodule and patches it.
-            git -C "$here/.." fetch -q origin "$browser"
-            export GIT_INDEX_FILE="$work/rush.index"
-            git -C "$clone" read-tree "$from"
-            git -C "$clone" update-index --cacheinfo "160000,$(git -C "$here/.." rev-parse "FETCH_HEAD^{commit}"),lib/N64Recomp-browser"
-            target="$(git -C "$clone" -c user.name=publish_pages -c user.email=publish_pages@localhost \
-                commit-tree "$(git -C "$clone" write-tree)" -p "$from" -m "N64Recomp-browser $browser")"
-            unset GIT_INDEX_FILE
-        fi
     else
         clone="$cache/$g" copy="${PAGES_COPY:-pages}-$g" usual=pages-$g
         [[ -d "$clone/.git" ]] || git clone -q --filter=blob:none --no-checkout "https://github.com/$repo" "$clone"
         git -C "$clone" fetch -q origin main
         from="$(base "$clone")" || { failed+=("$g"); continue; }
-        target=$from
+    fi
+    target=$from tree="" at=""
+    if [[ -n "$browser" ]]; then
+        tree="$(pin_tree "$clone" "$from" $g)" || { echo "   no pin commit for $from"; failed+=("$g"); continue; }
+        if [[ $own == *" $g "* ]]; then
+            # Built as that commit, made here: the checkout's files and branches stay as they are, and
+            # remote_build.sh's sync moves the submodules it moved and patches them.
+            target="$(git -C "$clone" -c user.name=publish_pages -c user.email=publish_pages@localhost \
+                commit-tree "$tree" -p "$from" -m "N64Recomp-browser $browser")"
+        else
+            at="browser_at $browser;"
+        fi
     fi
     sha="$(git -C "$clone" rev-parse --short "$from")" label="${ref:+commit $sha}" label="${label:-main $sha}"
     out="$work/$g"
@@ -513,9 +529,10 @@ for g in "${selected[@]}"; do
         # --played: the files a --browser --keep run left, if main is the main they were built from with only the pin
         # moved, which builds the same bytes.
         out="$played_dir/$g"
-        read -r was pin < "$out/built" 2> /dev/null || { echo "   no $out/built: build it"; failed+=("$g"); continue; }
-        if ! same_files "$clone" "$was" "$pin" "$from"; then
-            echo "   main $sha is not main ${was:0:7} with N64Recomp-browser ${pin:0:7}: build it"; failed+=("$g"); continue
+        read -r was pin tree < "$out/built" 2> /dev/null || { echo "   no $out/built: build it"; failed+=("$g"); continue; }
+        if [[ "$(git -C "$clone" rev-parse "$from^{tree}")" != "$tree" ]]; then
+            echo "   main $sha is not main ${was:0:7} with its pin moved to N64Recomp-browser ${pin:0:7}: build it"
+            failed+=("$g"); continue
         fi
         built="$(cd "$out" && git hash-object $(files $name) | tr '\n' ' ')"
     elif ! { seed "$clone" $copy $usual && bash "$remote_build" -C "$clone" -n $copy sync $target && dissociate $copy; } \
@@ -529,7 +546,7 @@ for g in "${selected[@]}"; do
         have="$(ssh -o BatchMode=yes "$BUILD_HOST" "sha1sum rush2049/$copy/rom.z64 2> /dev/null || true")"  # remote_build.sh's base
         [[ "$have" == "$(sha1sum < "$rom" | cut -c1-40) "* ]] || scp -q "$rom" "$BUILD_HOST:rush2049/$copy/rom.z64"
         script="set -euo pipefail; trap 'echo \"failed: \$BASH_COMMAND\" >&2' ERR; $(declare -f exclude browser_at unpatch patched keep_times n64recomp web build_$g); exclude;
-            ${browser:+browser_at $browser;} unpatch; build_$g; patched"
+            $at unpatch; build_$g; patched"
         if [[ $on_host == *" $g "* ]]; then
             # In the copy as remote_build.sh's run is, holding its lock, but outside its image.
             run=(ssh -o BatchMode=yes "$BUILD_HOST" "cd ~/rush2049/$copy/repo && BUILD_CPUS=${BUILD_CPUS:-12} exec flock ../.lock bash -c $(printf %q "$script")")
@@ -550,7 +567,7 @@ for g in "${selected[@]}"; do
     if [[ -n $keep ]]; then
         rm -rf "${keep:?}/$g"
         bash "$remote_build" -n $copy get "$dir" "$keep/$g"
-        echo "$from $browser_sha" > "$keep/$g/built"
+        echo "$from $browser_sha $tree" > "$keep/$g/built"
     fi
     $dry_run && continue
     [[ -n $played_dir ]] || bash "$remote_build" -n $copy get "$dir" "$out"

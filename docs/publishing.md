@@ -28,8 +28,9 @@ A run on a schedule that takes every change since the last one at once:
   retested in the
   same work,
   built, played and recorded the same way, never filed for later; only their pins move differently, by a
-  PR on each one's repo that moves `lib/N64Recomp-browser` to the tag and builds the same bytes, which the retest
-  merges before it publishes the page. Rush 2049's PR also runs the desktop game, and its pin moves even to a tag that
+  PR on each one's repo that moves `lib/N64Recomp-browser` to the tag, and its submodules of upstream's (`lib/rt64`,
+  `lib/N64ModernRuntime`, `lib/RecompFrontend`) to the commits the tag's `patches/patches.txt` names, as its CI
+  checks, and builds the same bytes, which the retest merges before it publishes the page. Rush 2049's PR also runs the desktop game, and its pin moves even to a tag that
   left its page's bytes alone, since its desktop build can take something from it. A critical fix that plays every game takes it along the same way.
 - Mario Party 1, 2 and 3, this project's own recomps too, are not published until the games are released:
   `tools/publish_pages.sh` holds them as unreleased, builds them only as a dry run and leaves them out of a run that
@@ -37,14 +38,15 @@ A run on a schedule that takes every change since the last one at once:
   `lib/N64Recomp-browser` to the tag, its page built with `--dry-run` and played by the smoke play), merges them, and
   publishes nothing: else nothing moves them, and the fixes made here for them never reach their builds.
 - `tools/publish_pages.sh <rush-2049-recomp checkout> --browser <tag> --keep <dir>`, run where the ROMs are, builds
-  every game's main, Rush 2049's too, with N64Recomp-browser moved to the tag (in the build host's copy only), names
+  every game's main, Rush 2049's too, with its pin moved to the tag as that PR or commit moves it (in the build host's
+  copy only), names
   the pages whose files differ from what Pages serves and copies each of those builds into `<dir>/<game>` as it
   finishes; one with the same bytes took nothing and is left alone. Those are played from `<dir>`, and nothing waits
   for anything it doesn't need: the smoke plays follow the builds one game behind (a play is a GPU turn beside a
   build's CPU, a build doesn't measure), the stand-in games' A/B goes first, since its verdict gates every pin, and
   once it reads no worse each game's pin moves as soon as its own smoke play is clean, and
   `tools/publish_pages.sh <rush-2049-recomp checkout> <game> --played <dir>` publishes the files that were played,
-  with no second build (it checks the moved main is the built one with only the pin moved) and boots it from Pages in
+  with no second build (it checks the moved main has the tree that was built) and boots it from Pages in
   headless Chrome, in a whole turn of its own between the next game's plays. Then the A/B's
   games, and each page whose repo changed more than its pin since the main Pages served (its own shell, patches or
   plan: a page's own Content-Security-Policy that blocked the hub's favicon failed only from Pages, in Firefox), are
