@@ -48,7 +48,8 @@ hub_url="$(gh api "repos/$hub/pages" --jq .html_url)"
 hub_head="$(gh api "repos/$hub/commits/gh-pages" --jq .commit.message)"
 git -C "$here/.." fetch -q --tags origin
 work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
+# A browser that has just quit can still hold a file in it on Windows: a folder left in TMPDIR fails no play.
+trap 'rm -rf "$work" || true' EXIT
 failed=()
 for g in "${selected[@]}"; do
     read -r _ repo name dir folder <<< "$(grep "^$g " <<< "$games")"
