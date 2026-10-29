@@ -505,7 +505,7 @@ its own setjmp and longjmp, which a recomp can't: the patches and natives the Ma
 the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own patches load each
 overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a picture wider than
 4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background zoomed and mirrored
-as the game draws it. A scene it draws at 4:3 (a board's results on the star stage and five minigames, its
+as the game draws it. A scene it draws at 4:3 (a board's results on the star stage and eleven minigames, its
 `patches/widescreen.c` lists them) keeps black at the window's sides as Mario Party 2's does. Its `tools/build_web.sh`
 runs a Docker image of its own, so `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image.
 Its list is 462 shaders: the boot (the launcher, the title, the file select, the mode select and a Battle Royale's
