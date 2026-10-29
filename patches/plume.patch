@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web 2688f8886d421fc7abe35b7be618f21152b17f43
+plume: https://github.com/n64hub/plume-web 0e8f6c291ca6ef333d3bede2a98da0a8fd57e80e
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -924,10 +924,10 @@ index 0000000..b4650c5
 +}
 diff --git a/plume_device_thread.cpp b/plume_device_thread.cpp
 new file mode 100644
-index 0000000..3f03353
+index 0000000..34abc3b
 --- /dev/null
 +++ b/plume_device_thread.cpp
-@@ -0,0 +1,1701 @@
+@@ -0,0 +1,1703 @@
 +//
 +// plume
 +//
@@ -1210,10 +1210,8 @@ index 0000000..3f03353
 +        bool uploadHeap = false;
 +        uint64_t size = 0;
 +
-+        // An upload buffer's memory on the calling side (map()), for one smaller than CopiedUploadMaxSize.
-+        static constexpr uint64_t CopiedUploadMaxSize = 16 * 1024 * 1024;
-+        std::unique_ptr<uint8_t[]> uploadCopy;
-+        std::once_flag uploadCopyMade;
++        // An upload buffer's memory on the calling side while it's mapped (map()), handed to the device thread by unmap().
++        std::shared_ptr<uint8_t[]> uploadCopy;
 +
 +        DTBuffer(DeviceThread *thread, std::unique_ptr<RenderBuffer> inner, const RenderBufferDesc &desc) : thread(thread), inner(inner.release()), size(desc.size) {
 +            uploadHeap = (desc.heapType == RenderHeapType::UPLOAD) || (desc.heapType == RenderHeapType::GPU_UPLOAD);
@@ -1268,17 +1266,21 @@ index 0000000..3f03353
 +                }
 +            }
 +
-+            // An upload buffer is mapped at memory of its own on the calling side, the same every time, without waiting
-+            // for the device thread (RT64 maps ~30 a frame, 1,700 a second in Pilotwings 64's menus, and each map that
-+            // waited was 0.1-0.2 ms behind the page's thread). unmap() copies what was written and queues the copy for
-+            // the backend's buffer, so the caller can write the next data at once, before the device thread has got to
-+            // the last: waitForCommandFence() doesn't wait for it. Not one of CopiedUploadMaxSize or more: that memory is a
-+            // second copy of the buffer in the heap beside the backend's, and RecompFrontend's for its images (1.5 times
-+            // the largest yet, an SVG drawn at 4K among them) took GoldenEye's page past its heap at boot. One that big
-+            // is mapped now and then, so it maps the backend's on the device thread below, which runs every unmap queued
-+            // before, and unmap() is queued: the caller writes into the backend's memory once the last data went out.
-+            if (uploadHeap && (subresource == 0) && (size < CopiedUploadMaxSize)) {
-+                std::call_once(uploadCopyMade, [&]() { uploadCopy.reset(new uint8_t[size]()); });
++            // An upload buffer is mapped at memory of its own on the calling side, without waiting for the device thread
++            // (RT64 maps ~30 a frame, 1,700 a second in Pilotwings 64's menus, and each map that waited was 0.1-0.2 ms
++            // behind the page's thread). unmap() hands that memory to the device thread, which writes what was written
++            // into the backend's buffer, so the caller can write the next data at once, before the device thread has got
++            // to the last: waitForCommandFence() doesn't wait for it. The memory is made at each map and freed once the
++            // device thread has written it out. Kept, it was a copy of every upload buffer in the heap beside the
++            // backend's, and those add up: RT64's 64 workloads each keep their buffers at the size of the largest draws
++            // they have had (Rush 2049's page ran out of its heap in a race), and RecompFrontend's for its images are 1.5
++            // times the largest yet. So, as the backend's (plume_webgpu.h, WebGPUBuffer::shadow), what it holds at map()
++            // is undefined, and a caller writes all it unmaps.
++            if (uploadHeap && (subresource == 0)) {
++                if (uploadCopy == nullptr) {
++                    uploadCopy.reset(new uint8_t[size]);
++                }
++
 +                setUploadMapped(this, true);
 +                return uploadCopy.get();
 +            }
@@ -1324,9 +1326,9 @@ index 0000000..3f03353
 +                setUploadMapped(this, false);
 +                const uint64_t begin = ranged ? std::min(range.begin, size) : 0;
 +                const uint64_t end = ranged ? std::min(std::max(range.end, begin), size) : size;
-+                thread->runAsync([buffer, begin, bytes = std::vector<uint8_t>(uploadCopy.get() + begin, uploadCopy.get() + end), ranged, range]() {
++                thread->runAsync([buffer, begin, end, written = std::move(uploadCopy), ranged, range]() {
 +                    uint8_t *data = static_cast<uint8_t *>(buffer->map(0, nullptr));
-+                    memcpy(data + begin, bytes.data(), bytes.size());
++                    memcpy(data + begin, written.get() + begin, end - begin);
 +                    buffer->unmap(0, ranged ? &range : nullptr);
 +                });
 +            }
@@ -3007,10 +3009,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..927d078
+index 0000000..1268982
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3577 @@
+@@ -0,0 +1,3576 @@
 +//
 +// plume
 +//
@@ -3460,11 +3462,8 @@ index 0000000..927d078
 +        size = bufferDesc.size;
 +        handleSerial = newHandleSerial();
 +        device->liveBufferSerials.insert(handleSerial);
-+        if ((desc.heapType == RenderHeapType::UPLOAD) || (desc.heapType == RenderHeapType::GPU_UPLOAD) || (desc.heapType == RenderHeapType::READBACK)) {
-+            shadow.resize(bufferDesc.size, 0);
-+        }
-+
 +        if (desc.heapType == RenderHeapType::READBACK) {
++            shadow.reset(new uint8_t[size]());
 +            readback = std::make_shared<WebGPUReadback>();
 +            readback->buffer = this;
 +        }
@@ -3488,20 +3487,20 @@ index 0000000..927d078
 +    }
 +
 +    void *WebGPUBuffer::map(uint32_t subresource, const RenderRange *readRange) {
-+        if (shadow.empty()) {
-+            assert(false && "Only UPLOAD and READBACK buffers can be mapped.");
-+            return nullptr;
-+        }
-+
 +        if (desc.heapType == RenderHeapType::READBACK) {
 +            waitForReadback();
 +        }
++        else if ((desc.heapType != RenderHeapType::UPLOAD) && (desc.heapType != RenderHeapType::GPU_UPLOAD)) {
++            assert(false && "Only UPLOAD and READBACK buffers can be mapped.");
++            return nullptr;
++        }
 +        else if (!mapped) {
++            shadow.reset(new uint8_t[size]);
 +            device->mappedBuffers.emplace_back(this);
 +        }
 +
 +        mapped = true;
-+        return shadow.data();
++        return shadow.get();
 +    }
 +
 +    void WebGPUBuffer::unmap(uint32_t subresource, const RenderRange *writtenRange) {
@@ -3520,16 +3519,18 @@ index 0000000..927d078
 +            flush(writtenRange->begin, writtenRange->end);
 +        }
 +        else {
-+            flush(0, shadow.size());
++            flush(0, size);
 +        }
++
++        shadow.reset();
 +    }
 +
 +    void WebGPUBuffer::flush(uint64_t begin, uint64_t end) {
 +        // writeBuffer wants a multiple of 4 bytes at a multiple of 4.
 +        begin = begin & ~uint64_t(3);
-+        end = std::min<uint64_t>(alignUp(end, 4), shadow.size());
++        end = std::min<uint64_t>(alignUp(end, 4), size);
 +        if (end > begin) {
-+            wgpuQueueWriteBuffer(device->queue, buffer, begin, shadow.data() + begin, end - begin);
++            wgpuQueueWriteBuffer(device->queue, buffer, begin, shadow.get() + begin, end - begin);
 +        }
 +    }
 +
@@ -3550,9 +3551,9 @@ index 0000000..927d078
 +        readback->pending = false;
 +        WebGPUBuffer *buffer = readback->buffer;
 +        if ((status == WGPUMapAsyncStatus_Success) && (buffer != nullptr)) {
-+            const void *data = wgpuBufferGetConstMappedRange(buffer->buffer, 0, buffer->shadow.size());
++            const void *data = wgpuBufferGetConstMappedRange(buffer->buffer, 0, buffer->size);
 +            if (data != nullptr) {
-+                memcpy(buffer->shadow.data(), data, buffer->shadow.size());
++                memcpy(buffer->shadow.get(), data, buffer->size);
 +            }
 +
 +            wgpuBufferUnmap(buffer->buffer);
@@ -3574,7 +3575,7 @@ index 0000000..927d078
 +        callbackInfo.callback = readbackMapped;
 +        callbackInfo.userdata1 = new std::shared_ptr<WebGPUReadback>(readback);
 +        callbackInfo.userdata2 = reinterpret_cast<void *>(uintptr_t(readback->serial));
-+        wgpuBufferMapAsync(buffer, WGPUMapMode_Read, 0, shadow.size(), callbackInfo);
++        wgpuBufferMapAsync(buffer, WGPUMapMode_Read, 0, size, callbackInfo);
 +    }
 +
 +    // Waits for the map in flight, if the build can wait. Called before reading the buffer and before a submission
@@ -6332,7 +6333,7 @@ index 0000000..927d078
 +
 +    void WebGPUDevice::flushMappedBuffers() {
 +        for (WebGPUBuffer *buffer : mappedBuffers) {
-+            buffer->flush(0, buffer->shadow.size());
++            buffer->flush(0, buffer->size);
 +        }
 +    }
 +
@@ -6590,10 +6591,10 @@ index 0000000..927d078
 +};
 diff --git a/plume_webgpu.h b/plume_webgpu.h
 new file mode 100644
-index 0000000..6751067
+index 0000000..bf3ffa9
 --- /dev/null
 +++ b/plume_webgpu.h
-@@ -0,0 +1,739 @@
+@@ -0,0 +1,744 @@
 +//
 +// plume
 +//
@@ -6771,7 +6772,12 @@ index 0000000..6751067
 +        uint64_t handleSerial = 0;
 +        WebGPUDevice *device = nullptr;
 +        RenderBufferDesc desc;
-+        std::vector<uint8_t> shadow;
++        // What map() hands out. A READBACK buffer's, all its life, holds what its last map brought back. An UPLOAD
++        // buffer's is made at map() and freed at unmap(), once what was written is out (writeBuffer copies it): kept,
++        // it was a second copy of the buffer in the heap beside the GPU's, and RT64 keeps the buffers of its 64
++        // workloads at the size of the largest draws each has had. So an UPLOAD buffer's contents at map() are
++        // undefined, as a fresh one's are on any backend, and a caller writes all it unmaps.
++        std::unique_ptr<uint8_t[]> shadow;
 +        std::shared_ptr<WebGPUReadback> readback;
 +        bool mapped = false;
 +
