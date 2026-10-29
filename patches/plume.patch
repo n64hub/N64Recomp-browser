@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web 0e8f6c291ca6ef333d3bede2a98da0a8fd57e80e
+plume: https://github.com/n64hub/plume-web 0a7027e05f3fbd3673d88d2d19cb9e82e693eaea
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -924,10 +924,10 @@ index 0000000..b4650c5
 +}
 diff --git a/plume_device_thread.cpp b/plume_device_thread.cpp
 new file mode 100644
-index 0000000..34abc3b
+index 0000000..7870305
 --- /dev/null
 +++ b/plume_device_thread.cpp
-@@ -0,0 +1,1703 @@
+@@ -0,0 +1,1710 @@
 +//
 +// plume
 +//
@@ -1210,7 +1210,9 @@ index 0000000..34abc3b
 +        bool uploadHeap = false;
 +        uint64_t size = 0;
 +
-+        // An upload buffer's memory on the calling side while it's mapped (map()), handed to the device thread by unmap().
++        // An upload buffer's memory on the calling side while it's mapped (map()), handed to the device thread by unmap(),
++        // for one smaller than CopiedUploadMaxSize.
++        static constexpr uint64_t CopiedUploadMaxSize = 16 * 1024 * 1024;
 +        std::shared_ptr<uint8_t[]> uploadCopy;
 +
 +        DTBuffer(DeviceThread *thread, std::unique_ptr<RenderBuffer> inner, const RenderBufferDesc &desc) : thread(thread), inner(inner.release()), size(desc.size) {
@@ -1273,10 +1275,15 @@ index 0000000..34abc3b
 +            // to the last: waitForCommandFence() doesn't wait for it. The memory is made at each map and freed once the
 +            // device thread has written it out. Kept, it was a copy of every upload buffer in the heap beside the
 +            // backend's, and those add up: RT64's 64 workloads each keep their buffers at the size of the largest draws
-+            // they have had (Rush 2049's page ran out of its heap in a race), and RecompFrontend's for its images are 1.5
-+            // times the largest yet. So, as the backend's (plume_webgpu.h, WebGPUBuffer::shadow), what it holds at map()
-+            // is undefined, and a caller writes all it unmaps.
-+            if (uploadHeap && (subresource == 0)) {
++            // they have had (Rush 2049's page ran out of its heap in a race). So, as the backend's (plume_webgpu.h,
++            // WebGPUBuffer::shadow), what it holds at map() is undefined, and a caller writes all it unmaps. Not one of
++            // CopiedUploadMaxSize or more: its memory here and the backend's at unmap() would be two of it in the heap at
++            // once, and the heap's break, which never comes down, keeps the peak (RecompFrontend's buffer for its images,
++            // 1.5 times the largest yet, an SVG drawn at 4K among them, took GoldenEye's page past its heap at boot, and
++            // Diddy Kong Racing's break rose 60 MB). One that big is mapped now and then, so it maps the backend's on the
++            // device thread below, which runs every unmap queued before, and unmap() is queued: the caller writes into
++            // the backend's memory once the last data went out.
++            if (uploadHeap && (subresource == 0) && (size < CopiedUploadMaxSize)) {
 +                if (uploadCopy == nullptr) {
 +                    uploadCopy.reset(new uint8_t[size]);
 +                }
