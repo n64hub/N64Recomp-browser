@@ -483,7 +483,7 @@ with the same scheduler from its `lib/mario-party-engine`, so the page needs no 
 patches load each overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a
 picture wider than 4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background
 zoomed and mirrored as the game draws it, and a hook keeps the scissor its text sets inside the picture as Mario Party
-3's does. A scene it draws at 4:3 (Crazy Cutters and four more minigames, its `patches/widescreen.c` lists
+3's does. A scene it draws at 4:3 (Crazy Cutters and five more minigames, its `patches/widescreen.c` lists
 them) keeps black at the window's sides, the engine's `wipe.cpp` drawing it over what the scene's 3D reaches past 4:3.
 A sprite as wide as the screen (Abandon Ship's sky) is drawn stretched over the window wherever the game puts it, its
 sprite hook giving the engine's `hud.cpp` each sprite's width: RT64 stretches one only while it covers 0-320, and the
