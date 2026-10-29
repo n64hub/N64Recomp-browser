@@ -23,7 +23,7 @@
 #   boots it from Pages in headless Chrome). An --ab game, and one whose repo changed more than its pin since the main
 #   Pages served, is then played from Pages in Firefox (play_pages.sh); the rest are not (docs/publishing.md, The
 #   retest). Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3 move by a PR on their own repos
-#   (CLAUDE.md, The pins), though the games publish_pages.sh holds as unreleased (Mario Party 1, 2 and 3) are left
+#   (CLAUDE.md, The pins), though the games publish_pages.sh holds as unreleased (none now) are left
 #   out of a run that names no game, since Pages serves no page of theirs to play against: for each, the run pushes the
 #   pin commit, which also moves its submodules of upstream's to the commits the tag's patches/patches.txt names, as
 #   the build did (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
