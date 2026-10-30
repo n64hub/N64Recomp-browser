@@ -17,7 +17,7 @@ recomps aside, the games are here to build out and test the web support on more 
 game: what one of them or one browser turns up is fixed in this repo or the forks unless it really is that game's own,
 so every game and both browsers get it. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3
 are this project's own recomps, each with releases of its desktop build for Windows and Linux on its repo's Releases
-page (Mario Party's are prereleases).
+page.
 
 | Game | Recomp | Repo | Page |
 |---|---|---|---|
