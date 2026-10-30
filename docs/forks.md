@@ -694,4 +694,8 @@ rt64 11940aa           the device thread's copy on the calling side are made at 
 plume 73a6625,         Vulkan: a scissor or clear rect past the target's edges is clamped to it, as a GPU clips it (a
 rt64 138edee           wide window's extended scissor starts left of 0); Mesa's lavapipe wrote past the image into the
                        heap, and Mario Party 3's Linux build crashed seconds into its opening. Desktop only
+RecompFrontend 8ed21f5 RECOMPINPUT_PADS_IN_ORDER, an option a game of several players turns on (off on the desktop and
+                       the web alike): until players are assigned each pad plays a port of its own, in the order they
+                       were connected, and the keyboard port 1, where every pad played every port; with
+                       get_detected_controller_count() for the game's get_connected_device_info
 ```

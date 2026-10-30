@@ -376,7 +376,10 @@ n64hub/N64ModernRuntime-web         N64Recomp/N64ModernRuntime  Emscripten: no l
 n64hub/RecompFrontend-web           N64Recomp/RecompFrontend recompui on WebGPU, the canvas as the window,
                                                                   a file picker on a thread of its own, render
                                                                   to RAM as an option and its copy a display
-                                                                  list late as another
+                                                                  list late as another; a game of several
+                                                                  players plays as one until they are
+                                                                  assigned, or with RECOMPINPUT_PADS_IN_ORDER,
+                                                                  an option it turns on, each pad its own port
 n64hub/hlslpp-web                   redorav/hlslpp           fixes to the WebAssembly SIMD backend RT64's
                                                                   CPU-side matrices use with -msimd128
 ```
