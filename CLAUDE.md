@@ -193,6 +193,13 @@ published and booted from Pages after, so Pages holds only played pages. A page 
 (the hub's last gh-pages commit names the main each game's folder was built from) is played and published by whoever finds it. How:
 docs/publishing.md.
 
+**A fix for an issue a player filed** reaches them in a release made in the same work, unasked: most players play the
+desktop build, on Windows or Linux, and the page's publish doesn't reach them. A recomp of the project's own with
+desktop releases gets a new one once the fix merges (its `tools/release.sh`, or Rush 2049's docs/releasing.md): the
+version bumped, notes saying what the player gets, both archives built from that main and booted on Windows and
+Linux before they are published, and the issue's answer names the release. A game fork has no desktop release of its
+own, so its page's publish is its release.
+
 ## The games table
 
 The README's Games table has each game's recomp, repo and page, and nothing about how it plays: a frame rate or a date
