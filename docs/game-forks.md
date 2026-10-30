@@ -463,17 +463,20 @@ display lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its 
 view to the window's edges and its `patches/background.c` a board's background, through the engine's `camera_view.c`
 and `board_back.c`, so the window's sides show more of the board, unstretched; a camera whose scissor is the whole
 screen, to 320 or to 319 as Bowl Over's and three more scenes' are, reaches the window's edges. A scene it draws at 4:3
-(Chance Time, Buried Treasure and Tipsy Tourney, its `patches/widescreen.c` lists them) keeps its camera's view and its
-HUD inside 4:3, black beside it. A sprite as wide as the screen is drawn stretched over the window wherever the game puts
-it (Piranha's Pursuit's jungle, which scrolls), as Mario Party 2's is, its sprite hook giving the engine's `hud.cpp`
-each sprite's width (its sprite lays its frame and scale out its own way). Piranha's Pursuit's ground, one mesh the game
-moves with the track and only a little wider than 4:3's view, is widened by as much as the picture is wider than 4:3
-(`patches/widescreen.c`), its texture stretched with it, so it reaches the window's lower left. Its trees and bushes,
-which the game keeps within 1500 of the track's scroll and moves on by 3000 as they fall behind, have a copy each 3000
-to either side, which carries them past a 32:9 picture's left edge. The engine draws a frame in several RSP tasks, one
-a camera and some of them empty, which RT64 interpolates as one game frame (rt64 bce5e11; d64a926 draws
-each whole, where frames of a dozen tasks ended early and the board flickered without its HUD, text or characters, and
-5f104ed holds one that a present for the frame before would split, which drew Toad tiny and an object beside him huge), so
+(Chance Time, Buried Treasure, Treasure Divers, Tipsy Tourney and Deep Sea Divers, its `patches/widescreen.c` lists
+them) keeps its camera's view and its HUD inside 4:3, black beside it. A sprite as wide as the screen is drawn stretched
+over the window wherever the game puts it (Piranha's Pursuit's jungle, which scrolls), as Mario Party 2's is, its sprite
+hook giving the engine's `hud.cpp` each sprite's width (its sprite lays its frame and scale out its own way), and kept
+to 4:3 in a scene drawn at 4:3, where RT64 would stretch it under the black by itself (a rectangle that covers the
+screen's width). Buried Treasure's dirt, 61 such rectangles the game draws itself, is kept to 4:3 by a patch of its own.
+Piranha's Pursuit's ground, one mesh the game moves with the track and only a little wider than 4:3's view, is widened
+by as much as the picture is wider than 4:3 (`patches/widescreen.c`), its texture stretched with it, so it reaches the
+window's lower left. Its trees and bushes, which the game keeps within 1500 of the track's scroll and moves on by 3000
+as they fall behind, have a copy each 3000 to either side, which carries them past a 32:9 picture's left edge. The
+engine draws a frame in several RSP tasks, one a camera and some of them empty, which RT64 interpolates as one game
+frame (rt64 bce5e11; d64a926 draws each whole, where frames of a dozen tasks ended early and the board flickered without
+its HUD, text or characters, and 5f104ed holds one that a present for the frame before would split, which drew Toad tiny
+and an object beside him huge), so
 Mushroom Village, the minigames' instructions and the minigames interpolate to the display's rate as the boards do. Its `tools/build_web.sh` runs a Docker image of its own, so
 `publish_pages.sh` runs it on the build host and not in rush-2049-recomp's image. Its list is 346 shaders in 69
 sections: the boot and the village, the rules' board, each board, each minigame and each of the village's places,
@@ -490,7 +493,7 @@ with the same scheduler from its `lib/mario-party-engine`, so the page needs no 
 patches load each overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a
 picture wider than 4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background
 zoomed and mirrored as the game draws it, and a hook keeps the scissor its text sets inside the picture as Mario Party
-3's does. A scene it draws at 4:3 (Crazy Cutters and eight more minigames, its `patches/widescreen.c` lists
+3's does. A scene it draws at 4:3 (Crazy Cutters and fourteen more minigames, its `patches/widescreen.c` lists
 them) keeps black at the window's sides, the engine's `wipe.cpp` drawing it over what the scene's 3D reaches past 4:3.
 A sprite as wide as the screen (Abandon Ship's sky) is drawn stretched over the window wherever the game puts it, its
 sprite hook giving the engine's `hud.cpp` each sprite's width: RT64 stretches one only while it covers 0-320, and the
@@ -516,7 +519,7 @@ its own setjmp and longjmp, which a recomp can't: the patches and natives the Ma
 the desktop and the page alike (that repo's docs/processes.md), so the page needs no Asyncify. Its own patches load each
 overlay through its OvlLoad. It draws a board's camera and background to the window's edges on a picture wider than
 4:3, through the engine's `camera_view.c` and `board_back.c` as Mario Party does, its background zoomed and mirrored
-as the game draws it. A scene it draws at 4:3 (a board's results on the star stage and nineteen minigames, its
+as the game draws it. A scene it draws at 4:3 (a board's results on the star stage and thirty-three minigames, its
 `patches/widescreen.c` lists them) keeps black at the window's sides as Mario Party 2's does. A sprite as wide as the
 screen is drawn stretched over the window wherever the game puts it, its sprite hook giving the engine's `hud.cpp`
 each sprite's width as Mario Party 2's does, from a sprite laid out as Mario Party 2's is. Its `tools/build_web.sh`
