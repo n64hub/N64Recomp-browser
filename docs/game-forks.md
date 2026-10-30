@@ -463,7 +463,7 @@ display lists, and draws a picture wider than 4:3 with Aspect Ratio Expand, its 
 view to the window's edges and its `patches/background.c` a board's background, through the engine's `camera_view.c`
 and `board_back.c`, so the window's sides show more of the board, unstretched; a camera whose scissor is the whole
 screen, to 320 or to 319 as Bowl Over's and three more scenes' are, reaches the window's edges. A scene it draws at 4:3
-(Chance Time and Tipsy Tourney, its `patches/widescreen.c` lists them) keeps its camera's view and its HUD inside 4:3,
+(Chance Time, Buried Treasure and Tipsy Tourney, its `patches/widescreen.c` lists them) keeps its camera's view and its HUD inside 4:3,
 black beside it. A sprite as wide as the screen is drawn stretched over the window wherever the game puts it
 (Piranha's Pursuit's jungle, which scrolls), as Mario Party 2's is, its sprite hook giving the engine's `hud.cpp` each
 sprite's width (its sprite lays its frame and scale out its own way). Piranha's Pursuit's ground, one mesh the game
