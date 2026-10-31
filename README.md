@@ -35,6 +35,7 @@ page.
 | The Legend of Zelda: Ocarina of Time | [OoT: Recompiled](https://github.com/JonB-Dev/oot-recompiled) by JonB-Dev | [oot-recompiled-web](https://github.com/n64hub/oot-recompiled-web) | [play](https://n64hub.com/ocarina-of-time/) |
 | Diddy Kong Racing | [DKR-R](https://github.com/ThatGuyMcd/DKR-R) by ThatGuyMcd | [DKR-R-web](https://github.com/n64hub/DKR-R-web) | [play](https://n64hub.com/diddy-kong-racing/) |
 | Jet Force Gemini | [Jet Force Gemini: Recompiled](https://github.com/VibinToast/JetForceGemini-Recomp) by VibinToast | [JetForceGemini-Recomp-web](https://github.com/n64hub/JetForceGemini-Recomp-web) | [play](https://n64hub.com/jet-force-gemini/) |
+| Star Wars Episode I: Racer | [racer](https://github.com/sp00nznet/racer) by sp00nznet | [racer-web](https://github.com/n64hub/racer-web) | [play](https://n64hub.com/star-wars-episode-1-racer/) |
 | Pokémon Snap | [Snap64Recomp](https://github.com/JackandBeans/Snap64Recomp) by JackandBeans | [Snap64Recomp-web](https://github.com/n64hub/Snap64Recomp-web) | [play](https://n64hub.com/pokemon-snap/) |
 | Rush 2: Extreme Racing USA | [Rush 2 Recompiled](https://github.com/bryantmh/rush2recompiled) by bryantmh | [rush2recompiled-web](https://github.com/n64hub/rush2recompiled-web) | [play](https://n64hub.com/rush-2/) |
 | 1080° Snowboarding | [1080° Snowboarding: Recompiled](https://github.com/thebradshaw/1080-Snowboarding-decomp) by thebradshaw | [1080-Snowboarding-recomp-web](https://github.com/n64hub/1080-Snowboarding-recomp-web) | [play](https://n64hub.com/1080-snowboarding/) |

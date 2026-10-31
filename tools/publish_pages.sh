@@ -126,6 +126,7 @@ mk64   n64hub/MarioKart64Recomp-web          MarioKart64Recompiled build-web mar
 sf64   n64hub/Starfox64Recomp-web            Starfox64Recompiled  build-web star-fox-64
 oot    n64hub/oot-recompiled-web             OoTRecompiled        build-web ocarina-of-time
 jfg    n64hub/JetForceGemini-Recomp-web      JetForceGeminiRecompiled web-build/build-web jet-force-gemini
+racer  n64hub/racer-web                      SWE1Racer            web-build/build-web star-wars-episode-1-racer
 dkr    n64hub/DKR-R-web                      DKR-R                build-web/bin/Release diddy-kong-racing
 snap   n64hub/Snap64Recomp-web               Snap64Recomp         build-web pokemon-snap
 rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush-2
@@ -362,6 +363,9 @@ build_oot() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
 build_jfg() {
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
+build_racer() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
 

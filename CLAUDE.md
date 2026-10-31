@@ -117,7 +117,7 @@ docs line) is made in the same work like any other.
 - CI (`.github/workflows/ci.yml`) builds every library of a page with Emscripten from the forks, checks every WGSL
   shader, the plume device thread and hlslpp's wasm SIMD backend, and checks that `patches/` match the forks and apply
   to every recomp commit in `patches/pins.txt` and over DKR-R-web's, CBFD-Recompiled-web's,
-  JetForceGemini-Recomp-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
+  JetForceGemini-Recomp-web's, racer-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
   BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's, f-zero-x-recomp's and
   rush-2049-recomp's own patches, and compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui.
   It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands.
