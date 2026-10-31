@@ -14,7 +14,7 @@
 #    the host itself for a repo whose scripts run images of their own (Perfect Dark's: the decomp's, then the web's;
 #    Super Mario 64's, F-Zero X's and Mario Party 1's, 2's and 3's: the web's). A build that stops on ninja's "still
 #    dirty after 100 tries" is built once more when no file in the copy is dated ahead of the host's clock (again_dirty).
-# 3. Hashes the files the page serves (.html, .js, .wasm, .data, coi_serviceworker.js) as git does and compares them
+# 3. Hashes the files the page serves (.html, .js, .wasm, its .data if any, coi_serviceworker.js) as git does and compares them
 #    with the blobs in its folder of the hub's gh-pages (below). A commit builds the same bytes in any copy
 #    (frontend/build_speed.cmake, once the game's N64Recomp-browser pin has it: before, a ccache hit could carry another
 #    checkout's path in), so a page whose code didn't change is left alone, and one built from an older main but the same bytes stays too.
@@ -126,6 +126,7 @@ mk64   n64hub/MarioKart64Recomp-web          MarioKart64Recompiled build-web mar
 sf64   n64hub/Starfox64Recomp-web            Starfox64Recompiled  build-web star-fox-64
 oot    n64hub/oot-recompiled-web             OoTRecompiled        build-web ocarina-of-time
 jfg    n64hub/JetForceGemini-Recomp-web      JetForceGeminiRecompiled web-build/build-web jet-force-gemini
+racer  n64hub/racer-web                      SWE1Racer            web-build/build-web star-wars-episode-1-racer
 dkr    n64hub/DKR-R-web                      DKR-R                build-web/bin/Release diddy-kong-racing
 snap   n64hub/Snap64Recomp-web               Snap64Recomp         build-web pokemon-snap
 rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush-2
@@ -364,6 +365,9 @@ build_oot() {
 build_jfg() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
+build_racer() {
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
 
 build_dkr() {
     # Patches its dependencies from clean whenever N64Recomp-browser or its patches moved (build/web-patched).
@@ -427,6 +431,9 @@ on_host=" pd sm64 fzx mp1 mp2 mp3 "
 # --- Here ---
 
 files() { echo "$1.html $1.js $1.wasm $1.data coi_serviceworker.js"; }
+# hashes <name>: files' blob ids as git makes them, in the current folder, on one line, a - for one it lacks (a page that
+# preloads nothing has no .data).
+hashes() { for f in $(files $1); do if [[ -f $f ]]; then git hash-object "$f"; else echo -; fi; done | tr '\n' ' '; }
 # seed <clone> <copy> <usual copy>: a copy of its own (PAGES_COPY) not yet on the host starts from the game's usual
 # copy's git objects, when that copy is there: its repo is cloned with the usual one's as a reference and each
 # submodule borrows the usual one's (submodule.alternateLocation), so remote_build.sh's sync fetches from GitHub only
@@ -534,7 +541,7 @@ for g in "${selected[@]}"; do
             echo "   main $sha is not main ${was:0:7} with its pin moved to N64Recomp-browser ${pin:0:7}: build it"
             failed+=("$g"); continue
         fi
-        built="$(cd "$out" && git hash-object $(files $name) | tr '\n' ' ')"
+        built="$(cd "$out" && hashes $name)"
     elif ! { seed "$clone" $copy $usual && bash "$remote_build" -C "$clone" -n $copy sync $target && dissociate $copy; } \
         > "$work/$g.log" 2>&1; then
         echo "   sync failed:"; tail -5 "$work/$g.log"; failed+=("$g"); continue
@@ -557,10 +564,13 @@ for g in "${selected[@]}"; do
             echo "   build failed:"; tail -20 "$work/$g.log"; failed+=("$g"); continue
         fi
     fi
-    [[ -n $played_dir ]] || built="$(bash "$remote_build" -n $copy run "cd $dir && git hash-object $(files $name)" | tr '\n' ' ')"
+    [[ -n $played_dir ]] || built="$(bash "$remote_build" -n $copy run "$(declare -f files hashes); cd $dir && hashes $name")"
     pages="$(gh api "repos/$hub/git/trees/gh-pages:$folder" --jq '.tree[] | .path + " " + .sha' 2> /dev/null || true)"
     served=""
-    for f in $(files $name); do served+="$(awk -v p="${f/$name.html/index.html}" '$1 == p { print $2 }' <<< "$pages") "; done
+    for f in $(files $name); do
+        blob="$(awk -v p="${f/$name.html/index.html}" '$1 == p { print $2 }' <<< "$pages")"
+        served+="${blob:--} "
+    done
     echo "   $label${browser:+ with N64Recomp-browser $browser} $([[ -n $played_dir ]] && echo "as played" || echo "built in $((SECONDS - start)) s"); $([[ "$built" == "$served" ]] && echo "the same as the hub's" || echo "differs from the hub's")"
     [[ "$built" != "$served" ]] || continue
     differ+=("$g")

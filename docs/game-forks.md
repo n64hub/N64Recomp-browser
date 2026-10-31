@@ -266,6 +266,22 @@ then, 14,600-25,500, where the GPU is busiest and RT64 reaches a list behind 2-3
 built into a page, the recompile without call tracking, render to RAM kept exact and why, the list read from a copy of
 RDRAM, the scheduler hook, the frame rates, the shader list and its survey.
 
+`n64hub/racer-web` is sp00nznet's racer (MIT), Star Wars Episode I: Racer (US), on a launcher of its own (ImGui, no
+RecompFrontend). Its desktop build fetches sp00nznet's forks of N64Recomp, rt64 and N64ModernRuntime into `deps/` at
+their `main` (`tools/setup.ps1`); the page's are upstream's at the commits N64Recomp-browser patches, with the web
+support and then the desktop's changes made again for those commits on top, as Jet Force Gemini's are
+(`patches/web/N64ModernRuntime.patch`: the game's VI, PI and memory fixes; `patches/web/rt64.patch`: VI modes whose
+pixels are not square; `patches/web/rt64-imgui.patch`: upstream RT64's move to ImGui 1.92, which the desktop's RT64 has
+and its launcher needs, merged with the web's shader changes), all applied in a clone of the checkout by
+`tools/build_web.sh`, and CI's `racer-patches` job runs its `tools/build_web.sh --patches` with the PR's checkout as
+`jfg-patches` does Jet Force Gemini's. The page's own code is in the game's, behind `__EMSCRIPTEN__`: the canvas, the
+launcher's WGSL renderer and file picker, sound on the browser's audio thread, saves under the page's kept folder.
+Render to RAM is on with its late copy, RT64 telling the game the RDP is done as it takes a list. The page leaves out
+netplay, which needs UDP sockets, cheats and texture packs. Its list is 101 descriptions: the boot (the launcher, the
+intro, Tournament's menus, 94) and the first race (7), recorded by `tools/shader_plan.json` over the menus to Boonta
+Training Course, with what plays of its plans missed added. Its BUILDING.md and the headers of `tools/build_web.sh` and
+`src/rt64_shaders.txt` have the rest.
+
 `n64hub/DKR-R-web` is DKR-R (MIT, 1.0.8 and its main to d94b05f), on a runtime and a launcher of its own (ImGui, no
 RecompFrontend). `dependencies.lock.json` pins rt64 at Banjo's commit and N64ModernRuntime ae1ffbb. Its checkouts carry
 DKR-R's patches before the web's, so `pins.txt` has no row for it: CI's `dkr-patches` job runs its
@@ -542,9 +558,10 @@ once a VI; its controller reads held it to 30 on a fast CPU, which its `patches/
 Racing 30 (DKR-R's Accurate profile, the desktop's default, holds RT64 at Original; the page plays Modern), Jet Force
 Gemini 30 dropping to 20 when a frame runs long, or 60 (its Game Frame Rate, 60 on a page: 54-59 at the display's 60
 and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), and the
-cartridge's for the other fourteen: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 30, Mario Party 2 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
+cartridge's for the other fifteen: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 30, Mario Party 2 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
 (Terrydactyland 12, Hailfire Peaks 10), Wave Race 64 20 in races, Star Fox 64 30 (20 where a scene sets 3 VIs a
-frame), GoldenEye's and Conker's variable. None of the fourteen has an option to run faster.
+frame), GoldenEye's, Conker's and Star Wars Episode I: Racer's variable (Racer 30-43 in a race, uncapped at
+3840x2000). None of the fifteen has an option to run faster.
 
 A game fork may take a change that runs its game faster when that makes the page play better. Weigh it: logic at 60
 gives lower input lag, motion the game computes rather than RT64 interpolates, and what interpolation misses (some

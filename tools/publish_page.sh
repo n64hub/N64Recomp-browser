@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Publishes a recomp's built page on GitHub Pages, at the repo's Pages address (https://<owner>.github.io/<repo>/, or
 # its custom domain, as the hub's https://n64hub.com/; it prints the one `gh api repos/<owner/repo>/pages` gives): the
-# build dir's <name>.html as index.html, with its .js, .wasm, .data and coi_serviceworker.js (Pages can't send the
-# cross-origin headers threads need, so the service worker sets them after one reload), and a .nojekyll so Pages
-# serves the files as they are.
+# build dir's <name>.html as index.html, with its .js, .wasm, .data (a page that preloads nothing has none) and
+# coi_serviceworker.js (Pages can't send the cross-origin headers threads need, so the service worker sets them after
+# one reload), and a .nojekyll so Pages serves the files as they are.
 # They go in as the only commit on the orphan branch gh-pages, force-pushed each time, so the repo keeps one copy of
 # the page rather than every one published. The first time, Pages is switched on for that branch (with gh).
 #
@@ -49,7 +49,8 @@ else
     stage="$build/page"
     rm -rf "$stage"
     mkdir -p "$stage"
-    cp "$build/$name".{js,wasm,data} "$build"/coi_serviceworker.js "$stage"/
+    cp "$build/$name".{js,wasm} "$build"/coi_serviceworker.js "$stage"/
+    [ ! -f "$build/$name.data" ] || cp "$build/$name.data" "$stage"/
     cp "$build/$name.html" "$stage"/index.html
     touch "$stage"/.nojekyll
     if $dry_run; then

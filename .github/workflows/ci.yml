@@ -337,6 +337,29 @@ jobs:
             em++ "${flags[@]}" "$file"
           done
 
+  # The patches under Star Wars Episode I: Racer's web fork's own (racer-web, its main), as jfg-patches does for Jet
+  # Force Gemini's: its tools/build_web.sh puts patches/apply.cmake's on upstream's commits, then its patches/web/*.patch,
+  # the desktop runtime's and RT64's changes for the game made again for them, on top. Its rt64 takes the same ImGui as
+  # Jet Force Gemini's, which jfg-patches compiles rt64's ImGui code against. Red on a PR that keeps main's patches means
+  # racer-web's main stopped applying over them, which is fixed there.
+  racer-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: racer-web's apply over them
+        run: |
+          racer="$RUNNER_TEMP/racer"
+          git clone -q --depth 1 https://github.com/n64hub/racer-web "$racer"
+          git -C "$racer" log -1 --format='racer-web %h %s'
+          rmdir "$racer/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$racer/lib/N64Recomp-browser"
+          bash "$racer/tools/build_web.sh" --patches
+
   # The patches under Pokémon Snap's web fork's own (Snap64Recomp-web, its main), on its port's own rt64 and
   # N64ModernRuntime (their snap64 branches): its tools/build_web.sh leaves out the files where the port's lines and the
   # web's meet, applies its patches/web/*.patch to them, and merges in the web's change to them since with apply.cmake
@@ -640,8 +663,8 @@ jobs:
   # covered by that one's, and the changes job builds a docs-only push's whenever this would tag. A tag pushed with
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
-    needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, snap-patches,
-      rush2-patches, snowboarding-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
+    needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, racer-patches,
+      snap-patches, rush2-patches, snowboarding-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
