@@ -694,6 +694,12 @@ rt64 11940aa           the device thread's copy on the calling side are made at 
 plume 73a6625,         Vulkan: a scissor or clear rect past the target's edges is clamped to it, as a GPU clips it (a
 rt64 138edee           wide window's extended scissor starts left of 0); Mesa's lavapipe wrote past the image into the
                        heap, and Mario Party 3's Linux build crashed seconds into its opening. Desktop only
+rt64 8cc291f           a target copied into one of the other kind (its last write was the other's) is copied only
+                       inside it, on every build: the last write's rect starts left of x 0 where a wide window's 3D
+                       reaches past the 4:3 picture, and copyFromTarget took it unsigned, so its viewport began at
+                       4294965248 for -2048, which WebGPU refused and lost the frame's command buffer (a minigame's
+                       end in a wide window, a window made narrower mid-play); the copy shaders read each pixel at
+                       its own position, so the part inside is what a GPU draws of the whole rect
 RecompFrontend 8ed21f5 RECOMPINPUT_PADS_IN_ORDER, an option a game of several players turns on (off on the desktop and
                        the web alike): until players are assigned each pad plays a port of its own, in the order they
                        were connected, and the keyboard port 1, where every pad played every port; with
