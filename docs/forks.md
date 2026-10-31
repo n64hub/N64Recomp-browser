@@ -707,4 +707,8 @@ RecompFrontend 8ed21f5 RECOMPINPUT_PADS_IN_ORDER, an option a game of several pl
 RecompFrontend ec948d3 get_detected_controller_count() counts the controllers SDL has opened, not the list poll_inputs
                        fills: a game asks which ports have one in osContInit, before its first read, and saw port 1
                        alone, so F-Zero X's VS Battle offered one player with four pads plugged in
+rt64 2ae8560           the VI draws black where it shows more of the framebuffer than the target has, with WEBGPU:
+                       the desktop samples there through a BORDER sampler, black, which WebGPU lacks and plume clamps
+                       to the edge, so the target's last row repeated to the picture's edge (a game that draws its
+                       frame lines short of its VI's lost its bottom border to 27-33 rows of streaks at 1256x645)
 ```
