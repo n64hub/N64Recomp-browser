@@ -560,7 +560,7 @@ Gemini 30 dropping to 20 when a frame runs long, or 60 (its Game Frame Rate, 60 
 and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), and the
 cartridge's for the other fifteen: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 30, Mario Party 2 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
 (Terrydactyland 12, Hailfire Peaks 10), Wave Race 64 20 in races, Star Fox 64 30 (20 where a scene sets 3 VIs a
-frame), GoldenEye's, Conker's and Star Wars Episode I: Racer's variable (Racer 34-43 in a race, uncapped at
+frame), GoldenEye's, Conker's and Star Wars Episode I: Racer's variable (Racer 30-43 in a race, uncapped at
 3840x2000). None of the fifteen has an option to run faster.
 
 A game fork may take a change that runs its game faster when that makes the page play better. Weigh it: logic at 60
