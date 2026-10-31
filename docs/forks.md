@@ -704,4 +704,7 @@ RecompFrontend 8ed21f5 RECOMPINPUT_PADS_IN_ORDER, an option a game of several pl
                        the web alike): until players are assigned each pad plays a port of its own, in the order they
                        were connected, and the keyboard port 1, where every pad played every port; with
                        get_detected_controller_count() for the game's get_connected_device_info
+RecompFrontend ec948d3 get_detected_controller_count() counts the controllers SDL has opened, not the list poll_inputs
+                       fills: a game asks which ports have one in osContInit, before its first read, and saw port 1
+                       alone, so F-Zero X's VS Battle offered one player with four pads plugged in
 ```
