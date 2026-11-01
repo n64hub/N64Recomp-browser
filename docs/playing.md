@@ -289,7 +289,8 @@ game plays in, so that publish is what takes the controller and a change to it t
 it current in the same work as what changes it:
 
 - A new feature or game on the hub (not a fix or a speedup) gets its entry at the top of `site/news.html`, a date and
-  one sentence, in the work that lands it, and a publish (`site.js` reads the entries from the published page).
+  one sentence, in the work that lands it, and a publish (`site.js` reads the entries from the published page). A
+  game's entry links the repo its Games row's Recomp or Repo cell does, and CI's changes job fails without one.
 - It reads the table from main's README.md each visit (served locally, the checkout's), finding the columns by header
   (Game, Recomp, Repo, Page): a column renamed or a cell written another way needs
   `site.js`'s parse to follow.

@@ -122,7 +122,7 @@ docs line) is made in the same work like any other.
   rush-2049-recomp's own patches, and compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui.
   It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands.
   A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play, serve, read and publish pages runs only the
-  `changes` job.
+  `changes` job, which also fails while a game in the README's Games table has no entry in `site/news.html`.
 
 ## The forks
 
