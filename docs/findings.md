@@ -191,6 +191,21 @@ same minutes: presents 58.5-58.8 from its second play on against main's 58.2-58.
 plays against main's 120, where waiting on every load cost 71,000 a play. Without the checked build's delay the trap
 is rarer there: main's page played 8 of 8 clean that day, and v0.67.0's trapped 1 in 5.
 
+A stall in RT64's thread lets a game run ahead much further. Paper Mario's page (v0.161.0, its regular plan, Firefox
+on a desktop GPU on a busy host) trapped in 2 of 5 plays at the end of its intro section's build, `index out of
+bounds` in malloc on two workers, and stopped drawing in the other 3 after its demo section's, the game's clock still
+running. Firefox builds pipelines in line with the device, so a readback map in a list waited 4.3-6.6 s while a
+section built, and the game, told its RSP task was done before RT64 read the list, kept stepping: Paper Mario's
+gfxRetrace_Callback runs step_game_loop before it checks how many tasks are pending, which holds back only its drawing.
+In one 6.6 s wait it went 151 frames on, into its attract demo's first map, and the list RT64 was still reading pointed
+at what that map's load put there. Every framebuffer RT64 wrote back stayed inside the game's own framebuffers; what
+went wrong came after, a function pointer read as 0x00010001 ("Failed to find function", the trap), a color image
+4096 wide at address 0. Chrome does the same with every `mapAsync` held back 7 s by a preload: it trapped as the hold
+ended. N64ModernRuntime 0a44618 (`ULTRAMODERN_VIS_WAIT_FOR_RENDERER`, on with Emscripten, and 05d95be) sends the
+game no VI while the graphics thread has been on one action over 100 ms: in the same Chrome play the game went 17-18
+frames in the wait and played the demo's next scenes clean, and the regular plan played clean in Firefox 3 times in 3
+(waits of 3.7-12.6 s for the boot's, intro's and demo's sections), where it had failed 5 times in 5.
+
 A page that runs out of heap does so in a burst after a stall, not by leaking. Banjo-Kazooie's page aborted with
 `Aborted(OOM)` in Firefox 158 in 3 of 6 runs of a retest (2026-10-19 21:11-21:56 UTC, uncapped at 3840x2000 on an RTX
 5080, the page from Pages, v0.67.0, and a v0.71.0 build both), at 70, 72 and 123 s; Chrome (throttled 6 times) played
