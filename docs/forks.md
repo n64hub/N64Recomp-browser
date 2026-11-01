@@ -711,11 +711,17 @@ rt64 2ae8560           the VI draws black where it shows more of the framebuffer
                        the desktop samples there through a BORDER sampler, black, which WebGPU lacks and plume clamps
                        to the edge, so the target's last row repeated to the picture's edge (a game that draws its
                        frame lines short of its VI's lost its bottom border to 27-33 rows of streaks at 1256x645)
-RecompFrontend b442dbb a page rumbles the gamepad behind a joystick by the browser's index, found once with SDL's own
+RecompFrontend         RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED: Reset to defaults gives the first keyboard player in
+8570279,               player order the default keys (upstream cleared every keyboard player's, which left a player
+62d7edc                alone on the keyboard none), and only that one's empty profile gets single-player mode's keys,
+                       not a second's sharing the keyboard; the controls page's controller and keyboard toggle shows for
+                       a player 1 on a pad who still plays the keyboard (profiles::controller_player_has_keyboard), so
+                       its keys can be seen and changed
+RecompFrontend 197853d a page rumbles the gamepad behind a joystick by the browser's index, found once with SDL's own
                        SDL_CreateJoystickName over each gamepad's id: it looked the gamepad up by the joystick's name,
                        which is the id cut to 63 bytes and renamed, so a pad whose id runs longer (Chrome's for a
                        DualSense, a DualShock 4, an Xbox pad over Bluetooth) or that SDL renames never rumbled
-RecompFrontend b026fa2 a gamepad already there as SDL starts (pressed before a reload) is opened: the pointer lock's
+RecompFrontend 060709f a gamepad already there as SDL starts (pressed as the page loads) is opened: the pointer lock's
                        filter went in with SDL_SetEventFilter, which empties SDL's queue, the SDL_CONTROLLERDEVICEADDED
                        SDL_Init queued for it included, so the pad played nothing until plugged in again
 ```

@@ -5,9 +5,8 @@
 //   plugPads(n | [id, ...])   plugs in n pads (4 if none given), or one per id given, as a real pad connects: there
 //                             in navigator.getGamepads() from then on, and a gamepadconnected event each. Call it once
 //                             the program has started SDL (the launcher is SDL's), say at the start of the plan's
-//                             "start" steps, before Start Game: SDL takes a pad that is there as it starts as added
-//                             before the program reads its events, and the program never opens it (site/touch_pad.js
-//                             says the same), where a real pad shows itself only at its first press on the page.
+//                             "start" steps, before Start Game: a page whose RecompFrontend is older than 060709f
+//                             never opens a pad that is there as SDL starts (site/touch_pad.js).
 //   padRumbles()              what reached each pad's vibrationActuator: "plays <n per pad> resets <n per pad> peak
 //                             <the strongest weakMagnitude per pad>"
 //   padRumbleCalls()          the rumbles that came in, from RecompFrontend's recompinput_web_rumble (its EM_JS, which
