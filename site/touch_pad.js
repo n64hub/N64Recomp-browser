@@ -15,9 +15,9 @@
 // defaults take them (input_mapping.cpp): A south, B west, Z the left trigger, R the right, L the left shoulder,
 // Start, Back for its menu, the stick the left stick, the C buttons the right stick. It comes and goes as a real pad
 // does, with gamepadconnected and gamepaddisconnected, and like one it connects at its first touch, not as it shows:
-// SDL takes a pad that is there when it starts as added before the program reads its events, and the program never
-// opened it, and the controller can show before SDL starts (the hub's, on a page that doesn't say when its game
-// starts). What the game reads moves only as it reads the pad (navigator.getGamepads(), which SDL calls at each poll of
+// a page whose RecompFrontend is older than 060709f never opens a pad that is there as SDL starts (its pointer lock's
+// SDL_SetEventFilter dropped the pad's queued add), and the controller can show before SDL starts (the hub's, on a
+// page that doesn't say when its game starts). What the game reads moves only as it reads the pad (navigator.getGamepads(), which SDL calls at each poll of
 // a pad it has open, then reads the pad from what it returned): the first read after a connect, SDL's own as the
 // program opens the pad, sees nothing held, since SDL_JoystickOpen updates a pad before the controller over it is made
 // and a button held then is taken as down already, its press never sent (MENU as the first touch opened no menu); and a
