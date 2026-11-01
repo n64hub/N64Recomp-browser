@@ -140,7 +140,7 @@ Fifteen options are off on a desktop build, on with Emscripten, and settable nat
 `ULTRAMODERN_HOLD_BLOCKED_MESSAGES` (N64ModernRuntime 66539ab), `ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS`
 (N64ModernRuntime bf96a62), `ULTRAMODERN_RSP_TASKS_COPIED` (N64ModernRuntime 0ec6c51),
 `ULTRAMODERN_SCREEN_UPDATE_AFTER_VI` (N64ModernRuntime c700131), `ULTRAMODERN_VIS_WAIT_FOR_RENDERER`
-(N64ModernRuntime 0a44618) and `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED` (RecompFrontend bf01590).
+(N64ModernRuntime 05d95be) and `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED` (RecompFrontend bf01590).
 
 ## Changing it
 

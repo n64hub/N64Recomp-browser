@@ -201,8 +201,8 @@ In one 6.6 s wait it went 151 frames on, into its attract demo's first map, and 
 at what that map's load put there. Every framebuffer RT64 wrote back stayed inside the game's own framebuffers; what
 went wrong came after, a function pointer read as 0x00010001 ("Failed to find function", the trap), a color image
 4096 wide at address 0. Chrome does the same with every `mapAsync` held back 7 s by a preload: it trapped as the hold
-ended. N64ModernRuntime 0a44618 (`ULTRAMODERN_VIS_WAIT_FOR_RENDERER`, on with Emscripten) sends the game no VI or AI
-message while the graphics thread has been on one action over 100 ms: in the same Chrome play the game went 17 frames
+ended. N64ModernRuntime 0a44618 (`ULTRAMODERN_VIS_WAIT_FOR_RENDERER`, on with Emscripten, and 05d95be) sends the
+game no VI while the graphics thread has been on one action over 100 ms: in the same Chrome play the game went 17 frames
 in the 6.5 s wait and played the demo's next 7 scenes clean, and the regular plan played clean in Firefox.
 
 A page that runs out of heap does so in a burst after a stall, not by leaking. Banjo-Kazooie's page aborted with
