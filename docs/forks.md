@@ -724,4 +724,8 @@ RecompFrontend 197853d a page rumbles the gamepad behind a joystick by the brows
 RecompFrontend 060709f a gamepad already there as SDL starts (pressed as the page loads) is opened: the pointer lock's
                        filter went in with SDL_SetEventFilter, which empties SDL's queue, the SDL_CONTROLLERDEVICEADDED
                        SDL_Init queued for it included, so the pad played nothing until plugged in again
+N64ModernRuntime       load_overlays loads nothing for a ROM range inside one section, on every build: its first
+8d99dc5                section starting in the range came after the first ending past it, and the loop waited to meet
+                       it, walking off the section table into load_overlay (a game reading an overlay in pieces, as
+                       Paper Mario's nuPiReadRom does in 0x2000-byte ones, an access violation on the desktop)
 ```
