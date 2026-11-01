@@ -711,4 +711,8 @@ rt64 2ae8560           the VI draws black where it shows more of the framebuffer
                        the desktop samples there through a BORDER sampler, black, which WebGPU lacks and plume clamps
                        to the edge, so the target's last row repeated to the picture's edge (a game that draws its
                        frame lines short of its VI's lost its bottom border to 27-33 rows of streaks at 1256x645)
+RecompFrontend b442dbb a page rumbles the gamepad behind a joystick by the browser's index, found once with SDL's own
+                       SDL_CreateJoystickName over each gamepad's id: it looked the gamepad up by the joystick's name,
+                       which is the id cut to 63 bytes and renamed, so a pad whose id runs longer (Chrome's for a
+                       DualSense, a DualShock 4, an Xbox pad over Bluetooth) or that SDL renames never rumbled
 ```
