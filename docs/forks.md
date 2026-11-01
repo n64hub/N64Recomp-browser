@@ -724,4 +724,9 @@ RecompFrontend 197853d a page rumbles the gamepad behind a joystick by the brows
 RecompFrontend 060709f a gamepad already there as SDL starts (pressed as the page loads) is opened: the pointer lock's
                        filter went in with SDL_SetEventFilter, which empties SDL's queue, the SDL_CONTROLLERDEVICEADDED
                        SDL_Init queued for it included, so the pad played nothing until plugged in again
+N64ModernRuntime       a save's address wraps at its size, as the chip's does, on every build: save_read, save_write
+a161995                and save_clear indexed the save buffer by the game's offset, checked by an assert a release
+                       build leaves out, so a Flash page outside the chip (Paper Mario's file menu reads page -128 for
+                       a file with no save yet) read far past it and the program crashed. SRAM and EEPROM go through
+                       the same functions
 ```
