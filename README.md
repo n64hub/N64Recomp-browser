@@ -5,8 +5,8 @@ Web support for N64 static recompilations built on [N64Recomp](https://github.co
 and [RT64](https://github.com/rt64/rt64): the game, its menus and RT64 built with Emscripten into one page that draws
 through WebGPU. It is game-agnostic. A recomp keeps its own submodules at the commits it pins and adds this repo
 beside them, and its web build patches their checkouts (Using it in a recomp). It was written for San Francisco Rush
-2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's, F-Zero X's and Mario Party 1's, 2's
-and 3's are, and sixteen more recomps build a page with it (Games).
+2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's, F-Zero X's, Mario Party 1's, 2's
+and 3's and Super Smash Bros.' are, and sixteen more recomps build a page with it (Games).
 
 > Written almost entirely by AI (Claude), like the recomp it came from.
 
@@ -15,8 +15,8 @@ and 3's are, and sixteen more recomps build a page with it (Games).
 Each game's repo builds its page with this repo; a page holds no ROM, the player loads their own. This project's own
 recomps aside, the games are here to build out and test the web support on more than one
 game: what one of them or one browser turns up is fixed in this repo or the forks unless it really is that game's own,
-so every game and both browsers get it. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X and Mario Party 1, 2 and 3
-are this project's own recomps, each with releases of its desktop build for Windows and Linux on its repo's Releases
+so every game and both browsers get it. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party 1, 2 and 3
+and Super Smash Bros. are this project's own recomps, each with releases of its desktop build for Windows and Linux on its repo's Releases
 page.
 
 | Game | Recomp | Repo | Page |
@@ -45,6 +45,7 @@ page.
 | Mario Party | this project's own recomp | [mario-party-recomp](https://github.com/n64hub/mario-party-recomp) | [play](https://n64hub.com/mario-party/) |
 | Mario Party 2 | this project's own recomp | [mario-party-2-recomp](https://github.com/n64hub/mario-party-2-recomp) | [play](https://n64hub.com/mario-party-2/) |
 | Mario Party 3 | this project's own recomp | [mario-party-3-recomp](https://github.com/n64hub/mario-party-3-recomp) | [play](https://n64hub.com/mario-party-3/) |
+| Super Smash Bros. | this project's own recomp | [super-smash-bros-recomp](https://github.com/n64hub/super-smash-bros-recomp) | [play](https://n64hub.com/super-smash-bros/) |
 
 ## Using it in a recomp
 

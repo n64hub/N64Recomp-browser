@@ -12,7 +12,7 @@
 #    (~/.cache/n64recomp-pages) with no files checked out.
 # 2. Builds the page there by the fork's BUILDING.md steps (Rush 2049's: remote_build.sh build), in that image, or on
 #    the host itself for a repo whose scripts run images of their own (Perfect Dark's: the decomp's, then the web's;
-#    Super Mario 64's, F-Zero X's and Mario Party 1's, 2's and 3's: the web's). A build that stops on ninja's "still
+#    Super Mario 64's, F-Zero X's, Mario Party 1's, 2's and 3's and Super Smash Bros.'s: the web's). A build that stops on ninja's "still
 #    dirty after 100 tries" is built once more when no file in the copy is dated ahead of the host's clock (again_dirty).
 # 3. Hashes the files the page serves (.html, .js, .wasm, its .data if any, coi_serviceworker.js) as git does and compares them
 #    with the blobs in its folder of the hub's gh-pages (below). A commit builds the same bytes in any copy
@@ -137,13 +137,14 @@ fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-ze
 mp1    n64hub/mario-party-recomp             MarioPartyRecompiled build/web mario-party
 mp2    n64hub/mario-party-2-recomp           MarioParty2Recompiled build/web mario-party-2
 mp3    n64hub/mario-party-3-recomp           MarioParty3Recompiled build/web mario-party-3
+ssb    n64hub/super-smash-bros-recomp        SmashBrosRecompiled  build/web super-smash-bros
 "
 # Games whose pages are not published until the games are released: left out of a run that names no game, and built
 # only as a dry run (--dry-run, --browser, --ref), so their pins can still be built and played. None is held now.
 unreleased=" "
 # This project's own recomps, whose pins move by a pull request on their repos (CLAUDE.md, The pins), and which pin
 # upstream's own commits of what N64Recomp-browser patches as submodules (pin_tree). retest.sh reads this list.
-own=" rush pd sm64 fzx mp1 mp2 mp3 "
+own=" rush pd sm64 fzx mp1 mp2 mp3 ssb "
 selected=("${args[@]:1}")
 [[ ${#selected[@]} -gt 0 ]] || selected=($(awk -v u="$unreleased" 'NF && !index(u, " " $1 " ") { print $1 }' <<< "$games"))
 for g in "${selected[@]}"; do grep -q "^$g " <<< "$games" || { echo "no game $g (one of: $(awk 'NF { printf "%s ", $1 }' <<< "$games"))"; exit 1; }; done
@@ -426,7 +427,13 @@ build_mp3() {
     cmp -s ../rom.z64 roms/marioparty3.us.z64 || cp ../rom.z64 roms/marioparty3.us.z64
     bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
 }
-on_host=" pd sm64 fzx mp1 mp2 mp3 "
+# Super Smash Bros.'s, the same from roms/smashbrothers.us.z64.
+build_ssb() {
+    mkdir -p roms
+    cmp -s ../rom.z64 roms/smashbrothers.us.z64 || cp ../rom.z64 roms/smashbrothers.us.z64
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+}
+on_host=" pd sm64 fzx mp1 mp2 mp3 ssb "
 
 # --- Here ---
 
