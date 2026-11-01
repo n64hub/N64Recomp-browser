@@ -715,4 +715,7 @@ RecompFrontend b442dbb a page rumbles the gamepad behind a joystick by the brows
                        SDL_CreateJoystickName over each gamepad's id: it looked the gamepad up by the joystick's name,
                        which is the id cut to 63 bytes and renamed, so a pad whose id runs longer (Chrome's for a
                        DualSense, a DualShock 4, an Xbox pad over Bluetooth) or that SDL renames never rumbled
+RecompFrontend b026fa2 a gamepad already there as SDL starts (pressed before a reload) is opened: the pointer lock's
+                       filter went in with SDL_SetEventFilter, which empties SDL's queue, the SDL_CONTROLLERDEVICEADDED
+                       SDL_Init queued for it included, so the pad played nothing until plugged in again
 ```

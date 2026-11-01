@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web b442dbbf72868e61ed480fa97323cb6280483ace
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web b026fa23330a5f14015c8f35d5424a4b441f95c9
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
@@ -70,22 +70,23 @@ index 45bedd1..72ad464 100644
          const ControllerGUID &get_controller_guid(int controller_index);
          int get_controller_profile_index(int controller_index);
 diff --git a/recompinput/src/input_events.cpp b/recompinput/src/input_events.cpp
-index c76a1dc..831568a 100644
+index c76a1dc..745be92 100644
 --- a/recompinput/src/input_events.cpp
 +++ b/recompinput/src/input_events.cpp
-@@ -5,6 +5,11 @@
+@@ -5,6 +5,12 @@
  #include "recompui/config.h"
  #include "ultramodern/ultramodern.hpp"
  
 +#ifdef __EMSCRIPTEN__
 +#include <atomic>
++#include <vector>
 +#include <emscripten/html5.h>
 +#endif
 +
  static struct {
      std::list<std::filesystem::path> files_dropped;
  } DropState;
-@@ -38,6 +43,62 @@ void purge_deferred_controller_profiles() {
+@@ -38,6 +44,71 @@ void purge_deferred_controller_profiles() {
      deferred_controller_profiles.clear();
  }
  
@@ -128,7 +129,16 @@ index c76a1dc..831568a 100644
 +            web_next_filter = nullptr;
 +            web_next_filter_userdata = nullptr;
 +        }
++        // SDL_SetEventFilter drops every event still queued, and this runs before the first is read: among them the
++        // SDL_CONTROLLERDEVICEADDED SDL_Init queues for each gamepad already there (one pressed before a reload), which
++        // was then never opened. So they are taken out first and queued again after.
++        int count = SDL_PeepEvents(nullptr, 0, SDL_PEEKEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
++        std::vector<SDL_Event> queued(count > 0 ? count : 0);
++        count = queued.empty() ? 0 : SDL_PeepEvents(queued.data(), int(queued.size()), SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
 +        SDL_SetEventFilter(web_mouse_filter, nullptr);
++        if (count > 0) {
++            SDL_PeepEvents(queued.data(), count, SDL_ADDEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
++        }
 +    }
 +
 +    // Relative mode is still on only if the lock ended without this side turning it off (a menu opened another way).
@@ -148,7 +158,7 @@ index c76a1dc..831568a 100644
  bool sdl_event_filter(void* userdata, SDL_Event* event) {
      switch (event->type) {
      case SDL_EventType::SDL_KEYDOWN:
-@@ -95,6 +156,13 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
+@@ -95,6 +166,13 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
                  profiles::add_controller(guid, profile_index);
              }
          }
@@ -162,7 +172,7 @@ index c76a1dc..831568a 100644
      }
      break;
      case SDL_EventType::SDL_CONTROLLERDEVICEREMOVED:
-@@ -250,6 +318,9 @@ void handle_events() {
+@@ -250,6 +328,9 @@ void handle_events() {
      SDL_Event cur_event;
      static bool started = false;
      static bool exited = false;
