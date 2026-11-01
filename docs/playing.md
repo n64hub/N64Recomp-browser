@@ -182,6 +182,9 @@ work, naming the game, the browser, the time and the curve.
 - How much of its heap a page has taken, and what ran it out: `--preload tools/heap_probe.js` logs the heap's break
   and length each second (`heap <s> sbrk <MB> len <MB>`) and, before an `Aborted(OOM)`, the request's size and the
   stack that made it (`heapoom`) (docs/findings.md, Memory).
+- What a game makes of several controllers, and where its rumble goes: `--preload tools/gamepad_probe.js` gives the
+  page stand-in pads, plugged in by a plan's `plugPads()` once SDL runs (before Start Game), and says what reached
+  each pad's vibrationActuator (`padRumbles()`) and which pad the page looked for (its header).
 - Video memory: read the adapter's `\GPU Adapter Memory(*)\Dedicated Usage` and nvidia-smi, never
   `\GPU Process Memory(*)\Dedicated Usage`, which climbs by a canvas a frame in Firefox (Windows 10 counts every reopen
   of its shared canvas texture, KB4490156). nvidia-smi's is the whole GPU's, so a page filling video memory beside
