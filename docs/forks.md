@@ -717,4 +717,11 @@ RecompFrontend         RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED: Reset to defaul
                        not a second's sharing the keyboard; the controls page's controller and keyboard toggle shows for
                        a player 1 on a pad who still plays the keyboard (profiles::controller_player_has_keyboard), so
                        its keys can be seen and changed
+RecompFrontend 197853d a page rumbles the gamepad behind a joystick by the browser's index, found once with SDL's own
+                       SDL_CreateJoystickName over each gamepad's id: it looked the gamepad up by the joystick's name,
+                       which is the id cut to 63 bytes and renamed, so a pad whose id runs longer (Chrome's for a
+                       DualSense, a DualShock 4, an Xbox pad over Bluetooth) or that SDL renames never rumbled
+RecompFrontend 060709f a gamepad already there as SDL starts (pressed as the page loads) is opened: the pointer lock's
+                       filter went in with SDL_SetEventFilter, which empties SDL's queue, the SDL_CONTROLLERDEVICEADDED
+                       SDL_Init queued for it included, so the pad played nothing until plugged in again
 ```
