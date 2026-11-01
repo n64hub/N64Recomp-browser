@@ -728,4 +728,10 @@ N64ModernRuntime       load_overlays loads nothing for a ROM range inside one se
 8d99dc5                section starting in the range came after the first ending past it, and the loop waited to meet
                        it, walking off the section table into load_overlay (a game reading an overlay in pieces, as
                        Paper Mario's nuPiReadRom does in 0x2000-byte ones, an access violation on the desktop)
+N64ModernRuntime       a Flash page number wraps at the chip's 1024 pages, as a console's Flash does, on every build:
+a161995 7c9f704        osFlashReadArray, osFlashWriteArray and the page erases took a page with no bound, so a page
+                       outside the chip (Paper Mario's file menu reads page -128 for a file with no save yet) read far
+                       past the save buffer and the program crashed. a161995 wrapped it in the save buffer's functions,
+                       which racer-web's and DKR-R-web's own patches rewrite; 7c9f704 puts those back and wraps the
+                       page in the Flash calls
 ```
