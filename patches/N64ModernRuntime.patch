@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web a16199552240bba4f979ee3ca1c781e7c3acbe95
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 7c9f704d0f173224fcb6fc63ceb922d354747488
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -203,6 +203,71 @@ index 6bc03fd..04894fb 100644
      if (json_parse_option_map.contains(option.id)) {
          return json_parse_option_map[option.id](json_value);
      }
+diff --git a/librecomp/src/flash.cpp b/librecomp/src/flash.cpp
+index f46261c..0e9ef28 100644
+--- a/librecomp/src/flash.cpp
++++ b/librecomp/src/flash.cpp
+@@ -94,13 +94,8 @@ extern "C" void osFlashSectorErase_recomp(uint8_t * rdram, recomp_context * ctx)
+         ULTRAMODERN_QUICK_EXIT();
+     }
+ 
+-    uint32_t page_num = (uint32_t)ctx->r4;
+-
+-    // Prevent out of bounds erase
+-    if (page_num >= page_count) {
+-        ctx->r2 = -1;
+-        return;
+-    }
++    // The chip's page number wraps at its page count, as on a console.
++    uint32_t page_num = (uint32_t)ctx->r4 % page_count;
+ 
+     save_clear(page_num * page_size, page_size, 0xFF);
+ 
+@@ -114,13 +109,8 @@ extern "C" void osFlashSectorEraseThrough_recomp(uint8_t * rdram, recomp_context
+         ULTRAMODERN_QUICK_EXIT();
+     }
+ 
+-    uint32_t page_num = (uint32_t)ctx->r4;
+-
+-    // Prevent out of bounds erase
+-    if (page_num >= page_count) {
+-        ctx->r2 = -1;
+-        return;
+-    }
++    // The chip's page number wraps at its page count, as on a console.
++    uint32_t page_num = (uint32_t)ctx->r4 % page_count;
+ 
+     save_clear(page_num * page_size, page_size, 0xFF);
+ 
+@@ -167,8 +157,8 @@ extern "C" void osFlashWriteArray_recomp(uint8_t * rdram, recomp_context * ctx)
+ 
+     uint32_t page_num = ctx->r4;
+ 
+-    // Copy the write buffer into the save file
+-    save_write_ptr(write_buffer.data(), page_num * page_size, page_size);
++    // Copy the write buffer into the save file. The chip's page number wraps at its page count, as on a console.
++    save_write_ptr(write_buffer.data(), (page_num % page_count) * page_size, page_size);
+ 
+     ctx->r2 = 0;
+ }
+@@ -186,11 +176,12 @@ extern "C" void osFlashReadArray_recomp(uint8_t * rdram, recomp_context * ctx) {
+     uint32_t n_pages = MEM_W(0x10, ctx->r29);
+     PTR(OSMesgQueue) mq = MEM_W(0x14, ctx->r29);
+ 
+-    uint32_t offset = page_num * page_size;
+-    uint32_t count = n_pages * page_size;
+-
+-    // Read from the save file into the provided buffer
+-    save_read(PASS_RDRAM dramAddr, offset, count);
++    // Read from the save file into the provided buffer, a page at a time: the chip's page number wraps at its page
++    // count, so a page outside it (Paper Mario's file menu reads page -128 for a file with no save yet) reads one
++    // inside it, as on a console, where the game then finds its checksum wrong, and never memory past the save.
++    for (uint32_t i = 0; i < n_pages; i++) {
++        save_read(PASS_RDRAM dramAddr + i * page_size, ((page_num + i) % page_count) * page_size, page_size);
++    }
+ 
+     // Send the message indicating read completion
+     ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
 diff --git a/librecomp/src/mods.cpp b/librecomp/src/mods.cpp
 index 0f7de83..9bec0ec 100644
 --- a/librecomp/src/mods.cpp
@@ -579,71 +644,10 @@ index 8c8e5d1..68771e8 100644
      }
  }
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..9b79e85 100644
+index 43509ba..71ee4d9 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
-@@ -162,24 +162,29 @@ void saving_thread_func(RDRAM_ARG1) {
-     }
- }
- 
--void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
--    assert(offset + count <= save_context.save_buffer.size());
-+// A save's address wraps at its size, as the chip's does: every save type's size is a power of two, so an address past
-+// it (Paper Mario's file menu reads Flash page -128 for a file with no save yet) reaches the save inside it, which the
-+// game then finds empty or wrong, never memory past save_buffer. A count that runs off its end wraps the same way.
-+static size_t save_index(uint32_t offset) {
-+    return offset & (save_context.save_buffer.size() - 1);
-+}
- 
-+void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
-     {
-         std::lock_guard lock { save_context.save_buffer_mutex };
--        memcpy(&save_context.save_buffer[offset], in, count);
-+        for (uint32_t i = 0; i < count; i++) {
-+            save_context.save_buffer[save_index(offset + i)] = static_cast<const char*>(in)[i];
-+        }
-     }
-     
-     save_context.write_sempahore.signal();
- }
- 
- void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count) {
--    assert(offset + count <= save_context.save_buffer.size());
--
-     {
-         std::lock_guard lock { save_context.save_buffer_mutex };
-         for (gpr i = 0; i < count; i++) {
--            save_context.save_buffer[offset + i] = MEM_B(i, rdram_address);
-+            save_context.save_buffer[save_index(offset + i)] = MEM_B(i, rdram_address);
-         }
-     }
- 
-@@ -187,20 +192,18 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
- }
- 
- void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count) {
--    assert(offset + count <= save_context.save_buffer.size());
--
-     std::lock_guard lock { save_context.save_buffer_mutex };
-     for (gpr i = 0; i < count; i++) {
--        MEM_B(i, rdram_address) = save_context.save_buffer[offset + i];
-+        MEM_B(i, rdram_address) = save_context.save_buffer[save_index(offset + i)];
-     }
- }
- 
- void save_clear(uint32_t start, uint32_t size, char value) {
--    assert(start + size < save_context.save_buffer.size());
--
-     {
-         std::lock_guard lock { save_context.save_buffer_mutex };
--        std::fill_n(save_context.save_buffer.begin() + start, size, value);
-+        for (uint32_t i = 0; i < size; i++) {
-+            save_context.save_buffer[save_index(start + i)] = value;
-+        }
-     }
- 
-     save_context.write_sempahore.signal();
-@@ -271,6 +274,8 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -271,6 +271,8 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
      // TODO implement unaligned DMA correctly
      if (direction == 0) {
          if (physical_addr >= recomp::rom_base) {
