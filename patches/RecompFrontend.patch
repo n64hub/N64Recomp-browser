@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web 8570279315dadd2914aef76c528d32c4b77a63a3
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web 62d7edc5f3a19b621ee1015c69ac3aa5cd6b80aa
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
@@ -56,19 +56,19 @@ index 1961e29..db576c4 100644
      void update_rumble();
      bool should_override_keystate(SDL_Scancode key, SDL_Keymod mod);
 diff --git a/recompinput/include/recompinput/profiles.h b/recompinput/include/recompinput/profiles.h
-index 45bedd1..72ad464 100644
+index 45bedd1..d6819a0 100644
 --- a/recompinput/include/recompinput/profiles.h
 +++ b/recompinput/include/recompinput/profiles.h
-@@ -47,6 +47,9 @@ namespace recompinput {
-         const std::vector<int> get_indices_for_custom_profiles(InputDevice device);
-         void set_input_profile_for_player(int player_index, int profile_index, InputDevice device);
-         int get_input_profile_for_player(int player_index, InputDevice device);
+@@ -56,6 +56,9 @@ namespace recompinput {
+         int get_controller_profile_index_from_sdl_controller(SDL_GameController *game_controller);
+         std::string get_mp_keyboard_profile_key(int player_index);
+         std::string get_mp_keyboard_profile_name(int player_index);
 +        // Whether a controller player also plays the keyboard, on their keyboard profile: with
 +        // RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED, player 1 while nobody has been given it. Otherwise never.
 +        bool controller_player_has_keyboard(int player_index);
-         int add_controller(ControllerGUID guid, int profile_index);
-         const ControllerGUID &get_controller_guid(int controller_index);
-         int get_controller_profile_index(int controller_index);
+         void initialize_input_bindings();
+         int get_sp_controller_profile_index();
+         int get_sp_keyboard_profile_index();
 diff --git a/recompinput/src/input_events.cpp b/recompinput/src/input_events.cpp
 index c76a1dc..831568a 100644
 --- a/recompinput/src/input_events.cpp

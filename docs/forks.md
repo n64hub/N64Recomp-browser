@@ -711,7 +711,7 @@ rt64 2ae8560           the VI draws black where it shows more of the framebuffer
                        the desktop samples there through a BORDER sampler, black, which WebGPU lacks and plume clamps
                        to the edge, so the target's last row repeated to the picture's edge (a game that draws its
                        frame lines short of its VI's lost its bottom border to 27-33 rows of streaks at 1256x645)
-RecompFrontend 8570279 RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED: Reset to defaults gives the first keyboard player in
+RecompFrontend 8570279, RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED: Reset to defaults gives the first keyboard player in
                        player order the default keys (upstream cleared every keyboard player's, which left a player
                        alone on the keyboard none), and only that one's empty profile gets single-player mode's keys,
                        not a second's sharing the keyboard; the controls page's controller and keyboard toggle shows for
