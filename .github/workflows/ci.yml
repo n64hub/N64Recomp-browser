@@ -3,7 +3,8 @@
 #
 # A change to nothing but docs (*.md), plays.jsonl, the games' page (site/) and the tools that play, serve and publish
 # pages, which CI never runs, skips every job but changes: they report as skipped, not failed, except on a push to main
-# when what a page is built from has changed since the newest tag (the tag job). A tag builds everything.
+# when what a page is built from has changed since the newest tag (the tag job). A tag builds everything. The changes
+# job also checks that What's new (site/news.html) has an entry for every game in README.md's Games table.
 # A green push to main that changes what a page is built from is tagged as the next release (the tag job). The compiles go through ccache (the
 # emscripten job, frontend/build_speed.cmake), so a PR whose forks, patches/ and sources are main's mostly hits; the
 # cache a PR saves is its own, main's is every PR's.
@@ -40,6 +41,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      # Every game in README.md's Games table has its What's new entry in site/news.html, one linking the repo its
+      # Recomp or Repo cell links (a port's upstream recomp, this project's own recomp's repo): a new game's work adds
+      # its Games row and can forget the hub's news (docs/playing.md, The games page).
+      - name: What's new names every game
+        run: |
+          missing=0
+          while IFS= read -r row; do
+            urls="$(grep -oE 'https://github\.com/[^)]+' <<< "$row")"
+            found=false
+            for url in $urls; do grep -qF "href=\"$url\"" site/news.html && found=true; done
+            if ! $found; then
+              echo "::error file=site/news.html::No What's new entry for $(cut -d'|' -f2 <<< "$row" | sed 's/^ *//; s/ *$//'): none links" $urls
+              missing=1
+            fi
+          done < <(sed -n '/^| Game |/,/^$/p' README.md | grep -E '^\| [^-]' | tail -n +2)
+          exit $missing
       - id: diff
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
