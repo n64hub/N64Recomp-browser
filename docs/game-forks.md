@@ -464,9 +464,6 @@ each and most of them in every one, recorded by `tools/record_shaders.sh` and `t
 course at machine select where the race reads it and has the computer drive player 1's machine, as its play plans do.
 Its README, CLAUDE.md and docs/web.md have the rest.
 
-Mario Party 1's, 2's and 3's pages are built and played like the others but not published until the games are
-released (docs/publishing.md).
-
 `n64hub/mario-party-recomp` is Mario Party (USA), not a fork but this project's own recomp (GPL-3.0), from the
 mariopartyrd/marioparty decompilation's symbols, with RecompFrontend's launcher and menus. It is on upstream's rt64,
 N64ModernRuntime and RecompFrontend at the commits Majora's Mask's are on (`patches/pins.txt`), patched by the
@@ -549,6 +546,25 @@ computer players and minigame index a board sets, and four computer players play
 frame in several RSP tasks, as Mario Party's does, which RT64 interpolates as one game frame since rt64 bce5e11: a
 page built before it presents the game's own 30 in a board's menus and minigames. Its README and docs/web.md have the
 rest.
+
+`n64hub/super-smash-bros-recomp` is Super Smash Bros. (USA), not a fork but this project's own recomp (GPL-3.0), from
+the Smash64RecompSyms symbols, with the VetriTheRetri/ssb-decomp-re decompilation's headers for its patches and
+RecompFrontend's launcher and menus. It is on upstream's rt64 and RecompFrontend at the commits Majora's Mask's are on
+and N64ModernRuntime at Conker's (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`
+pins, with no changes of its own to them. Each overlay is mapped by a hook at the start of the game's own
+`syDmaLoadOverlay`; the game's anti-piracy checks (reads of the RSP's memory, code run from a data file) are answered
+as a console with the cartridge answers them, by instruction patches in its `us.toml`, and the loops where the game
+waits on a variable another thread sets (the boot's wait for the audio thread, the music's stop before a battle) let
+the other threads run, which a recomp's one-thread-at-a-time runtime needs. Its audio microcode is `n_aspMain`,
+recompiled by RSPRecomp. Each pad plays a port of its own in the order the pads were connected
+(`RECOMPINPUT_PADS_IN_ORDER`), the keyboard port 1, and every port has a Rumble Pak. On a picture wider than 4:3 the battles and the
+stages' backgrounds reach the window's edges and the menus and the HUD stay in the middle 4:3. Its
+`tools/build_web.sh` runs a Docker image of its own, so `publish_pages.sh` runs it on the build host and not in
+rush-2049-recomp's image. Its list is 453 shaders: the boot (73) and 54 sections, the menus, each VS stage, the 1P
+Game's stages, the Bonus Practices and the movies among them, recorded by `tools/record_shaders.sh` and
+`tools/shader_plan.json` without anyone playing: `tools/shader_survey.js` starts each stage as the game's own menus
+do, writing the battle's players and stage and the next scene where the scene manager reads them, with four computer
+players. Its README, CLAUDE.md and docs/web.md have the rest.
 
 ## The games' own frame rates
 
