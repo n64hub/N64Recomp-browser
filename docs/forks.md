@@ -734,4 +734,10 @@ a161995 7c9f704        osFlashReadArray, osFlashWriteArray and the page erases t
                        past the save buffer and the program crashed. a161995 wrapped it in the save buffer's functions,
                        which racer-web's and DKR-R-web's own patches rewrite; 7c9f704 puts those back and wraps the
                        page in the Flash calls
+N64ModernRuntime       ULTRAMODERN_VIS_WAIT_FOR_RENDERER: the VI thread sends the game no VI or AI message while the
+0a44618                graphics thread has spent over 100 ms on one action (a list, a screen update), so a stall there
+                       is one long VI to the game. It is told its RSP task is done before RT64 reads the list, and a
+                       game that steps its logic whatever its lists do (Paper Mario's) went on to its next map while
+                       a readback waited 4-6.6 s on Firefox's in-line pipeline builds: the list RT64 was still reading
+                       pointed at what the load put there, and the page trapped or stopped drawing
 ```
