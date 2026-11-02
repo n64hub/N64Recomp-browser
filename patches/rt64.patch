@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 51d2cbb0bd5d299a56863afab5b3458efc27b725
+rt64: https://github.com/n64hub/rt64-web 217b52795ff6367dcc7e8b0039ba29b00dc17693
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3586,7 +3586,7 @@ index 8858dac..a9417c7 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..d86e6fc 100644
+index 2970e71..b3fa163 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -4136,7 +4136,20 @@ index 2970e71..d86e6fc 100644
  
              advanceFramebufferRenderer();
  
-@@ -1836,6 +2164,10 @@ namespace RT64 {
+@@ -1824,6 +2152,12 @@ namespace RT64 {
+         Workload &nextWorkload = ext.workloadQueue->workloads[workloadCursor];
+         nextWorkload.begin(workloadCounter++);
+ 
++        // The RSP's matrices carry over into the next display list, but the transforms they were added as are the
++        // ended workload's: a list that draws before it loads a projection or a matrix would index the next workload's
++        // transforms by the ended one's, past their end. Each is added to it again first.
++        rsp->projectionMatrixChanged = true;
++        rsp->modelViewProjChanged = true;
++
+         // Indicate on the framebuffer manager that all tile copies are free to be used again.
+         framebufferManager.clearUsedTileCopies();
+ 
+@@ -1836,6 +2170,10 @@ namespace RT64 {
      }
      
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
@@ -4147,7 +4160,7 @@ index 2970e71..d86e6fc 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1883,6 +2215,16 @@ namespace RT64 {
+@@ -1883,6 +2221,16 @@ namespace RT64 {
                  viHistory.pushVI(newVI, screenFbSize.x);
                  viHistory.pushFactor(lastScreenFactorCounter + 1);
                  lastScreenFactorCounter = 0;
@@ -4164,7 +4177,7 @@ index 2970e71..d86e6fc 100644
              }
              else if (viVisible) {
                  lastScreenFactorCounter++;
-@@ -1909,6 +2251,7 @@ namespace RT64 {
+@@ -1909,6 +2257,7 @@ namespace RT64 {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
@@ -4172,7 +4185,7 @@ index 2970e71..d86e6fc 100644
                          {
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
-@@ -1952,7 +2295,16 @@ namespace RT64 {
+@@ -1952,7 +2301,16 @@ namespace RT64 {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
              advancePresent(present, false);
@@ -4189,7 +4202,7 @@ index 2970e71..d86e6fc 100644
  
              // This presentation originates from screen changes being made manually by the CPU
              // or the game somehow not doing some form of buffering (instant input romhacks).
-@@ -1971,6 +2323,9 @@ namespace RT64 {
+@@ -1971,6 +2329,9 @@ namespace RT64 {
          renderTargetManager.destroyAll();
          renderTargetManager.setMultisampling(multisampling);
          dummyDepthTarget.reset();
@@ -4199,7 +4212,7 @@ index 2970e71..d86e6fc 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,12 +3015,101 @@ namespace RT64 {
+@@ -2660,12 +3021,101 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -4301,7 +4314,7 @@ index 2970e71..d86e6fc 100644
          present.debuggerFramebuffer.address = debuggerInspector.renderer.framebufferAddress;
          present.debuggerFramebuffer.view = (debuggerInspector.renderer.framebufferIndex >= 0);
      }
-@@ -2724,6 +3168,25 @@ namespace RT64 {
+@@ -2724,6 +3174,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  

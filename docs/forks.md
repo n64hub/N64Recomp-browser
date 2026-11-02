@@ -768,7 +768,7 @@ N64ModernRuntime       a mod linked in ahead of time (register_precompiled_mod) 
                        which recomp_redirect runs them around, where the desktop's live recompiler writes them into
                        the replacement's code. It failed with OfflineModHooked, so a mod that both replaces and hooks
                        a function (Dinosaur Planet's Dinomod Enhanced, four) couldn't be built into a page
-rt64 51d2cbb           presents dropped while the rest went out on their slots don't pace a page: pace() counts drops
+rt64 217b527           presents dropped while the rest went out on their slots don't pace a page: pace() counts drops
                        only while fewer than 95% of the presents its window's rate makes went out in the 2 s. A present
                        queued sooner than its game frame's slots end is dropped with the GPU idle too: Dinosaur
                        Planet's page queued 45 presents a second for 30 game frames in its CloudRunner flight, and
