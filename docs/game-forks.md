@@ -246,10 +246,13 @@ settled there, by rebasing the fork's patch or keeping the web's lines off its. 
 727 descriptions in 16 sections, the boot 40 and a planet 20-86 descriptions each.
 
 The page opens widescreen, at Game Frame Rate 60 and with Frame Interpolation at Monitor, where his desktop build opens
-4:3 at the game's own pacing without Frame Interpolation, and moves a page's settings saved before it did to those once
-(`page_defaults` in its options file). RT64 interpolates in play since rt64 179adb8: the game draws its shadows' render
-targets in a display list of its own before each frame's, which RT64 took for a frame, so the frame after it matched
-nothing and was never interpolated (the two are one game frame since rt64 bce5e11), and its frames take 2 and 3
+4:3 at the game's own pacing without Frame Interpolation, with its HUD at the wide picture's edges (his HUD in Screen
+Corners, which writes RT64's `gEXSetRectAlign`, `gEXSetViewportAlign` and edge-aligned scissors into the HUD's display
+list as the game draws each piece, within 16:9 at the default HUD ratio; on in his Modern profiles, a new player's)
+and its menus, pause screen and full-screen overlays at 4:3, and moves a page's settings saved before it did to those
+once (`page_defaults` in its options file). RT64 interpolates in play since rt64 179adb8: the game draws its shadows'
+render targets in a display list of its own before each frame's, which RT64 took for a frame, so the frame after it
+matched nothing and was never interpolated (the two are one game frame since rt64 bce5e11), and its frames take 2 and 3
 VIs on a page, which upstream's original rate needs equal. His runtime holds the game thread that submits a display
 list until the graphics thread has drawn it (upstream's never waits there), which held the whole game through render
 to RAM's exact copy. The game rebuilds a list's memory as soon as it has submitted it, so the page copies RDRAM's 8 MB
