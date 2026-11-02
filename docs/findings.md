@@ -1546,6 +1546,30 @@ uncapped, a present counter preloaded, whole GPU turns on an idle host (plays.js
   246; Mario Party 2's Mario Land 322-326 and minigames 0x05 358, 0x0B 299-338 and 0x13 340 on v0.143.0 and the test
   builds of these changes.
 
+## Pokémon Snap's camera check against its desktop build
+
+After a course Pokémon Snap's camera check counts the photos taken ("N pictures have been taken"), a frame of
+offscreen passes for each thumbnail (docs/forks.md, rt64 75184f8 and 33d3125). The same screen on the page and on the
+desktop build, each reached by a replay of a course from a fresh save, on an RTX 2070 (one series of each):
+
+- The page (v0.165.0, with rt64 33d3125, headless Chrome uncapped at 1256x645, a whole GPU turn on a busy host)
+  counts from 2 to 50 in 11.05 s, about 230 ms a photo. The desktop build (upstream's 1.1.6 release, Vulkan, a 640x480
+  window, a busy host) counts from 2 to 48 in 2.2 s, about 48 ms a photo: five times as fast, so what the page adds
+  isn't the game's own time.
+- The port's slow-frame report (`SNAP_STATS`) puts the page's time in the display-list call, not in the game: a long
+  frame there is 117-228 ms, 121-220 ms of it inside the call, 3-8 ms waiting for the render thread and the game's
+  update and draw about 0, every second frame 40-65 ms. The desktop build's frames are 41-75 ms, the call 8-56 ms.
+- A Chrome trace of a build with names shows what the call waits on: render to RAM's readbacks, a `DTBuffer::map` in
+  `Framebuffer::copyNativeToRAM` from `State::fullSync`. Over 9.5 s of the count the display-list thread waits on 276
+  of them, 29 a second, 10-30 ms each (14 on average), 41% of its time; 6% goes to waiting for the render thread, 8% to
+  its own work, and the rest to waiting for the game's next list, while the game's threads wait on messages. The
+  checks of framebuffers the CPU rewrote (`State::checkRDRAM`, the slow-frame report's `fb`) took 1% in the trace.
+
+So each thumbnail costs about six readbacks, around 90 ms of waiting, where the desktop build's whole photo takes 48
+ms. Chrome paces a readback's map itself (Ruled out, measured), so what can shorten the page's is fewer readbacks a
+thumbnail, or not waiting for them (`set_render_to_ram_late`, WebGPU in Chrome and Firefox), if the game can take its
+frames one list old.
+
 ## Faults
 
 `play_page.mjs --fault resize,hidden,audio,device,reload` (its header), played from Pages on an RTX 5080 (headless

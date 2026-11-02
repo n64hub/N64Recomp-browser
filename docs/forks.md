@@ -763,6 +763,10 @@ rt64 33d3125           a framebuffer pair whose framebuffer changed format (new,
                        times, 4-16 ms each on WebGPU; it syncs 10, at the depth buffers that share RAM with a pair's
                        colour, and its longest gaps went from 150-250 ms to 114-188 (headless Chrome, uncapped, RTX
                        2070, an idle host). A desktop build keeps the sync at every format change
+rt64 5051342           a new workload marks the RSP's projection and MVP changed, so a list that draws before it loads
+                       one adds them to its own transforms: it drew with the ended workload's indices, and frame
+                       matching wrote past its view-projection map (Rayman 2's intro story, an access violation in
+                       RigidBody::updateDecomposition on its desktop build). Desktop builds too
 N64ModernRuntime       a mod linked in ahead of time (register_precompiled_mod) loads with a hook on a function it
 51317a9                replaces, with IS_WASM: the replaced function's hook slots go on the replacement's redirect,
                        which recomp_redirect runs them around, where the desktop's live recompiler writes them into
