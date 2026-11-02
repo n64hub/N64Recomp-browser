@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 217b52795ff6367dcc7e8b0039ba29b00dc17693
+rt64: https://github.com/n64hub/rt64-web ca7dc8da12fd4d6e30280d3de7b760eabfce1965
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2706,7 +2706,7 @@ index e1889e5..3a6cb10 100644
  };
 \ No newline at end of file
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index 3227ab1..800ab45 100644
+index 3227ab1..ae697ac 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -7,6 +7,10 @@
@@ -2858,13 +2858,13 @@ index 3227ab1..800ab45 100644
                  }
  
                  RenderCommandSemaphore *waitSemaphore = drawSemaphores[swapChainIndex].get();
++#           if defined(__EMSCRIPTEN__)
++                pacingShown++;
++#           endif
                  presentTimestamp = Timer::current();
 +                PhaseTimer phaseTimer(this, PhasePresent);
                  swapChainValid = ext.swapChain->present(swapChainIndex, &waitSemaphore, 1);
                  presentProfiler.logAndRestart();
-+#           if defined(__EMSCRIPTEN__)
-+                pacingShown++;
-+#           endif
              }
          }
 +
