@@ -25,8 +25,12 @@
 // It sits past the slots a browser gives real pads (Chrome has 8, Firefox none until one connects). Each finger holds
 // the control it is on, so the stick and buttons go together, and slides from one button to the next; a touch on them
 // never reaches the canvas, nor its mouse events (the pointerdown's default). A real pad connecting unplugs and hides it
-// until the last one goes, and #pad-toggle does for a player who doesn't want it, remembered for the site. Everything
-// is in a block, out of the program's global names.
+// until the last one goes, and #pad-toggle does for a player who doesn't want it, remembered for the site. A game that
+// draws touch controls of its own says so with Module.gameTouchControls, true while they have the touchscreen and false
+// when they don't (its player turned them off): while it is true this controller and #pad-toggle stay hidden, so the
+// two never show one over the other and every touch reaches the canvas, where the game's own controls are. A game may
+// set it at any time, before this script loads too (docs/porting.md, Building with Emscripten); one that never
+// does gets this controller. Everything is in a block, out of the program's global names.
 if (navigator.getGamepads) {
   document.head.append(Object.assign(document.createElement('style'), { textContent: `
     /* Sized by the screen's height (vmin, in landscape): the stick, L and Z at the left, the C buttons at the right with
@@ -160,12 +164,13 @@ if (navigator.getGamepads) {
   for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) pad.addEventListener(type, touch);
   pad.addEventListener('contextmenu', (e) => e.preventDefault());
   let started = false;
+  let gameControls = Boolean(Module.gameTouchControls);  // the game's own, said before this script loaded
   const show = () => {
     const realPad = realPads().some((p) => p?.connected);
     let hidden = false;
     try { hidden = localStorage.getItem('touch-pad') === 'hidden'; } catch {}
-    pad.hidden = !started || realPad || hidden;
-    toggle.hidden = !started || realPad;
+    pad.hidden = !started || realPad || hidden || gameControls;
+    toggle.hidden = !started || realPad || gameControls;
     toggle.textContent = hidden ? 'Show controls' : 'Hide controls';
     if (pad.hidden) { held.clear(); update(); }
     if (pad.hidden) plug(false);
@@ -178,4 +183,6 @@ if (navigator.getGamepads) {
   const start = () => { started = true; show(); };
   if (Module.gameRunning) start();
   Module.gameStarted = start;
+  Object.defineProperty(Module, 'gameTouchControls', { configurable: true, get: () => gameControls,
+                                                      set: (own) => { gameControls = Boolean(own); show(); } });
 }
