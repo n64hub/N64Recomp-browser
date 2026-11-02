@@ -230,7 +230,7 @@ file loads is under a second. Its BUILDING.md and the headers of `web/page.cmake
 the canvas and dp scaling, the first run's defaults), render to RAM kept exact for the pause background, the shader list
 and its survey, the warps.
 
-`n64hub/JetForceGemini-Recomp-web` is Jet Force Gemini: Recompiled, VibinToast's, and merges his releases (v1.2.4):
+`n64hub/JetForceGemini-Recomp-web` is Jet Force Gemini: Recompiled, VibinToast's, and merges his releases (v1.3.2):
 his launcher (RmlUi, no RecompFrontend), options, profiles and renderer are the fork's. His `lib/` pins his forks of
 rt64, N64ModernRuntime and N64Recomp; the page's are upstream's at the commits N64Recomp-browser patches, with the web
 support and then his changes made again for those commits on top (`patches/web/rt64.patch`: F3DDKR, Dinosaur Planet's
@@ -316,11 +316,11 @@ the culling bit. Its docs/WEB.md and the headers of `scripts/build_web.sh`, `web
 `web/rt64_shaders.txt` have the rest: how its patches and the web's are layered, the launcher, sound, input focus,
 render to RAM off, the fixed heap, the shader list and how it is recorded by the game's teleport, the play plan.
 
-`n64hub/Snap64Recomp-web` is Snap64 Recomp (1.1.5), Pokémon Snap (US), on its port's own forks of rt64, plume and
+`n64hub/Snap64Recomp-web` is Snap64 Recomp (1.1.6), Pokémon Snap (US), on its port's own forks of rt64, plume and
 N64ModernRuntime (their `snap64` branches), the one game fork whose rt64 isn't upstream's: ~8,000 lines of the port's
 in RT64 (each object's identity for interpolation, its frame pacing and presentation, Photo Detail's framebuffer
 readback, the Snap Station's overlay, primitive-depth sprites). `apply.cmake` patches them, but for the files where
-both change the same lines (`patches/web/files.txt`, 26 of rt64's and 6 of the runtime's), whose web change is its
+both change the same lines (`patches/web/files.txt`, 29 of rt64's and 6 of the runtime's), whose web change is its
 `patches/web/<project>.patch`, merged by hand. Its `tools/build_web.sh` then takes what N64Recomp-browser has changed in
 those files since that merge (`apply.cmake --since`, README), and stops only where that meets the port's own lines:
 that is merged into its patch by hand. CI's `snap-patches` job runs its `tools/build_web.sh --patches` (that step, no
@@ -340,6 +340,9 @@ runs or the demo plays the copy lands a list late (renderToRAMLate), which on a 
 the GPU (docs/phones.md, Pokémon Snap on a Galaxy S21). A play shows no kept writes. It
 opens widescreen, RT64's Expand in a course as the desktop's Widescreen setting draws it (off on the desktop):
 the setting is on with Emscripten, and a page's settings saved before, whose Off no player chose, are turned on once.
+Wide HUD, off by default on the desktop since 1.1.6 as every enhancement is, is on by default on a page (its
+`src/settings.h`), so the film counter and the R and Z icons sit at the wide picture's edges, not in mid-air at the 4:3
+picture's; a Wide HUD the player saved still wins.
 The fork widens the forest film the title opens with too, which the port leaves 4:3: it runs from the title's own
 code, not a course's, so its routine is wrapped and the picture is wide while it runs (its `src/overlay_hook.cpp`).
 The title, Oak's lab and the other 2D screens stay pillarboxed, since their art ends at 320, and the film's first
@@ -354,7 +357,7 @@ rides it to its end, taking photos and throwing the items. Its docs/WEB.md and t
 `lib/patches/<submodule>.patch` change (4,900 lines on rt64's 46 files: car reflection and ambient occlusion shaders,
 the Variable frame rate's timeline, generated mipmaps, MSAA's coverage), patched by the N64Recomp-browser tag its
 `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` applies Rush 2's patches first, then `apply.cmake` project by
-project, but for the files where both change the same lines (`web/patches/files.txt`: 11 of rt64's, the runtime's
+project, but for the files where both change the same lines (`web/patches/files.txt`: 12 of rt64's, the runtime's
 `config.cpp` and `events.cpp`, 2 of RecompFrontend's), whose web change is its `web/patches/<project>.patch`, merged by hand, and what N64Recomp-browser
 has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's `rush2-patches` job runs its
 `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. One of them applies as is but names what the port renamed (`ui_mod_menu.cpp`), so it is listed too. Two of
@@ -376,7 +379,7 @@ on cdlewis's rt64, N64ModernRuntime and RecompFrontend, the ones Snowboard Kids'
 `patches/runtime/` change further (rt64's camera cuts and the stale write-backs it skips, a projection depth remap,
 the HD boards' per-texture scale), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Its
 `tools/build_web.sh` applies the game's patches first, then `apply.cmake` project by project, but for the files where
-both change the same lines (`web/patches/files.txt`: 11 of rt64's, hlslpp's `wasm.h`, N64Recomp's `cgenerator.cpp`,
+both change the same lines (`web/patches/files.txt`: 12 of rt64's, hlslpp's `wasm.h`, N64Recomp's `cgenerator.cpp`,
 RecompFrontend's `profiles.cpp`), whose web change is its `web/patches/<project>.patch`, merged by hand, and what
 N64Recomp-browser has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's
 `snowboarding-patches` job runs its `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. Its rt64 is
@@ -386,7 +389,7 @@ game's otherwise. The page leaves out RetroAchievements, which needs a server, a
 since the game reads no frame back and the exact copy held a phone's game frames to 15-16 a second against 26 (the
 copy a list late would land on the level data it loads into its framebuffers' memory: docs/phones.md), with RT64
 still checking RDRAM for what the CPU wrote over a framebuffer as it does after a copy (its rt64 patch), and keeps
-every other option at the desktop's defaults. Its list is 55 shaders: the boot (the launcher, the intro, the title and
+every other option at the desktop's defaults. Its list is 57 shaders: the boot (the launcher, the intro, the title and
 its demo, the menus, 44) and 4 sections (Crystal Lake's Match Race, Time Attack on Crystal Peak and Golden Forest,
 Training), recorded by `tools/shader_plan.json`, which knows where the game is by its loaded modules
 (`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the
