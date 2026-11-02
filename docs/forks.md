@@ -763,6 +763,10 @@ rt64 33d3125           a framebuffer pair whose framebuffer changed format (new,
                        times, 4-16 ms each on WebGPU; it syncs 10, at the depth buffers that share RAM with a pair's
                        colour, and its longest gaps went from 150-250 ms to 114-188 (headless Chrome, uncapped, RTX
                        2070, an idle host). A desktop build keeps the sync at every format change
+rt64 5051342           a new workload marks the RSP's projection and MVP changed, so a list that draws before it loads
+                       one adds them to its own transforms: it drew with the ended workload's indices, and frame
+                       matching wrote past its view-projection map (Rayman 2's intro story, an access violation in
+                       RigidBody::updateDecomposition on its desktop build). Desktop builds too
 rt64 d18a5ad           254dee3's count on the CPU kept after render to RAM draws into the read buffer: the rows
                        copyToRAM reads back go into the CPU's copy of it, and the count goes to the GPU only while a
                        write nothing read back is pending. Pokémon Snap's camera check rewrites 16 framebuffers the
@@ -775,4 +779,11 @@ N64ModernRuntime       a mod linked in ahead of time (register_precompiled_mod) 
                        which recomp_redirect runs them around, where the desktop's live recompiler writes them into
                        the replacement's code. It failed with OfflineModHooked, so a mod that both replaces and hooks
                        a function (Dinosaur Planet's Dinomod Enhanced, four) couldn't be built into a page
+rt64 217b527, ca7dc8d  presents dropped while the rest went out on their slots don't pace a page: pace() counts drops
+                       only while fewer than 95% of the presents its window's rate makes went out in the 2 s. A present
+                       queued sooner than its game frame's slots end is dropped with the GPU idle too: Dinosaur
+                       Planet's page queued 45 presents a second for 30 game frames in its CloudRunner flight, and
+                       went to one present a game frame and stayed there, each try of the number above falling
+                       straight back, 45 presents a second against 240 for the last 65 s of a play (Chrome and
+                       Firefox, a 240 Hz display, the GPU 2% busy)
 ```
