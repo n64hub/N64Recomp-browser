@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 33d3125350a9de61646e2a45c6c6401a11bd8307
+rt64: https://github.com/n64hub/rt64-web 51d2cbb0bd5d299a56863afab5b3458efc27b725
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2706,7 +2706,7 @@ index e1889e5..3a6cb10 100644
  };
 \ No newline at end of file
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index 3227ab1..9b4daae 100644
+index 3227ab1..800ab45 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -7,6 +7,10 @@
@@ -2811,7 +2811,7 @@ index 3227ab1..9b4daae 100644
              if (lockedWorkloadMutex) {
                  ext.sharedResources->workloadMutex.unlock();
                  lockedWorkloadMutex = false;
-@@ -391,19 +430,64 @@ namespace RT64 {
+@@ -391,19 +430,67 @@ namespace RT64 {
              if (presentFrame && swapChainValid) {
                  // Wait until the approximate time the next present should be at the current intended rate.
                  if ((presentTimestamp != Timestamp()) && (targetRate > 0) && (targetRate > viOriginalRate)) {
@@ -2862,6 +2862,9 @@ index 3227ab1..9b4daae 100644
 +                PhaseTimer phaseTimer(this, PhasePresent);
                  swapChainValid = ext.swapChain->present(swapChainIndex, &waitSemaphore, 1);
                  presentProfiler.logAndRestart();
++#           if defined(__EMSCRIPTEN__)
++                pacingShown++;
++#           endif
              }
          }
 +
@@ -2876,7 +2879,7 @@ index 3227ab1..9b4daae 100644
      }
  
      void PresentQueue::skipInterpolation() {
-@@ -416,6 +500,194 @@ namespace RT64 {
+@@ -416,6 +503,205 @@ namespace RT64 {
          ext.sharedResources->interpolatedCondition.notify_all();
      }
  
@@ -2902,7 +2905,13 @@ index 3227ab1..9b4daae 100644
 +    // while the page is hidden, when none is presented (below), or for a second after, as after a wait: a hidden page's
 +    // presents dropped while the browser held its present callbacks (plume's isHidden()), and Mario Kart 64's page on a
 +    // 240 Hz display went from 114 presents a second to 60 while hidden, each try of the number above falling straight
-+    // back and doubling the time to the next, so it stayed at 60 for 80 s after the tab came back.
++    // back and doubling the time to the next, so it stayed at 60 for 80 s after the tab came back. Nor are presents
++    // dropped while the presents before them went out on their slots: the GPU kept up, and presents were only queued
++    // sooner than the slots their game frames were given, which fewer presents a frame shows no more evenly. So drops
++    // count only while fewer than 95% of the presents the window's rate makes went out in it. Dinosaur Planet's page,
++    // in the CloudRunner flight, queued 45 presents a second for 30 game frames, with the GPU 2% busy, and stayed at
++    // one present a game frame (45 a second, 240 at the display's rate) for the last 65 s of a play: at each try of
++    // the number above it dropped a present in ten or more while the present thread slept until every slot.
 +    // A page opened with ?present-stats prints where the present thread's time went before each present it drops
 +    // (reportDroppedPresent()).
 +    void PresentQueue::pace(bool presentDropped) {
@@ -2972,15 +2981,20 @@ index 3227ab1..9b4daae 100644
 +            return;
 +        }
 +
-+        pacingPresents.emplace_back(now, presentDropped);
++        pacingPresents.push_back({ now, presentDropped, pacingShown });
 +        pacingDropped += presentDropped ? 1 : 0;
-+        while (Timer::deltaMicroseconds(pacingPresents.front().first, now) > 2'000'000) {
-+            pacingDropped -= pacingPresents.front().second ? 1 : 0;
++        while (Timer::deltaMicroseconds(pacingPresents.front().time, now) > 2'000'000) {
++            pacingDropped -= pacingPresents.front().dropped ? 1 : 0;
 +            pacingPresents.pop_front();
 +        }
 +
-+        const bool wholeWindow = Timer::deltaMicroseconds(pacingPresents.front().first, now) >= 1'900'000;
-+        const bool fallingBehind = wholeWindow && (pacingDropped >= 4) && ((pacingDropped * 10) >= pacingPresents.size());
++        // The rate presents are meant to go out at (present()'s), and whether fewer went out in the window.
++        const int64_t windowMicro = Timer::deltaMicroseconds(pacingPresents.front().time, now);
++        const uint32_t presentRate = (pacingMultiple > 0) ? std::min(pacedMultipleAtMost(pacingMultiple) * originalRate, targetRate) : targetRate;
++        const uint64_t shown = pacingShown - pacingPresents.front().shown;
++        const bool shownBehind = (shown * 1'000'000 * 20) < (uint64_t(presentRate) * uint64_t(windowMicro) * 19);
++        const bool wholeWindow = windowMicro >= 1'900'000;
++        const bool fallingBehind = wholeWindow && shownBehind && (pacingDropped >= 4) && ((pacingDropped * 10) >= pacingPresents.size());
 +        const int64_t sinceChange = Timer::deltaMicroseconds(pacingChanged, now);
 +        if (fallingBehind && (pacingMultiple != 1)) {
 +            pacingMultiple = pacedMultipleAtMost((pacingMultiple > 0) ? (pacingMultiple - 1) : (targetRate / originalRate));
@@ -3071,7 +3085,7 @@ index 3227ab1..9b4daae 100644
      void PresentQueue::notifyPresentId(const Present &present) {
          {
              std::scoped_lock<std::mutex> cursorLock(presentIdMutex);
-@@ -446,12 +718,15 @@ namespace RT64 {
+@@ -446,12 +732,15 @@ namespace RT64 {
  
          int processCursor = -1;
          bool skipPresent = false;
@@ -3087,7 +3101,7 @@ index 3227ab1..9b4daae 100644
                  cursorCondition.wait(cursorLock, [&]() {
                      return (writeCursor != threadCursor) || !presentThreadRunning;
                  });
-@@ -459,7 +734,23 @@ namespace RT64 {
+@@ -459,7 +748,23 @@ namespace RT64 {
                  if (presentThreadRunning) {
                      processCursor = threadCursor;
                      threadCursor = (threadCursor + 1) % presents.size();
@@ -3112,7 +3126,7 @@ index 3227ab1..9b4daae 100644
                  }
              }
  
-@@ -501,15 +792,49 @@ namespace RT64 {
+@@ -501,15 +806,49 @@ namespace RT64 {
                      }
                  }
  
@@ -3165,7 +3179,7 @@ index 3227ab1..9b4daae 100644
                      skipInterpolation();
                      notifyPresentId(present);
 diff --git a/src/hle/rt64_present_queue.h b/src/hle/rt64_present_queue.h
-index e08b02c..7b7d896 100644
+index e08b02c..5653e91 100644
 --- a/src/hle/rt64_present_queue.h
 +++ b/src/hle/rt64_present_queue.h
 @@ -4,6 +4,10 @@
@@ -3179,13 +3193,22 @@ index e08b02c..7b7d896 100644
  #include "common/rt64_profiling_timer.h"
  #include "gui/rt64_inspector.h"
  #include "render/rt64_vi_renderer.h"
-@@ -57,6 +61,37 @@ namespace RT64 {
+@@ -57,6 +61,46 @@ namespace RT64 {
          Timestamp presentTimestamp;
          VIHistory viHistory;
          bool presentWaitEnabled = false;
 +        uint32_t pacingMultiple = 0;
-+        std::deque<std::pair<Timestamp, bool>> pacingPresents;
++        // pace()'s window: when each present was taken, whether it was dropped, and pacingShown then.
++        struct PacingPresent {
++            Timestamp time;
++            bool dropped;
++            uint64_t shown;
++        };
++
++        std::deque<PacingPresent> pacingPresents;
 +        uint32_t pacingDropped = 0;
++        // Frames the present thread has presented, for how many went out in pace()'s window.
++        uint64_t pacingShown = 0;
 +        Timestamp pacingChanged;
 +        Timestamp pacingRaised;
 +        int64_t pacingRetryMicro = 0;
@@ -3217,7 +3240,7 @@ index e08b02c..7b7d896 100644
  
          PresentQueue();
          ~PresentQueue();
-@@ -69,6 +104,9 @@ namespace RT64 {
+@@ -69,6 +113,9 @@ namespace RT64 {
          void setup(const External &ext);
          void threadPresent(const Present &present, bool &swapChainValid);
          void skipInterpolation();
