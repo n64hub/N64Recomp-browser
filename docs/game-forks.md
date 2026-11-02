@@ -366,7 +366,9 @@ plume 827a073 binds as that level, as D3D12 does (before it every race drew blac
 The page leaves out online play, for
 `src/online/online_web.cpp`, an offline machine to the game, the texture upscaler, which starts a program, and N64:
 Recompiled code mods. Render to RAM is off: nothing in the game reads a frame back, and on a phone the exact copy
-held its demos to half the game frames (docs/phones.md, Rush 2 on a Galaxy S21). Its list is 82 shaders: the boot (the launcher, the title and the menus, 37) and 9 sections (the
+held its demos to half the game frames (docs/phones.md, Rush 2 on a Galaxy S21). Its own on-screen controls
+(upstream's `src/touch_controls.cpp`) have a phone's touchscreen while they are on Auto or On, and tell the page so
+(`Module.gameTouchControls`, docs/porting.md), which keeps its own controller out of their way. Its list is 82 shaders: the boot (the launcher, the title and the menus, 37) and 9 sections (the
 title's demos, a race on each of the 7 tracks, a stunt course), recorded by `web/shader_plan.json`, which drives the
 menus by the front end's screen and the track select's entry in RDRAM. Its docs/BUILDING.md (The web page) and the
 header of `tools/build_web.sh` has the rest.
