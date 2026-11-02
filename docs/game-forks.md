@@ -626,7 +626,11 @@ list, not as the task starts, since the game changes what a list reads once the 
 same VI as the one before until the next retrace: the game keys its cache of texture loads, in its one display list
 buffer, by the retrace count a frame starts in, so a second frame in a count calls the blocks the first wrote where
 its own commands now go, a call to itself that RT64 followed until the page ran out of memory, and the recomp's CPU
-builds frames that fast where a console's never does. Its code is three sections read out of ROM
+builds frames that fast where a console's never does. Another drops what would run past the end of its sound
+engine's queue of calls, 250 long and never checked: each retrace adds the stops of finished voices until an audio
+frame runs them, and a list RT64 takes long to read (lavapipe building a pipeline) holds back the audio task, so
+after about 84 retraces the queue overwrote the voice table after it and the game called garbage ("Failed to find
+function"). Its code is three sections read out of ROM
 once at boot, with no overlays. The loops where the game waits on its controller thread (a Controller Pak request,
 each frame's read of the controllers) let the other threads run, and the idle thread's watchdog, which reads
 libultra's thread states where the runtime keeps its own, is parked. It saves only to a Controller Pak, which port 1
