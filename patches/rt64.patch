@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 2ae85602a5f7d83fc33bb2b5a746f32c53193873
+rt64: https://github.com/n64hub/rt64-web 6dad6a7ea510aa3fd4c13088224621a1783c7ede
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1321,7 +1321,7 @@ index 558f1ee..40a2e09 100644
      };
  };
 diff --git a/src/hle/rt64_application.cpp b/src/hle/rt64_application.cpp
-index 785de27..28357c0 100644
+index 785de27..42eb2e6 100644
 --- a/src/hle/rt64_application.cpp
 +++ b/src/hle/rt64_application.cpp
 @@ -16,12 +16,18 @@
@@ -1387,11 +1387,18 @@ index 785de27..28357c0 100644
          for (uint32_t creationAttempt = 0; (creationAttempt < CreationAttempts) && (device == nullptr); creationAttempt++) {
  #       ifdef _WIN64
              if (creationAttempt == 1) {
-@@ -294,10 +317,33 @@ namespace RT64 {
+@@ -294,10 +317,40 @@ namespace RT64 {
              break;
          }
  
 +#   if defined(RT64_WGSL)
++        // The high precision framebuffer's format, rgba16unorm, is a render target or storage texture in WebGPU only with
++        // the optional texture-formats-tier1 feature, the WGSL shaders declare the framebuffer's storage textures rgba8
++        // (WebGPU.hlsli, IMAGE_FORMAT) and a game's prebuilt shader list is recorded at the standard format, so a page
++        // draws in the standard one whatever the setting. With On (a game's default, or a profile's) the page failed at
++        // the first target's createTexture and trapped after.
++        usesHDR = false;
++
 +        // A depth target with a stencil, for the prebuilt decals (RasterShader::createPipeline()), where the device has
 +        // depth32float-stencil8, an optional feature of WebGPU.
 +        if (device->getSampleCountsSupported(RenderFormat::D32_FLOAT_S8_UINT) & RenderSampleCount::COUNT_1) {
@@ -1424,7 +1431,7 @@ index 785de27..28357c0 100644
          }
  
          // Create all the render workers.
-@@ -316,7 +362,7 @@ namespace RT64 {
+@@ -316,7 +369,7 @@ namespace RT64 {
          // Create the swap chain with the texture count specified from the configuration.
          RenderSwapChainDesc swapChainDesc;
          swapChainDesc.renderWindow = appWindow->windowHandle;
@@ -1433,7 +1440,7 @@ index 785de27..28357c0 100644
          swapChainDesc.textureCount = (userConfig.displayBuffering == UserConfiguration::DisplayBuffering::Triple) ? 3 : 2;
  
          // Enable present wait if supported by the device. We specify a max latency of 1 as we use it to wait right before the next
-@@ -350,7 +396,14 @@ namespace RT64 {
+@@ -350,7 +403,14 @@ namespace RT64 {
          // Create the shader caches.
          // Estimate the amount of shader compiler threads by trying to use about half of the system's available threads.
          // We need the ubershader pipelines done as soon as possible, so we use a different thread count that demands more of the system.
@@ -1448,7 +1455,7 @@ index 785de27..28357c0 100644
          const uint32_t ubershaderThreads = uint32_t(std::max(int(threadsAvailable) - 2, 1));
          rasterShaderCache = std::make_unique<RasterShaderCache>(rasterShaderThreads, ubershaderThreads);
          rasterShaderCache->setup(device.get(), renderInterface->getCapabilities().shaderFormat, shaderLibrary.get(), multisampling);
-@@ -391,7 +444,12 @@ namespace RT64 {
+@@ -391,7 +451,12 @@ namespace RT64 {
          sharedQueueResources->setEmulatorConfig(emulatorConfig);
          sharedQueueResources->setEnhancementConfig(enhancementConfig);
          sharedQueueResources->setSwapChainSize(swapChain->getWidth(), swapChain->getHeight());
@@ -1461,7 +1468,7 @@ index 785de27..28357c0 100644
          sharedQueueResources->renderTargetManager.setMultisampling(multisampling);
          sharedQueueResources->renderTargetManager.setUsesHDR(usesHDR);
  
-@@ -455,6 +513,19 @@ namespace RT64 {
+@@ -455,6 +520,19 @@ namespace RT64 {
          // Set up the RDP
          state->rdp->setGBI();
  
@@ -1481,7 +1488,7 @@ index 785de27..28357c0 100644
          return SetupResult::Success;
      }
  
-@@ -510,6 +581,12 @@ namespace RT64 {
+@@ -510,6 +588,12 @@ namespace RT64 {
      }
  
      void Application::updateScreen() {
@@ -1494,7 +1501,7 @@ index 785de27..28357c0 100644
          appWindow->sdlCheckFilterInstallation();
          screenApiProfiler.logAndRestart();
          state->updateScreen(core.decodeVI(), false);
-@@ -674,9 +751,17 @@ namespace RT64 {
+@@ -674,9 +758,17 @@ namespace RT64 {
          presentQueue.reset();
  
          // Call the deinit hook if one was attached.
@@ -1515,7 +1522,7 @@ index 785de27..28357c0 100644
          }
  
          drawDataUploader.reset();
-@@ -705,6 +790,30 @@ namespace RT64 {
+@@ -705,6 +797,30 @@ namespace RT64 {
          FileDialog::finish();
      }
  

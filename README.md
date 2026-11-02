@@ -6,7 +6,7 @@ and [RT64](https://github.com/rt64/rt64): the game, its menus and RT64 built wit
 through WebGPU. It is game-agnostic. A recomp keeps its own submodules at the commits it pins and adds this repo
 beside them, and its web build patches their checkouts (Using it in a recomp). It was written for San Francisco Rush
 2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's, F-Zero X's, Mario Party 1's, 2's
-and 3's and Super Smash Bros.' are, and sixteen more recomps build a page with it (Games).
+and 3's, Super Smash Bros.' and Paper Mario's are, and sixteen more recomps build a page with it (Games).
 
 > Written almost entirely by AI (Claude), like the recomp it came from.
 
@@ -15,9 +15,9 @@ and 3's and Super Smash Bros.' are, and sixteen more recomps build a page with i
 Each game's repo builds its page with this repo; a page holds no ROM, the player loads their own. This project's own
 recomps aside, the games are here to build out and test the web support on more than one
 game: what one of them or one browser turns up is fixed in this repo or the forks unless it really is that game's own,
-so every game and both browsers get it. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party 1, 2 and 3
-and Super Smash Bros. are this project's own recomps, each with releases of its desktop build for Windows and Linux on its repo's Releases
-page.
+so every game and both browsers get it. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party 1, 2 and 3,
+Super Smash Bros. and Paper Mario are this project's own recomps, each with releases of its desktop build for Windows
+and Linux on its repo's Releases page.
 
 | Game | Recomp | Repo | Page |
 |---|---|---|---|
@@ -46,6 +46,7 @@ page.
 | Mario Party 2 | this project's own recomp | [mario-party-2-recomp](https://github.com/n64hub/mario-party-2-recomp) | [play](https://n64hub.com/mario-party-2/) |
 | Mario Party 3 | this project's own recomp | [mario-party-3-recomp](https://github.com/n64hub/mario-party-3-recomp) | [play](https://n64hub.com/mario-party-3/) |
 | Super Smash Bros. | this project's own recomp | [super-smash-bros-recomp](https://github.com/n64hub/super-smash-bros-recomp) | [play](https://n64hub.com/super-smash-bros/) |
+| Paper Mario | this project's own recomp | [paper-mario-recomp](https://github.com/n64hub/paper-mario-recomp) | [play](https://n64hub.com/paper-mario/) |
 
 ## Using it in a recomp
 
@@ -413,7 +414,8 @@ take the web support without moving its submodules to the forks (Using it in a r
   played on the browser's audio thread (`audio_output.h`), the browser's file picker for a recomp with menus of its own
   (`file_picker.h`), the WebGPU device, a notice in Firefox on Windows' Intel graphics naming its fixes, fullscreen in landscape at
   a phone's first tap, an on-screen controller on a phone once the game starts (`site/touch_pad.js`, served from the
-  hub's top and put into a game's frame by the hub, so it changes without a page build), and `coi_serviceworker.js`.
+  hub's top and put into a game's frame by the hub, so it changes without a page build; it steps aside for a game that
+  draws touch controls of its own), and `coi_serviceworker.js`.
 - `renderer/`: RT64 as the runtime's renderer without RecompFrontend, for a test page with no menus.
 - `tools/`: `fetch_forks.sh` checks out the forks at `forks.txt`'s commits (CI uses it), `fetch_pins.sh` a recomp's
   own commits in `patches/pins.txt`, patched, and `publish_page.sh` puts
