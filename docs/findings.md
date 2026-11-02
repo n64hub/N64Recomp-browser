@@ -1574,7 +1574,9 @@ of each one's changed pixels was made on the GPU, an execute, a wait and a readb
 254dee3's count on the CPU knew nothing of a buffer render to RAM had drawn into. The trace's maps were those counts'
 as much as the syncs'. Since rt64 d18a5ad what render to RAM reads back goes into the CPU's copy, none of the count's
 16 goes to the GPU, `checkRDRAM` there takes 1.1 s of the count's time against 7.6 s, and a thumbnail's list about
-101 ms (docs/forks.md). What it still waits for is one execute of the upload a list and the syncs' readbacks.
+101 ms (docs/forks.md). What it still waits for is one execute of the upload a list and the syncs' readbacks. Read
+from a shot a second at 3840x2000, a page with it counts from 7 to 47 in 4 s, about 100 ms a photo, all 55 in 8 s,
+where Pages' page from v0.162.0 (before 71e67b4 and 33d3125 too) counted 1 to 20 in 15 s (an RTX 2070, plays.jsonl).
 
 `set_render_to_ram_late` at the count would spare only the last batch's readback a list, about 3 ms, for the risk of
 the album and the grading reading a thumbnail one list old, so Snap keeps it to its title film and attract demo.
