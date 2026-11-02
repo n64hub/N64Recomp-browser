@@ -1565,10 +1565,19 @@ desktop build, each reached by a replay of a course from a fresh save, on an RTX
   its own work, and the rest to waiting for the game's next list, while the game's threads wait on messages. The
   checks of framebuffers the CPU rewrote (`State::checkRDRAM`, the slow-frame report's `fb`) took 1% in the trace.
 
-So each thumbnail costs about six readbacks, around 90 ms of waiting, where the desktop build's whole photo takes 48
-ms. Chrome paces a readback's map itself (Ruled out, measured), so what can shorten the page's is fewer readbacks a
-thumbnail, or not waiting for them (`set_render_to_ram_late`, WebGPU in Chrome and Firefox), if the game can take its
-frames one list old.
+Timers in a test build's display-list call (the same plan held 25 s at the count, headless Chrome uncapped, an RTX
+2070, a busy host) split a thumbnail's list of about 155 ms otherwise. Its render to RAM syncs, 10 a list and each
+needed (a depth buffer whose format changed, or one sampled as a texture), wait about 22 ms a list for their
+readbacks, 3.3 ms each at the median. The larger part, 44-56 ms, is `State::checkRDRAM` at the list's start: the CPU
+rewrites the thumbnail's 16 framebuffers between lists, each drawn and copied to RAM in the list before, and the count
+of each one's changed pixels was made on the GPU, an execute, a wait and a readback of one word apiece, since rt64
+254dee3's count on the CPU knew nothing of a buffer render to RAM had drawn into. The trace's maps were those counts'
+as much as the syncs'. Since rt64 d18a5ad what render to RAM reads back goes into the CPU's copy, none of the count's
+16 goes to the GPU, `checkRDRAM` there takes 1.1 s of the count's time against 7.6 s, and a thumbnail's list about
+101 ms (docs/forks.md). What it still waits for is one execute of the upload a list and the syncs' readbacks.
+
+`set_render_to_ram_late` at the count would spare only the last batch's readback a list, about 3 ms, for the risk of
+the album and the grading reading a thumbnail one list old, so Snap keeps it to its title film and attract demo.
 
 ## Faults
 
