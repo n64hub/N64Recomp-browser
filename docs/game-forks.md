@@ -351,7 +351,7 @@ rides it to its end, taking photos and throwing the items. Its docs/WEB.md and t
 `lib/patches/<submodule>.patch` change (4,900 lines on rt64's 46 files: car reflection and ambient occlusion shaders,
 the Variable frame rate's timeline, generated mipmaps, MSAA's coverage), patched by the N64Recomp-browser tag its
 `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` applies Rush 2's patches first, then `apply.cmake` project by
-project, but for the files where both change the same lines (`web/patches/files.txt`: 11 of rt64's, the runtime's
+project, but for the files where both change the same lines (`web/patches/files.txt`: 12 of rt64's, the runtime's
 `config.cpp` and `events.cpp`, 2 of RecompFrontend's), whose web change is its `web/patches/<project>.patch`, merged by hand, and what N64Recomp-browser
 has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's `rush2-patches` job runs its
 `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. One of them applies as is but names what the port renamed (`ui_mod_menu.cpp`), so it is listed too. Two of
