@@ -158,3 +158,9 @@ mod replaces or hooks redirected at each function's entry, since wasm code can't
 address used as an array index into the load's offset, where the linker fills in the function's index in the module,
 not its table index, which hung the page at boot until `recomp.h` hid the address behind an empty `asm`: a function
 pointer is safe in wasm as a value, not as arithmetic. No other N64 recomp running in a browser was found to learn from.
+
+A built-in mod that both replaces a function and hooks it (Dinosaur Planet's Dinomod Enhanced) needs N64ModernRuntime
+51317a9: the hook slots go on the replacement's redirect. A mod whose `.nrm` holds data made from the ROM (Dinomod's
+patched asset files) can't be in a page any more than the ROM can: dino-recomp-web's page holds its code, recompiled
+ahead of time, and a delta from the player's ROM to the `.nrm`, which it rebuilds from the ROM the launcher stored
+before the runtime looks for mods (docs/game-forks.md, Dinosaur Planet's part).
