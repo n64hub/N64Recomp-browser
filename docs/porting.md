@@ -26,7 +26,8 @@ presents on the web.
 - Two web paths run natively on Vulkan too, to check them against the stock ones: configure a game with
   `-DRT64_PER_DRAW_TEXTURES=ON` (rt64-0007: a texture set per draw, TMEM in one buffer; to test that pool, make
   `TMEMHasher::requiresRawTMEM` return true) or `-DRT64_PACKED_RSP_INPUTS=ON` (rt64-0009).
-- Still to do: no `rgba16unorm` (HDR) target on the web, and MSAA is off: WebGPU has no sample positions.
+- Still to do: no `rgba16unorm` (HDR) target on the web, so a page draws in the standard format whatever a game's high
+  precision framebuffer setting says (rt64 6dad6a7), and MSAA is off: WebGPU has no sample positions.
 
 ## Prebuilt shader lists
 
@@ -71,6 +72,12 @@ What a recomp's code needed for wasm, besides N64ModernRuntime-0003 and N64Recom
   float-to-int conversions round (Rush 2049's attract race walked off RDRAM after 40 s). Float to int out of range
   saturates in wasm and gives 0x80000000 on x86; nothing has hit it yet.
 - RDRAM has no guard pages: a stray access corrupts memory rather than faulting, unless it lands past the heap.
+  Nor can a page be opened past it: a recomp whose desktop build opens pages past RDRAM (`VirtualProtect`, `mprotect`)
+  for the game's own reads of hardware through KSEG1 (an anti-piracy check, an inlined AI_LEN) and writes their values
+  there gets the heap's own memory on a page, which other allocations use. Its game reads their bytes, and the writes
+  corrupt them, so on the web each such read gets its value without the read, by a hook or a patch of the
+  instruction (JetForceGemini-Recomp-web's `patches/web/jfg.us.web.toml`: with garbage from its cartridge check, a
+  new game's story scenes never started).
 - A game's main that declares `recomp::Configuration cfg;` without an initialiser and never sets `window_handle`
   (Zelda64Recomp's and the mains built on it) leaves that handle, a bare `SDL_Window*` on Emscripten as on Linux, as
   whatever was in that memory. `recomp::start` makes the window only when the handle equals `WindowHandle{}`, so a
@@ -122,6 +129,16 @@ What a recomp's code needed for wasm, besides N64ModernRuntime-0003 and N64Recom
   pad has been tried. A phone's on-screen controller (site/touch_pad.js) is a standard-mapping pad of the same
   kind, plugged in by a gamepadconnected event once the game starts. Exit is hidden on a page (RecompFrontend-0005): it left a black canvas, and the next input
   aborted the program (`emscripten_proxy_async failed`).
+- A game that draws touch controls of its own says so to the page, or a phone shows them and the page's on-screen
+  controller one over the other: `Module.gameTouchControls`, true while they have the touchscreen and false while its
+  player has them off, set on the page's thread whenever that changes, before the game starts too
+  (`MAIN_THREAD_ASYNC_EM_ASM({ Module.gameTouchControls = !!$0; }, on)`). The page's controller and its Hide controls
+  button then stay hidden, and every touch reaches the canvas (site/touch_pad.js). The game's filter for SDL's finger
+  events is chained: SDL keeps one filter, and `SDL_SetEventFilter` replaces the one there (RecompFrontend-web's for the
+  pointer lock, which chains RT64's), so the new one takes the old with `SDL_GetEventFilter` first and passes it every
+  event it keeps, or the page loses its pointer lock. `SDL_SetEventFilter` also empties SDL's queue (RecompFrontend
+  060709f), so it goes in where nothing is queued, after a frame's events were read. rush2recompiled-web's
+  `src/touch_controls.cpp` does both.
 - A script in the page (a preload, a survey) waits on a timer (`setTimeout`, 4 ms at the shortest), never on a loop of
   messages to itself (`MessageChannel`, a promise that resolves at once): in Chrome ~10,000 tasks a second starve the
   tasks that carry the device thread's WebGPU work, and presents stop for seconds while the thread looks free
@@ -141,3 +158,9 @@ mod replaces or hooks redirected at each function's entry, since wasm code can't
 address used as an array index into the load's offset, where the linker fills in the function's index in the module,
 not its table index, which hung the page at boot until `recomp.h` hid the address behind an empty `asm`: a function
 pointer is safe in wasm as a value, not as arithmetic. No other N64 recomp running in a browser was found to learn from.
+
+A built-in mod that both replaces a function and hooks it (Dinosaur Planet's Dinomod Enhanced) needs N64ModernRuntime
+51317a9: the hook slots go on the replacement's redirect. A mod whose `.nrm` holds data made from the ROM (Dinomod's
+patched asset files) can't be in a page any more than the ROM can: dino-recomp-web's page holds its code, recompiled
+ahead of time, and a delta from the player's ROM to the `.nrm`, which it rebuilds from the ROM the launcher stored
+before the runtime looks for mods (docs/game-forks.md, Dinosaur Planet's part).

@@ -230,7 +230,7 @@ file loads is under a second. Its BUILDING.md and the headers of `web/page.cmake
 the canvas and dp scaling, the first run's defaults), render to RAM kept exact for the pause background, the shader list
 and its survey, the warps.
 
-`n64hub/JetForceGemini-Recomp-web` is Jet Force Gemini: Recompiled, VibinToast's, and merges his releases (v1.2.4):
+`n64hub/JetForceGemini-Recomp-web` is Jet Force Gemini: Recompiled, VibinToast's, and merges his releases (v1.3.2):
 his launcher (RmlUi, no RecompFrontend), options, profiles and renderer are the fork's. His `lib/` pins his forks of
 rt64, N64ModernRuntime and N64Recomp; the page's are upstream's at the commits N64Recomp-browser patches, with the web
 support and then his changes made again for those commits on top (`patches/web/rt64.patch`: F3DDKR, Dinosaur Planet's
@@ -242,14 +242,21 @@ the checkout by `tools/build_web.sh`. The game binds draw buffers the workload h
 which WebGPU refused until rt64-web f01c3a6 bound a zeroed one. Its `rt64.patch` is his renderer, so it can't move into
 rt64-web, and it goes on top of the web's: CI's `jfg-patches` job runs its `tools/build_web.sh --patches` (the whole
 patch step, no ROM) with the PR's checkout, so a change here to the lines it touches is red in its own PR and is
-settled there, by rebasing the fork's patch or keeping the web's lines off its. Its list, `src/rt64_shaders.txt`, is
+settled there, by rebasing the fork's patch or keeping the web's lines off its. The game reads hardware through KSEG1
+in its anti-piracy checks and its sound manager (AI_LEN), which his desktop build serves from pages it opens past
+RDRAM; on the page those are the heap's own memory, so `patches/web/jfg.us.web.toml` gives each read its value
+without the read (a scene script starts with the cartridge check, and with the heap's bytes there a new game's story
+scenes never ended). Its list, `src/rt64_shaders.txt`, is
 727 descriptions in 16 sections, the boot 40 and a planet 20-86 descriptions each.
 
 The page opens widescreen, at Game Frame Rate 60 and with Frame Interpolation at Monitor, where his desktop build opens
-4:3 at the game's own pacing without Frame Interpolation, and moves a page's settings saved before it did to those once
-(`page_defaults` in its options file). RT64 interpolates in play since rt64 179adb8: the game draws its shadows' render
-targets in a display list of its own before each frame's, which RT64 took for a frame, so the frame after it matched
-nothing and was never interpolated (the two are one game frame since rt64 bce5e11), and its frames take 2 and 3
+4:3 at the game's own pacing without Frame Interpolation, with its HUD at the wide picture's edges (his HUD in Screen
+Corners, which writes RT64's `gEXSetRectAlign`, `gEXSetViewportAlign` and edge-aligned scissors into the HUD's display
+list as the game draws each piece, within 16:9 at the default HUD ratio; on in his Modern profiles, a new player's)
+and its menus, pause screen and full-screen overlays at 4:3, and moves a page's settings saved before it did to those
+once (`page_defaults` in its options file). RT64 interpolates in play since rt64 179adb8: the game draws its shadows'
+render targets in a display list of its own before each frame's, which RT64 took for a frame, so the frame after it
+matched nothing and was never interpolated (the two are one game frame since rt64 bce5e11), and its frames take 2 and 3
 VIs on a page, which upstream's original rate needs equal. His runtime holds the game thread that submits a display
 list until the graphics thread has drawn it (upstream's never waits there), which held the whole game through render
 to RAM's exact copy. The game rebuilds a list's memory as soon as it has submitted it, so the page copies RDRAM's 8 MB
@@ -313,11 +320,11 @@ the culling bit. Its docs/WEB.md and the headers of `scripts/build_web.sh`, `web
 `web/rt64_shaders.txt` have the rest: how its patches and the web's are layered, the launcher, sound, input focus,
 render to RAM off, the fixed heap, the shader list and how it is recorded by the game's teleport, the play plan.
 
-`n64hub/Snap64Recomp-web` is Snap64 Recomp (1.1.5), Pokémon Snap (US), on its port's own forks of rt64, plume and
+`n64hub/Snap64Recomp-web` is Snap64 Recomp (1.1.6), Pokémon Snap (US), on its port's own forks of rt64, plume and
 N64ModernRuntime (their `snap64` branches), the one game fork whose rt64 isn't upstream's: ~8,000 lines of the port's
 in RT64 (each object's identity for interpolation, its frame pacing and presentation, Photo Detail's framebuffer
 readback, the Snap Station's overlay, primitive-depth sprites). `apply.cmake` patches them, but for the files where
-both change the same lines (`patches/web/files.txt`, 26 of rt64's and 6 of the runtime's), whose web change is its
+both change the same lines (`patches/web/files.txt`, 29 of rt64's and 6 of the runtime's), whose web change is its
 `patches/web/<project>.patch`, merged by hand. Its `tools/build_web.sh` then takes what N64Recomp-browser has changed in
 those files since that merge (`apply.cmake --since`, README), and stops only where that meets the port's own lines:
 that is merged into its patch by hand. CI's `snap-patches` job runs its `tools/build_web.sh --patches` (that step, no
@@ -337,6 +344,9 @@ runs or the demo plays the copy lands a list late (renderToRAMLate), which on a 
 the GPU (docs/phones.md, Pokémon Snap on a Galaxy S21). A play shows no kept writes. It
 opens widescreen, RT64's Expand in a course as the desktop's Widescreen setting draws it (off on the desktop):
 the setting is on with Emscripten, and a page's settings saved before, whose Off no player chose, are turned on once.
+Wide HUD, off by default on the desktop since 1.1.6 as every enhancement is, is on by default on a page (its
+`src/settings.h`), so the film counter and the R and Z icons sit at the wide picture's edges, not in mid-air at the 4:3
+picture's; a Wide HUD the player saved still wins.
 The fork widens the forest film the title opens with too, which the port leaves 4:3: it runs from the title's own
 code, not a course's, so its routine is wrapped and the picture is wide while it runs (its `src/overlay_hook.cpp`).
 The title, Oak's lab and the other 2D screens stay pillarboxed, since their art ends at 320, and the film's first
@@ -351,7 +361,7 @@ rides it to its end, taking photos and throwing the items. Its docs/WEB.md and t
 `lib/patches/<submodule>.patch` change (4,900 lines on rt64's 46 files: car reflection and ambient occlusion shaders,
 the Variable frame rate's timeline, generated mipmaps, MSAA's coverage), patched by the N64Recomp-browser tag its
 `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` applies Rush 2's patches first, then `apply.cmake` project by
-project, but for the files where both change the same lines (`web/patches/files.txt`: 11 of rt64's, the runtime's
+project, but for the files where both change the same lines (`web/patches/files.txt`: 12 of rt64's, the runtime's
 `config.cpp` and `events.cpp`, 2 of RecompFrontend's), whose web change is its `web/patches/<project>.patch`, merged by hand, and what N64Recomp-browser
 has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's `rush2-patches` job runs its
 `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. One of them applies as is but names what the port renamed (`ui_mod_menu.cpp`), so it is listed too. Two of
@@ -363,7 +373,9 @@ plume 827a073 binds as that level, as D3D12 does (before it every race drew blac
 The page leaves out online play, for
 `src/online/online_web.cpp`, an offline machine to the game, the texture upscaler, which starts a program, and N64:
 Recompiled code mods. Render to RAM is off: nothing in the game reads a frame back, and on a phone the exact copy
-held its demos to half the game frames (docs/phones.md, Rush 2 on a Galaxy S21). Its list is 82 shaders: the boot (the launcher, the title and the menus, 37) and 9 sections (the
+held its demos to half the game frames (docs/phones.md, Rush 2 on a Galaxy S21). Its own on-screen controls
+(upstream's `src/touch_controls.cpp`) have a phone's touchscreen while they are on Auto or On, and tell the page so
+(`Module.gameTouchControls`, docs/porting.md), which keeps its own controller out of their way. Its list is 82 shaders: the boot (the launcher, the title and the menus, 37) and 9 sections (the
 title's demos, a race on each of the 7 tracks, a stunt course), recorded by `web/shader_plan.json`, which drives the
 menus by the front end's screen and the track select's entry in RDRAM. Its docs/BUILDING.md (The web page) and the
 header of `tools/build_web.sh` has the rest.
@@ -373,7 +385,7 @@ on cdlewis's rt64, N64ModernRuntime and RecompFrontend, the ones Snowboard Kids'
 `patches/runtime/` change further (rt64's camera cuts and the stale write-backs it skips, a projection depth remap,
 the HD boards' per-texture scale), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Its
 `tools/build_web.sh` applies the game's patches first, then `apply.cmake` project by project, but for the files where
-both change the same lines (`web/patches/files.txt`: 11 of rt64's, hlslpp's `wasm.h`, N64Recomp's `cgenerator.cpp`,
+both change the same lines (`web/patches/files.txt`: 12 of rt64's, hlslpp's `wasm.h`, N64Recomp's `cgenerator.cpp`,
 RecompFrontend's `profiles.cpp`), whose web change is its `web/patches/<project>.patch`, merged by hand, and what
 N64Recomp-browser has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's
 `snowboarding-patches` job runs its `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. Its rt64 is
@@ -383,11 +395,30 @@ game's otherwise. The page leaves out RetroAchievements, which needs a server, a
 since the game reads no frame back and the exact copy held a phone's game frames to 15-16 a second against 26 (the
 copy a list late would land on the level data it loads into its framebuffers' memory: docs/phones.md), with RT64
 still checking RDRAM for what the CPU wrote over a framebuffer as it does after a copy (its rt64 patch), and keeps
-every other option at the desktop's defaults. Its list is 55 shaders: the boot (the launcher, the intro, the title and
+every other option at the desktop's defaults. Its list is 57 shaders: the boot (the launcher, the intro, the title and
 its demo, the menus, 44) and 4 sections (Crystal Lake's Match Race, Time Attack on Crystal Peak and Golden Forest,
 Training), recorded by `tools/shader_plan.json`, which knows where the game is by its loaded modules
 (`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the
 rest.
+
+`n64hub/dino-recomp-web` is Dinosaur Planet: Recompiled (GPL-3.0), the December 2000 prototype, with Dinomod Enhanced
+built in. Upstream bans AI-made contributions and asks its forks to keep the ban, and Dinomod is made with no AI, so
+nothing goes to either (CLAUDE.md, Rules). It is on the game's own rt64, N64ModernRuntime and N64Recomp
+(DinosaurPlanetRecomp's): its `tools/build_web.sh` moves `lib/rt64` back from the desktop's pin to the commit the web's
+rt64 patch is made on (the desktop's is seven upstream commits on, then the game's fix for the 480p framebuffer's
+extra rows, which `web/rt64.patch` makes again), patches the runtime as it is, and leaves out the two files of
+N64Recomp where the game's crash-log tracking meets the web's tail calls, merged by hand in `web/N64Recomp.patch`
+with the web's change since merged in by `apply.cmake --since`; CI's `dino-patches` job runs its `--patches`. The game
+loads its code as DLLs at runtime, which the recomp handles in its own recompiled code and needs nothing of the web.
+Without Dinomod the prototype can't be finished, so the page has it, enabled the first time: its `.nrm` holds the
+game's asset files patched, made from the ROM, so the build makes it as Dinomod's own steps do, recompiles its code
+into the page (`n64recomp_browser_precompiled_mod`; it replaces and hooks four of the same functions, which needed
+N64ModernRuntime 51317a9) and preloads only a VCDIFF delta from the ROM to it (`tools/dinomod_delta.py` fails if the
+delta holds the ROM's data), from which `web/dinomod.cpp` rebuilds the `.nrm` from the stored ROM before the runtime
+looks for mods. The page leaves out mods a player installs, the mods folder's button, the debug window and Exit and
+Quit. Its list is 66 shaders: the boot (the launcher, the intro, the title, a new game's menus, 39) and the opening
+CloudRunner flight at the Galleon (27), recorded by `tools/shader_plan.json` (A, Space, moves its dialogue on). Its BUILDING.md and the headers of `tools/build_web.sh`, `web/dinomod.cpp` and
+`src/rt64_shaders.txt` have the rest.
 
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
@@ -587,7 +618,8 @@ game forks' code: Rush 2049 60 (its Game Frame Rate, Original 30), Perfect Dark 
 once a VI; its controller reads held it to 30 on a fast CPU, which its `patches/frame_rate.c` undoes), Pilotwings 64 60 (a variable timestep), Diddy Kong
 Racing 30 (DKR-R's Accurate profile, the desktop's default, holds RT64 at Original; the page plays Modern), Jet Force
 Gemini 30 dropping to 20 when a frame runs long, or 60 (its Game Frame Rate, 60 on a page: 54-59 at the display's 60
-and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), and the
+and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), Dinosaur Planet 30 (Dinomod's
+60 Hz Gameplay, off by default, marked experimental and not recommended: it runs parts of the game too fast), and the
 cartridge's for the other fifteen: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 30, Mario Party 2 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
 (Terrydactyland 12, Hailfire Peaks 10), Wave Race 64 20 in races, Star Fox 64 30 (20 where a scene sets 3 VIs a
 frame), GoldenEye's, Conker's and Star Wars Episode I: Racer's variable (Racer 30-43 in a race, uncapped at

@@ -39,6 +39,7 @@ and Linux on its repo's Releases page.
 | Pokémon Snap | [Snap64Recomp](https://github.com/JackandBeans/Snap64Recomp) by JackandBeans | [Snap64Recomp-web](https://github.com/n64hub/Snap64Recomp-web) | [play](https://n64hub.com/pokemon-snap/) |
 | Rush 2: Extreme Racing USA | [Rush 2 Recompiled](https://github.com/bryantmh/rush2recompiled) by bryantmh | [rush2recompiled-web](https://github.com/n64hub/rush2recompiled-web) | [play](https://n64hub.com/rush-2/) |
 | 1080° Snowboarding | [1080° Snowboarding: Recompiled](https://github.com/thebradshaw/1080-Snowboarding-decomp) by thebradshaw | [1080-Snowboarding-recomp-web](https://github.com/n64hub/1080-Snowboarding-recomp-web) | [play](https://n64hub.com/1080-snowboarding/) |
+| Dinosaur Planet | [Dinosaur Planet: Recompiled](https://github.com/DinosaurPlanetRecomp/dino-recomp) by DinosaurPlanetRecomp, with [Dinomod Enhanced](https://github.com/EoinODoodles/dinomod-enhanced-recompiled) built in | [dino-recomp-web](https://github.com/n64hub/dino-recomp-web) | [play](https://n64hub.com/dinosaur-planet/) |
 | Perfect Dark | this project's own recomp | [perfect-dark-recomp](https://github.com/n64hub/perfect-dark-recomp) | [play](https://n64hub.com/perfect-dark/) |
 | Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) |
 | F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) |
@@ -414,7 +415,8 @@ take the web support without moving its submodules to the forks (Using it in a r
   played on the browser's audio thread (`audio_output.h`), the browser's file picker for a recomp with menus of its own
   (`file_picker.h`), the WebGPU device, a notice in Firefox on Windows' Intel graphics naming its fixes, fullscreen in landscape at
   a phone's first tap, an on-screen controller on a phone once the game starts (`site/touch_pad.js`, served from the
-  hub's top and put into a game's frame by the hub, so it changes without a page build), and `coi_serviceworker.js`.
+  hub's top and put into a game's frame by the hub, so it changes without a page build; it steps aside for a game that
+  draws touch controls of its own), and `coi_serviceworker.js`.
 - `renderer/`: RT64 as the runtime's renderer without RecompFrontend, for a test page with no menus.
 - `tools/`: `fetch_forks.sh` checks out the forks at `forks.txt`'s commits (CI uses it), `fetch_pins.sh` a recomp's
   own commits in `patches/pins.txt`, patched, and `publish_page.sh` puts
