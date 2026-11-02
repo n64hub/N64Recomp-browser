@@ -26,7 +26,8 @@ presents on the web.
 - Two web paths run natively on Vulkan too, to check them against the stock ones: configure a game with
   `-DRT64_PER_DRAW_TEXTURES=ON` (rt64-0007: a texture set per draw, TMEM in one buffer; to test that pool, make
   `TMEMHasher::requiresRawTMEM` return true) or `-DRT64_PACKED_RSP_INPUTS=ON` (rt64-0009).
-- Still to do: no `rgba16unorm` (HDR) target on the web, and MSAA is off: WebGPU has no sample positions.
+- Still to do: no `rgba16unorm` (HDR) target on the web, so a page draws in the standard format whatever a game's high
+  precision framebuffer setting says (rt64 6dad6a7), and MSAA is off: WebGPU has no sample positions.
 
 ## Prebuilt shader lists
 

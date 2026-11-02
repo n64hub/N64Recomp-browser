@@ -742,4 +742,10 @@ N64ModernRuntime       ULTRAMODERN_VIS_WAIT_FOR_RENDERER: no VI comes while the 
                        and the page trapped or stopped drawing. 05d95be times it by the graphics loop's turns on the VI
                        thread's own clock (a worker's time and another's don't agree in Firefox), on lines DKR-R-web's
                        own patches leave alone
+rt64 6dad6a7           a page draws in the standard framebuffer format whatever the high precision setting, with
+                       RT64_WGSL: On made its targets rgba16unorm, a render target in WebGPU only with the optional
+                       texture-formats-tier1, so createTexture failed at the first and the page trapped; the WGSL
+                       shaders' framebuffer storage textures are rgba8 and the prebuilt shader lists are recorded at
+                       the standard format, so the feature alone wouldn't draw it (a game's own default On, as Jet
+                       Force Gemini's and Dinosaur Planet's desktop builds have, or DKR-R's Modern profile's)
 ```
