@@ -397,6 +397,25 @@ Training), recorded by `tools/shader_plan.json`, which knows where the game is b
 (`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the
 rest.
 
+`n64hub/dino-recomp-web` is Dinosaur Planet: Recompiled (GPL-3.0), the December 2000 prototype, with Dinomod Enhanced
+built in. Upstream bans AI-made contributions and asks its forks to keep the ban, and Dinomod is made with no AI, so
+nothing goes to either (CLAUDE.md, Rules). It is on the game's own rt64, N64ModernRuntime and N64Recomp
+(DinosaurPlanetRecomp's): its `tools/build_web.sh` moves `lib/rt64` back from the desktop's pin to the commit the web's
+rt64 patch is made on (the desktop's is seven upstream commits on, then the game's fix for the 480p framebuffer's
+extra rows, which `web/rt64.patch` makes again), patches the runtime as it is, and leaves out the two files of
+N64Recomp where the game's crash-log tracking meets the web's tail calls, merged by hand in `web/N64Recomp.patch`
+with the web's change since merged in by `apply.cmake --since`; CI's `dino-patches` job runs its `--patches`. The game
+loads its code as DLLs at runtime, which the recomp handles in its own recompiled code and needs nothing of the web.
+Without Dinomod the prototype can't be finished, so the page has it, enabled the first time: its `.nrm` holds the
+game's asset files patched, made from the ROM, so the build makes it as Dinomod's own steps do, recompiles its code
+into the page (`n64recomp_browser_precompiled_mod`; it replaces and hooks four of the same functions, which needed
+N64ModernRuntime 51317a9) and preloads only a VCDIFF delta from the ROM to it (`tools/dinomod_delta.py` fails if the
+delta holds the ROM's data), from which `web/dinomod.cpp` rebuilds the `.nrm` from the stored ROM before the runtime
+looks for mods. The page leaves out mods a player installs, the mods folder's button, the debug window and Exit and
+Quit. Its list is SHADERS, recorded by `tools/shader_plan.json` over the boot and the opening CloudRunner flight at the
+Galleon (A, Space, moves its dialogue on). Its BUILDING.md and the headers of `tools/build_web.sh`, `web/dinomod.cpp` and
+`src/rt64_shaders.txt` have the rest.
+
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
 the commits GoldenEye's are on (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`
@@ -595,7 +614,8 @@ game forks' code: Rush 2049 60 (its Game Frame Rate, Original 30), Perfect Dark 
 once a VI; its controller reads held it to 30 on a fast CPU, which its `patches/frame_rate.c` undoes), Pilotwings 64 60 (a variable timestep), Diddy Kong
 Racing 30 (DKR-R's Accurate profile, the desktop's default, holds RT64 at Original; the page plays Modern), Jet Force
 Gemini 30 dropping to 20 when a frame runs long, or 60 (its Game Frame Rate, 60 on a page: 54-59 at the display's 60
-and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), and the
+and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), Dinosaur Planet 30 (Dinomod's
+60 Hz Gameplay, off by default, marked experimental and not recommended: it runs parts of the game too fast), and the
 cartridge's for the other fifteen: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 30, Mario Party 2 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
 (Terrydactyland 12, Hailfire Peaks 10), Wave Race 64 20 in races, Star Fox 64 30 (20 where a scene sets 3 VIs a
 frame), GoldenEye's, Conker's and Star Wars Episode I: Racer's variable (Racer 30-43 in a race, uncapped at
