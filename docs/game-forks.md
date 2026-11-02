@@ -230,7 +230,7 @@ file loads is under a second. Its BUILDING.md and the headers of `web/page.cmake
 the canvas and dp scaling, the first run's defaults), render to RAM kept exact for the pause background, the shader list
 and its survey, the warps.
 
-`n64hub/JetForceGemini-Recomp-web` is Jet Force Gemini: Recompiled, VibinToast's, and merges his releases (v1.2.4):
+`n64hub/JetForceGemini-Recomp-web` is Jet Force Gemini: Recompiled, VibinToast's, and merges his releases (v1.3.2):
 his launcher (RmlUi, no RecompFrontend), options, profiles and renderer are the fork's. His `lib/` pins his forks of
 rt64, N64ModernRuntime and N64Recomp; the page's are upstream's at the commits N64Recomp-browser patches, with the web
 support and then his changes made again for those commits on top (`patches/web/rt64.patch`: F3DDKR, Dinosaur Planet's
@@ -337,6 +337,9 @@ runs or the demo plays the copy lands a list late (renderToRAMLate), which on a 
 the GPU (docs/phones.md, Pokémon Snap on a Galaxy S21). A play shows no kept writes. It
 opens widescreen, RT64's Expand in a course as the desktop's Widescreen setting draws it (off on the desktop):
 the setting is on with Emscripten, and a page's settings saved before, whose Off no player chose, are turned on once.
+Wide HUD, off by default on the desktop since 1.1.6 as every enhancement is, is on by default on a page (its
+`src/settings.h`), so the film counter and the R and Z icons sit at the wide picture's edges, not in mid-air at the 4:3
+picture's; a Wide HUD the player saved still wins.
 The fork widens the forest film the title opens with too, which the port leaves 4:3: it runs from the title's own
 code, not a course's, so its routine is wrapped and the picture is wide while it runs (its `src/overlay_hook.cpp`).
 The title, Oak's lab and the other 2D screens stay pillarboxed, since their art ends at 320, and the film's first
