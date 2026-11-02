@@ -632,9 +632,8 @@ each frame's read of the controllers) let the other threads run, and the idle th
 libultra's thread states where the runtime keeps its own, is parked. It saves only to a Controller Pak, which port 1
 reports. Its audio microcode is `aspMain`, recompiled by RSPRecomp. On a picture wider than 4:3 the 3D reaches the
 window's edges. Its list is 142 shaders: the boot (31) and a section for each of 64 levels of the game's table,
-recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone playing, a Chrome a section:
-`tools/survey.js` changes level as the game's own exits do, writing the next level's name where the engine reads it,
-so a plan reaches any level from a new game. Before rt64 5051342 its intro story crashed RT64's frame matching. Its
+recorded by `tools/shader_plan.json` without anyone playing: `tools/survey.js` changes level as the game's own exits
+do, writing the next level's name where the engine reads it, so a plan reaches any level from a new game. Before rt64 5051342 its intro story crashed RT64's frame matching. Its
 README, CLAUDE.md and docs/web.md have the rest.
 
 ## The games' own frame rates
