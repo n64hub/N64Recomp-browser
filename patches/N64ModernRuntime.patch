@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 05d95bed5267a3494710e543b8f888706f26b5cb
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 51317a9a8246709b550652816a5bafb05d3d557e
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -269,7 +269,7 @@ index f46261c..0e9ef28 100644
      // Send the message indicating read completion
      ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
 diff --git a/librecomp/src/mods.cpp b/librecomp/src/mods.cpp
-index 0f7de83..9bec0ec 100644
+index 0f7de83..6c5555d 100644
 --- a/librecomp/src/mods.cpp
 +++ b/librecomp/src/mods.cpp
 @@ -74,6 +74,9 @@ bool get_to_vec(const nlohmann::json& val, std::vector<T2>& out) {
@@ -581,16 +581,20 @@ index 0f7de83..9bec0ec 100644
      // Parse the symbol file into the recompiler context.
      N64Recomp::ModSymbolsError symbol_load_error = N64Recomp::parse_mod_symbols(syms_data, binary_span, section_vrom_map, *mod.recompiler_context);
      if (symbol_load_error != N64Recomp::ModSymbolsError::Good) {
-@@ -2367,10 +2568,24 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::load_mod_code(uint8_t*
+@@ -2367,10 +2568,28 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::load_mod_code(uint8_t*
          .reference_section_addresses = section_addresses,
      };
  
 +    // Code recompiled ahead of time and linked in (register_precompiled_mod).
 +    if (mod.precompiled_code != nullptr) {
++#if !defined(IS_WASM)
 +        // Hooks can't be added to it either.
 +        if (!entry_func_hooks.empty() || !return_func_hooks.empty()) {
 +            return CodeModLoadError::OfflineModHooked;
 +        }
++#endif
++        // In WebAssembly a replacement is a redirect, and the hooks on the function it replaces run around it
++        // (resolve_code_dependencies), as the live recompiler would add them to its code.
 +
 +        mod.code_handle = std::make_unique<PrecompiledCodeHandle>(*mod.precompiled_code, *mod.recompiler_context, handle_inputs);
 +        if (!mod.code_handle->good()) {
@@ -607,7 +611,7 @@ index 0f7de83..9bec0ec 100644
          // Hooks can't be generated for native mods, so return an error if any of the functions this mod replaces are also hooked by another mod.
          if (!entry_func_hooks.empty() || !return_func_hooks.empty()) {
              return CodeModLoadError::OfflineModHooked;
-@@ -2630,7 +2845,9 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
+@@ -2630,11 +2849,26 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
  
          // Copy the original bytes so they can be restored later after the mod is unloaded.
          PatchData& cur_replacement_data = patched_funcs[to_replace];
@@ -617,7 +621,24 @@ index 0f7de83..9bec0ec 100644
          cur_replacement_data.mod_id = mod.manifest.mod_id;
  
          // Patch the function to redirect it to the replacement.
-@@ -2645,6 +2862,9 @@ void recomp::mods::ModContext::unload_mods() {
+         patch_func(to_replace, mod.code_handle->get_function_handle(replacement.func_index));
++#if defined(IS_WASM)
++        // The hooks on the function it replaces run around the replacement (load_mod_code): another mod's, or this one's
++        // own (a mod may hook a function it replaces itself).
++        Redirect& redirect = add_redirect(to_replace);
++        auto find_entry_it = hook_slots.find(HookDefinition{ replacement.original_section_vrom, replacement.original_vram, false });
++        if (find_entry_it != hook_slots.end()) {
++            redirect.entry_hook = find_entry_it->second;
++        }
++        auto find_return_it = hook_slots.find(HookDefinition{ replacement.original_section_vrom, replacement.original_vram, true });
++        if (find_return_it != hook_slots.end()) {
++            redirect.return_hook = find_return_it->second;
++        }
++#endif
+     }
+ 
+     return CodeModLoadError::Good;
+@@ -2645,6 +2879,9 @@ void recomp::mods::ModContext::unload_mods() {
          unpatch_func(reinterpret_cast<void*>(replacement_func), replacement_data);
      }
      patched_funcs.clear();

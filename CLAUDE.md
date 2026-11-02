@@ -102,7 +102,9 @@ docs line) is made in the same work like any other.
   (docs/porting.md, Prebuilt shader lists).
 - Never open a PR, issue or discussion upstream at rt64, plume, N64Recomp, N64ModernRuntime, RecompFrontend,
   BanjoRecomp, Zelda64Recomp or Donkey-Kong-64-Recompiled: their CONTRIBUTING.md asks for no LLM-written code (plume's,
-  no AI-made contribution and no AI talking to its maintainers). Each fork's README opens with a banner, and its GitHub
+  no AI-made contribution and no AI talking to its maintainers). Nor at dino-recomp or dinomod-enhanced-recompiled, or in
+  their Discord: dino-recomp bans AI-made contributions and asks its forks to keep the ban, which dino-recomp-web
+  doesn't, and Dinomod Enhanced is made with no AI. Each fork's README opens with a banner, and its GitHub
   description with "AI-written fork:", saying it is AI-written, not upstream's, and offered to nobody upstream
   (hlslpp-web's says only the first two: hlslpp has no ban). Keep that true of a new fork and of a game fork's README.
   A game's own repo is decided case by case: a game fork offers it only what it takes, said to be AI-written
@@ -117,9 +119,9 @@ docs line) is made in the same work like any other.
   shader, the plume device thread and hlslpp's wasm SIMD backend, and checks that `patches/` match the forks and apply
   to every recomp commit in `patches/pins.txt` and over DKR-R-web's, CBFD-Recompiled-web's,
   JetForceGemini-Recomp-web's, racer-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
-  BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's, f-zero-x-recomp's and
-  rush-2049-recomp's own patches, and compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui.
-  It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands.
+  dino-recomp-web's, BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's,
+  f-zero-x-recomp's and rush-2049-recomp's own patches, and compiles rt64's files that include ImGui against Jet Force
+  Gemini's newer ImGui. It builds no page (that needs a game), so anything that changes what a page runs is built and played before it lands.
   A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play, serve, read and publish pages runs only the
   `changes` job, which also fails while a game in the README's Games table has no entry in `site/news.html`.
 
