@@ -72,6 +72,12 @@ What a recomp's code needed for wasm, besides N64ModernRuntime-0003 and N64Recom
   float-to-int conversions round (Rush 2049's attract race walked off RDRAM after 40 s). Float to int out of range
   saturates in wasm and gives 0x80000000 on x86; nothing has hit it yet.
 - RDRAM has no guard pages: a stray access corrupts memory rather than faulting, unless it lands past the heap.
+  Nor can a page be opened past it: a recomp whose desktop build opens pages past RDRAM (`VirtualProtect`, `mprotect`)
+  for the game's own reads of hardware through KSEG1 (an anti-piracy check, an inlined AI_LEN) and writes their values
+  there gets the heap's own memory on a page, which other allocations use. Its game reads their bytes, and the writes
+  corrupt them, so on the web each such read gets its value without the read, by a hook or a patch of the
+  instruction (JetForceGemini-Recomp-web's `patches/web/jfg.us.web.toml`: with garbage from its cartridge check, a
+  new game's story scenes never started).
 - A game's main that declares `recomp::Configuration cfg;` without an initialiser and never sets `window_handle`
   (Zelda64Recomp's and the mains built on it) leaves that handle, a bare `SDL_Window*` on Emscripten as on Linux, as
   whatever was in that memory. `recomp::start` makes the window only when the handle equals `WindowHandle{}`, so a

@@ -242,7 +242,11 @@ the checkout by `tools/build_web.sh`. The game binds draw buffers the workload h
 which WebGPU refused until rt64-web f01c3a6 bound a zeroed one. Its `rt64.patch` is his renderer, so it can't move into
 rt64-web, and it goes on top of the web's: CI's `jfg-patches` job runs its `tools/build_web.sh --patches` (the whole
 patch step, no ROM) with the PR's checkout, so a change here to the lines it touches is red in its own PR and is
-settled there, by rebasing the fork's patch or keeping the web's lines off its. Its list, `src/rt64_shaders.txt`, is
+settled there, by rebasing the fork's patch or keeping the web's lines off its. The game reads hardware through KSEG1
+in its anti-piracy checks and its sound manager (AI_LEN), which his desktop build serves from pages it opens past
+RDRAM; on the page those are the heap's own memory, so `patches/web/jfg.us.web.toml` gives each read its value
+without the read (a scene script starts with the cartridge check, and with the heap's bytes there a new game's story
+scenes never ended). Its list, `src/rt64_shaders.txt`, is
 727 descriptions in 16 sections, the boot 40 and a planet 20-86 descriptions each.
 
 The page opens widescreen, at Game Frame Rate 60 and with Frame Interpolation at Monitor, where his desktop build opens
