@@ -748,4 +748,9 @@ rt64 6dad6a7           a page draws in the standard framebuffer format whatever 
                        shaders' framebuffer storage textures are rgba8 and the prebuilt shader lists are recorded at
                        the standard format, so the feature alone wouldn't draw it (a game's own default On, as Jet
                        Force Gemini's and Dinosaur Planet's desktop builds have, or DKR-R's Modern profile's)
+rt64 75184f8           RT64_GAME_FRAME_WORKLOADS: a frame the thread that queues the workloads waits for itself isn't
+                       held for the rest of it (6a06f75, e549855): nothing more comes until that wait ends, so the
+                       hold ran out its 300 ms. Pokémon Snap's port waits for each list's workload before its game
+                       goes on, and its camera check after a course, a frame of offscreen passes alone for each
+                       photo's thumbnail, drew nothing for 430-930 ms at a time, six or more gaps a visit
 ```
