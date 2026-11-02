@@ -566,6 +566,20 @@ Game's stages, the Bonus Practices and the movies among them, recorded by `tools
 do, writing the battle's players and stage and the next scene where the scene manager reads them, with four computer
 players. Its README, CLAUDE.md and docs/web.md have the rest.
 
+`n64hub/paper-mario-recomp` is Paper Mario (USA), not a fork but this project's own recomp (GPL-3.0), from the
+pmret/papermario decompilation's symbols and headers, with RecompFrontend's launcher and menus. It is on upstream's rt64
+and RecompFrontend at the commits Majora's Mask's are on and N64ModernRuntime at Conker's (`patches/pins.txt`), patched
+by the N64Recomp-browser tag its `lib/N64Recomp-browser` pins, with no changes of its own to them. Everything but
+`.main` is an overlay, and a hook at each of the three ways the game copies code out of ROM tells the runtime what is
+about to be copied; the effects run behind the TLB at 0xE0000000, backed by memory of the game's own, which on a page
+lies about 1.5 GB past RDRAM, so its heap grows. Its audio microcode is `n_aspMain`, recompiled by RSPRecomp. On a
+picture wider than 4:3 the world and battles reach the window's edges, a dark room's light and the pause menu's blurred
+world with them, and the menus and the HUD stay in the middle 4:3. Its `tools/build_web.sh` runs a Docker image of its
+own, so `publish_pages.sh` runs it on the build host. Its list is about 1800 shaders in 25 sections, the boot's and one
+an area's among them, recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone playing:
+`tools/shader_survey.js` takes the game to any map at any entrance as an exit does, and `tools/play_plan_maps.json`
+warps to every map in turn as a release's check. Its README, CLAUDE.md and docs/web.md have the rest.
+
 ## The games' own frame rates
 
 A page presents at the display's rate whatever its game runs at (CLAUDE.md, Rules). The game's own rate, set by the
