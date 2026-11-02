@@ -763,6 +763,13 @@ rt64 33d3125           a framebuffer pair whose framebuffer changed format (new,
                        times, 4-16 ms each on WebGPU; it syncs 10, at the depth buffers that share RAM with a pair's
                        colour, and its longest gaps went from 150-250 ms to 114-188 (headless Chrome, uncapped, RTX
                        2070, an idle host). A desktop build keeps the sync at every format change
+rt64 d18a5ad           254dee3's count on the CPU kept after render to RAM draws into the read buffer: the rows
+                       copyToRAM reads back go into the CPU's copy of it, and the count goes to the GPU only while a
+                       write nothing read back is pending. Pokémon Snap's camera check rewrites 16 framebuffers the
+                       list before drew and copied to RAM, each counted on the GPU (44-56 ms of a 150 ms list); a test
+                       build making both counts found them equal in all, and none of the camera check's goes to the
+                       GPU since: checkRDRAM's time there 7.6 s → 1.1 s, a thumbnail list about 155 ms → 101 (headless
+                       Chrome, uncapped, RTX 2070, a busy host)
 N64ModernRuntime       a mod linked in ahead of time (register_precompiled_mod) loads with a hook on a function it
 51317a9                replaces, with IS_WASM: the replaced function's hook slots go on the replacement's redirect,
                        which recomp_redirect runs them around, where the desktop's live recompiler writes them into
