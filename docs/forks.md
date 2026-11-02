@@ -742,4 +742,9 @@ N64ModernRuntime       ULTRAMODERN_VIS_WAIT_FOR_RENDERER: no VI comes while the 
                        and the page trapped or stopped drawing. 05d95be times it by the graphics loop's turns on the VI
                        thread's own clock (a worker's time and another's don't agree in Firefox), on lines DKR-R-web's
                        own patches leave alone
+N64ModernRuntime       a mod linked in ahead of time (register_precompiled_mod) loads with a hook on a function it
+51317a9                replaces, with IS_WASM: the replaced function's hook slots go on the replacement's redirect,
+                       which recomp_redirect runs them around, where the desktop's live recompiler writes them into
+                       the replacement's code. It failed with OfflineModHooked, so a mod that both replaces and hooks
+                       a function (Dinosaur Planet's Dinomod Enhanced, four) couldn't be built into a page
 ```
