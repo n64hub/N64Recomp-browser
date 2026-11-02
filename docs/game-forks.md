@@ -419,8 +419,9 @@ into the page (`n64recomp_browser_precompiled_mod`; it replaces and hooks four o
 N64ModernRuntime 51317a9) and preloads only a VCDIFF delta from the ROM to it (`tools/dinomod_delta.py` fails if the
 delta holds the ROM's data), from which `web/dinomod.cpp` rebuilds the `.nrm` from the stored ROM before the runtime
 looks for mods. The page leaves out mods a player installs, the mods folder's button, the debug window and Exit and
-Quit. Its list is 66 shaders: the boot (the launcher, the intro, the title, a new game's menus, 39) and the opening
-CloudRunner flight at the Galleon (27), recorded by `tools/shader_plan.json` (A, Space, moves its dialogue on). Its BUILDING.md and the headers of `tools/build_web.sh`, `web/dinomod.cpp` and
+Quit. Its list is 67 shaders: the boot (the launcher, the intro, the title, a new game's menus, 39) and the opening
+CloudRunner flight at the Galleon (28), recorded by `tools/shader_plan.json` (A, Space, moves its dialogue on), with
+the one a play from Pages missed in Chrome added. Its BUILDING.md and the headers of `tools/build_web.sh`, `web/dinomod.cpp` and
 `src/rt64_shaders.txt` have the rest.
 
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
