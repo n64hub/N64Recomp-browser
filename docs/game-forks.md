@@ -622,7 +622,11 @@ rt64 and RecompFrontend at the commits Majora's Mask's are on and N64ModernRunti
 patched by the N64Recomp-browser commit its `lib/N64Recomp-browser` pins, and by one change of its own
 (`runtime-patches/`): ultramodern tells the game a graphics task's RSP work is done once RT64 has read its display
 list, not as the task starts, since the game changes what a list reads once the RSP is done, and a slow renderer
-(lavapipe, a page on a busy host) read lists being rewritten and crashed. Its code is three sections read out of ROM
+(lavapipe, a page on a busy host) read lists being rewritten and crashed. A hook holds a frame that would start in the
+same VI as the one before until the next retrace: the game keys its cache of texture loads, in its one display list
+buffer, by the retrace count a frame starts in, so a second frame in a count calls the blocks the first wrote where
+its own commands now go, a call to itself that RT64 followed until the page ran out of memory, and the recomp's CPU
+builds frames that fast where a console's never does. Its code is three sections read out of ROM
 once at boot, with no overlays. The loops where the game waits on its controller thread (a Controller Pak request,
 each frame's read of the controllers) let the other threads run, and the idle thread's watchdog, which reads
 libultra's thread states where the runtime keeps its own, is parked. It saves only to a Controller Pak, which port 1
