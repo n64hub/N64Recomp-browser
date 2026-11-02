@@ -615,19 +615,23 @@ an area's among them, recorded by `tools/record_shaders.sh` and `tools/shader_pl
 `tools/shader_survey.js` takes the game to any map at any entrance as an exit does, and `tools/play_plan_maps.json`
 warps to every map in turn as a release's check. Its README, CLAUDE.md and docs/web.md have the rest.
 
-`n64hub/rayman-2-recomp` is Rayman 2: The Great Escape (USA), not a fork but this project's own recomp (GPL-3.0),
-with RecompFrontend's launcher and menus, held unreleased until it plays further. There is no decompilation of it: its
+`n64hub/rayman-2-recomp` is Rayman 2: The Great Escape (USA), not a fork but this project's own recomp (GPL-3.0), with
+RecompFrontend's launcher and menus, held unreleased until it plays further. There is no decompilation of it: its
 symbols are written from the ROM, libultra's named by their signatures and the rest by address. It is on upstream's
 rt64 and RecompFrontend at the commits Majora's Mask's are on and N64ModernRuntime at Conker's (`patches/pins.txt`),
-patched by the N64Recomp-browser commit its `lib/N64Recomp-browser` pins, with no changes of its own to them. Its code
-is three sections read out of ROM once at boot, with no overlays. The loops where the game waits on its controller
-thread (a Controller Pak request, each frame's read of the controllers) let the other threads run, and the idle
-thread's watchdog, which reads libultra's thread states where the runtime keeps its own, is parked. It saves only to
-a Controller Pak, which port 1 reports. Its audio microcode is `aspMain`, recompiled by RSPRecomp. On a picture wider
-than 4:3 the 3D reaches the window's edges. Its list is SHADERS, recorded by `tools/record_shaders.sh` and
-`tools/shader_plan.json` without anyone playing: `tools/survey.js` changes level as the game's own exits do, writing
-the next level's name where the engine reads it, so a plan reaches any level from a new game. Before rt64 5051342 its
-intro story crashed RT64's frame matching. Its README, CLAUDE.md and docs/web.md have the rest.
+patched by the N64Recomp-browser commit its `lib/N64Recomp-browser` pins, and by one change of its own
+(`runtime-patches/`): ultramodern tells the game a graphics task's RSP work is done once RT64 has read its display
+list, not as the task starts, since the game changes what a list reads once the RSP is done, and a slow renderer
+(lavapipe, a page on a busy host) read lists being rewritten and crashed. Its code is three sections read out of ROM
+once at boot, with no overlays. The loops where the game waits on its controller thread (a Controller Pak request,
+each frame's read of the controllers) let the other threads run, and the idle thread's watchdog, which reads
+libultra's thread states where the runtime keeps its own, is parked. It saves only to a Controller Pak, which port 1
+reports. Its audio microcode is `aspMain`, recompiled by RSPRecomp. On a picture wider than 4:3 the 3D reaches the
+window's edges. Its list is 142 shaders: the boot (31) and a section for each of 64 levels of the game's table,
+recorded by `tools/record_shaders.sh` and `tools/shader_plan.json` without anyone playing, a Chrome a section:
+`tools/survey.js` changes level as the game's own exits do, writing the next level's name where the engine reads it,
+so a plan reaches any level from a new game. Before rt64 5051342 its intro story crashed RT64's frame matching. Its
+README, CLAUDE.md and docs/web.md have the rest.
 
 ## The games' own frame rates
 
