@@ -313,11 +313,11 @@ the culling bit. Its docs/WEB.md and the headers of `scripts/build_web.sh`, `web
 `web/rt64_shaders.txt` have the rest: how its patches and the web's are layered, the launcher, sound, input focus,
 render to RAM off, the fixed heap, the shader list and how it is recorded by the game's teleport, the play plan.
 
-`n64hub/Snap64Recomp-web` is Snap64 Recomp (1.1.5), Pokémon Snap (US), on its port's own forks of rt64, plume and
+`n64hub/Snap64Recomp-web` is Snap64 Recomp (1.1.6), Pokémon Snap (US), on its port's own forks of rt64, plume and
 N64ModernRuntime (their `snap64` branches), the one game fork whose rt64 isn't upstream's: ~8,000 lines of the port's
 in RT64 (each object's identity for interpolation, its frame pacing and presentation, Photo Detail's framebuffer
 readback, the Snap Station's overlay, primitive-depth sprites). `apply.cmake` patches them, but for the files where
-both change the same lines (`patches/web/files.txt`, 26 of rt64's and 6 of the runtime's), whose web change is its
+both change the same lines (`patches/web/files.txt`, 29 of rt64's and 6 of the runtime's), whose web change is its
 `patches/web/<project>.patch`, merged by hand. Its `tools/build_web.sh` then takes what N64Recomp-browser has changed in
 those files since that merge (`apply.cmake --since`, README), and stops only where that meets the port's own lines:
 that is merged into its patch by hand. CI's `snap-patches` job runs its `tools/build_web.sh --patches` (that step, no
