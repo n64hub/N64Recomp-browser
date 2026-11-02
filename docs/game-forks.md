@@ -373,7 +373,7 @@ on cdlewis's rt64, N64ModernRuntime and RecompFrontend, the ones Snowboard Kids'
 `patches/runtime/` change further (rt64's camera cuts and the stale write-backs it skips, a projection depth remap,
 the HD boards' per-texture scale), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser` pins. Its
 `tools/build_web.sh` applies the game's patches first, then `apply.cmake` project by project, but for the files where
-both change the same lines (`web/patches/files.txt`: 11 of rt64's, hlslpp's `wasm.h`, N64Recomp's `cgenerator.cpp`,
+both change the same lines (`web/patches/files.txt`: 12 of rt64's, hlslpp's `wasm.h`, N64Recomp's `cgenerator.cpp`,
 RecompFrontend's `profiles.cpp`), whose web change is its `web/patches/<project>.patch`, merged by hand, and what
 N64Recomp-browser has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's
 `snowboarding-patches` job runs its `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. Its rt64 is
@@ -383,7 +383,7 @@ game's otherwise. The page leaves out RetroAchievements, which needs a server, a
 since the game reads no frame back and the exact copy held a phone's game frames to 15-16 a second against 26 (the
 copy a list late would land on the level data it loads into its framebuffers' memory: docs/phones.md), with RT64
 still checking RDRAM for what the CPU wrote over a framebuffer as it does after a copy (its rt64 patch), and keeps
-every other option at the desktop's defaults. Its list is 55 shaders: the boot (the launcher, the intro, the title and
+every other option at the desktop's defaults. Its list is 57 shaders: the boot (the launcher, the intro, the title and
 its demo, the menus, 44) and 4 sections (Crystal Lake's Match Race, Time Attack on Crystal Peak and Golden Forest,
 Training), recorded by `tools/shader_plan.json`, which knows where the game is by its loaded modules
 (`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the
