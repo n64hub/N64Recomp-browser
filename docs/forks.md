@@ -755,6 +755,14 @@ rt64 71e67b4           held for the rest of it (6a06f75, e549855): nothing more 
                        photo's thumbnail, drew nothing for 760-860 ms at a time, six gaps a visit, 150-250 ms since
                        (headless Chrome, uncapped, RTX 2070, an idle host); 71e67b4 keeps the thread outside the
                        lines DKR-R-web's, Jet Force Gemini's and Rush 2049's own patches change
+rt64 33d3125           a framebuffer pair whose framebuffer changed format (new, a new width or pixel size, or its RAM
+                       rewritten by the CPU) syncs only when a pair since the last sync drew into that RAM: its target
+                       is cleared and read whole from RAM when the workload records, so a sync is needed only for what
+                       those pairs haven't copied there yet. Pokémon Snap's camera check rewrites each photo's
+                       thumbnail framebuffers between lists, so every one was new and a 22-pair list synced 18-22
+                       times, 4-16 ms each on WebGPU; it syncs 10, at the depth buffers that share RAM with a pair's
+                       colour, and its longest gaps went from 150-250 ms to 114-188 (headless Chrome, uncapped, RTX
+                       2070, an idle host). A desktop build keeps the sync at every format change
 N64ModernRuntime       a mod linked in ahead of time (register_precompiled_mod) loads with a hook on a function it
 51317a9                replaces, with IS_WASM: the replaced function's hook slots go on the replacement's redirect,
                        which recomp_redirect runs them around, where the desktop's live recompiler writes them into
