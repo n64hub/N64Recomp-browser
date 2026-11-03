@@ -786,4 +786,10 @@ rt64 217b527, ca7dc8d  presents dropped while the rest went out on their slots d
                        went to one present a game frame and stayed there, each try of the number above falling
                        straight back, 45 presents a second against 240 for the last 65 s of a play (Chrome and
                        Firefox, a 240 Hz display, the GPU 2% busy)
+rt64 65fd38d           a decomposed matrix's perspective solved with the inverse untransposed, as recomposeMatrix puts
+                       it back, on every build: glm's transpose, for its column-major indexing, brought the translation
+                       in, and a far, small object's rounding in its last column became a perspective as large as its
+                       translation over its scale. A frame between two kept the current one's and drew it at a clip
+                       depth of -1.7e10, in front of everything (Rayman 2's prison cell: a dark fan beside Rayman in
+                       about 1 of 4 frames drawn between two, 0 of 40 with it)
 ```
