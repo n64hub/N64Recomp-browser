@@ -791,4 +791,10 @@ d5cac2c                was committed PAGE_NOACCESS, which counts against Windows
                        about 4.6 GB of commit to spare showed "Failed to allocate memory!" and never started a game
                        (Mario Party: Recompiled peaked at 4650 MiB; in a job that held a process to 3 GB it showed that
                        box). A reserved page faults on access as a PAGE_NOACCESS one does
+rt64 65fd38d           a decomposed matrix's perspective solved with the inverse untransposed, as recomposeMatrix puts
+                       it back, on every build: glm's transpose, for its column-major indexing, brought the translation
+                       in, and a far, small object's rounding in its last column became a perspective as large as its
+                       translation over its scale. A frame between two kept the current one's and drew it at a clip
+                       depth of -1.7e10, in front of everything (Rayman 2's prison cell: a dark fan beside Rayman in
+                       about 1 of 4 frames drawn between two, 0 of 40 with it)
 ```

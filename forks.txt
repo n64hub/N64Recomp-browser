@@ -2,6 +2,6 @@
 # rt64-web's src/contrib/plume is plume-web and its src/contrib/hlslpp hlslpp-web, and N64ModernRuntime-web's N64Recomp
 # is N64Recomp-web, at the commits those pin. A recomp pins its submodules to these same commits (tools/fetch_forks.sh
 # checks them out here).
-rt64              https://github.com/n64hub/rt64-web               d18a5ad6b30e610e1985db983772a48e91e75883
+rt64              https://github.com/n64hub/rt64-web               65fd38d8c1d72a0903fa89326481e22eed665dfd
 N64ModernRuntime  https://github.com/n64hub/N64ModernRuntime-web   d5cac2cb375f4d0c0d0c4b8992233acbf35a08e9
 RecompFrontend    https://github.com/n64hub/RecompFrontend-web     060709ff106e1cdc455b0a3325c675c0d9d3b2a0
