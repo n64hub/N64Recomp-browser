@@ -361,7 +361,10 @@ n64hub/rt64-web                     rt64/rt64                RT64 on WebGPU: WGS
                                                                   decals drawn without ending the render pass
                                                                   (a depth test and the stencil); tile copies
                                                                   reused from list to list (with render to RAM
-                                                                  off, each one was a new texture)
+                                                                  off, each one was a new texture); what the
+                                                                  CPU writes stretched across a wide picture,
+                                                                  with RT64_STRETCH_CPU_CHANGES, an option a
+                                                                  game turns on
 n64hub/N64Recomp-web                N64Recomp/N64Recomp      the FPU rounding mode on wasm; funcs.h
                                                                   declares every function the C calls; a mod
                                                                   recompiled to C ahead of time; functions a mod
@@ -394,8 +397,9 @@ N64ModernRuntime-web's `N64Recomp` at N64Recomp-web. Every web
 change is behind `__EMSCRIPTEN__` or `__wasm__` (or a CMake option on by default with Emscripten), so a desktop build
 of the forks is the upstream one, but for the declarations N64Recomp-web adds to `funcs.h` and plume-web's
 `RenderSwapChain::isWaitReady()` (always true but on WebGPU) and `waitOnCaller()` (always false but on WebGPU), which
-change nothing there, and fixes to bugs a desktop build has too (a crash, a hang, a wrong frame), which docs/forks.md
-says are "on every build". Each commit's message says what it does and why.
+change nothing there, fixes to bugs a desktop build has too (a crash, a hang, a wrong frame), which docs/forks.md
+says are "on every build", and `RT64_STRETCH_CPU_CHANGES`, off on every build until a game turns it on. Each commit's
+message says what it does and why.
 
 `patches/` holds each fork as one patch, everything its `main` adds to the upstream commit it is on, so a recomp can
 take the web support without moving its submodules to the forks (Using it in a recomp).
