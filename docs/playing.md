@@ -40,7 +40,9 @@ options; `docs/findings.md` has what was measured this way.
   direction, or back the way it came, carries the character off a ledge, into water or out an exit. Its waits and holds
   in the level are on the game's own clock (a `clock` step, page_driver's header): in ms of the browser's time,
   uneven frames walked Firefox's runs of one plan to other places than Chrome's (docs/findings.md, Behind CLAUDE.md's
-  rules). A plan that ends on black is the plan's fault until a direct warp there draws black too (Banjo-Tooie's:
+  rules). So is the wait before a shot of the first screen that draws: Firefox builds the list's first section there,
+  the game waiting with its clock stopped, and Rayman 2's menu shot, 3 s of the browser's time after the menu came up,
+  caught that wait black in every Firefox run. A plan that ends on black is the plan's fault until a direct warp there draws black too (Banjo-Tooie's:
   docs/findings.md, Behind CLAUDE.md's rules).
 - The step the rest of a plan stands on (a survey's `play()`, which loads a file) is a `need` (page_driver's header): a
   run that never gets there fails, rather than its warps and walks pressing keys at a menu for minutes, a path no player
