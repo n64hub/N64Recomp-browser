@@ -797,4 +797,8 @@ rt64 65fd38d           a decomposed matrix's perspective solved with the inverse
                        translation over its scale. A frame between two kept the current one's and drew it at a clip
                        depth of -1.7e10, in front of everything (Rayman 2's prison cell: a dark fan beside Rayman in
                        about 1 of 4 frames drawn between two, 0 of 40 with it)
+rt64 6607645           RT64_STRETCH_CPU_CHANGES, off on every build, Emscripten's too, for a game to turn on: what
+                       the CPU writes into a target wider than 4:3 covers its whole width, not its 4:3 middle, so a
+                       full-screen effect a game draws from the CPU, written squeezed by as much, reaches the sides
+                       (Rayman 2's scene transition, its blotches stopped on a straight line at the 4:3 edges)
 ```
