@@ -55,7 +55,7 @@ for Windows and Linux on its repo's Releases page.
 This is for a recomp built on RecompFrontend that already builds for the desktop. Its dependencies stay as they are:
 `rt64`, `N64ModernRuntime` and `RecompFrontend` remain its own submodules at the commits it pins, this repo is added
 beside them, and the web build patches their checkouts with `patches/`. The patches change nothing in a desktop build
-(The forks), and the changes stay in the checkouts, uncommitted.
+but fixes to bugs it has too (The forks), and the changes stay in the checkouts, uncommitted.
 
 ### 1. Add this repo
 
