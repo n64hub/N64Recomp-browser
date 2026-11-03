@@ -801,4 +801,14 @@ rt64 6607645           RT64_STRETCH_CPU_CHANGES, off on every build, Emscripten'
                        the CPU writes into a target wider than 4:3 covers its whole width, not its 4:3 middle, so a
                        full-screen effect a game draws from the CPU, written squeezed by as much, reaches the sides
                        (Rayman 2's scene transition, its blotches stopped on a straight line at the 4:3 edges)
+rt64 08427aa           a slow texture scroll (a quarter texel every few frames, or on two of three) moves on every
+                       frame drawn, at the rate it moved over about its last 32 game frames, steered toward half a step
+                       behind the game's place and never ahead of it, where it was drawn a step at a time, or placed on
+                       some frames and not others (Rayman 2's sky in its intro, its language menu's water). A steady
+                       scroll of a texel or less a frame is drawn as before. Every build
+rt64 a03baa2           vertices a game's CPU moves under a matrix it keeps, in a group with no matrix ID and vertex
+                       interpolation off, move between frames from where the last frame drew them, when both frames
+                       have as many and none moved further than their box's largest side: they moved only on the
+                       game's own frames against everything else moving on every frame drawn (Rayman 2's menu
+                       cursor). A game that gives matrix IDs or asks for vertex interpolation is untouched. Every build
 ```
