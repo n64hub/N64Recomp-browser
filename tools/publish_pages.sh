@@ -144,7 +144,7 @@ r2     n64hub/rayman-2-recomp                Rayman2Recompiled    build/web raym
 "
 # Games whose pages are not published until the games are released: left out of a run that names no game, and built
 # only as a dry run (--dry-run, --browser, --ref), so their pins can still be built and played.
-unreleased=" r2 "
+unreleased=" "
 # This project's own recomps, whose pins move by a pull request on their repos (CLAUDE.md, The pins), and which pin
 # upstream's own commits of what N64Recomp-browser patches as submodules (pin_tree). retest.sh reads this list.
 own=" rush pd sm64 fzx mp1 mp2 mp3 ssb pm r2 "

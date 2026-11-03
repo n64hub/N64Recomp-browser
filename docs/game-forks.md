@@ -616,7 +616,7 @@ an area's among them, recorded by `tools/record_shaders.sh` and `tools/shader_pl
 warps to every map in turn as a release's check. Its README, CLAUDE.md and docs/web.md have the rest.
 
 `n64hub/rayman-2-recomp` is Rayman 2: The Great Escape (USA), not a fork but this project's own recomp (GPL-3.0), with
-RecompFrontend's launcher and menus, held unreleased until it plays further. There is no decompilation of it: its
+RecompFrontend's launcher and menus, released for Windows and Linux and in the browser. There is no decompilation of it: its
 symbols are written from the ROM, libultra's named by their signatures and the rest by address. It is on upstream's
 rt64 and RecompFrontend at the commits Majora's Mask's are on and N64ModernRuntime at Conker's (`patches/pins.txt`),
 patched by the N64Recomp-browser commit its `lib/N64Recomp-browser` pins, and by one change of its own
