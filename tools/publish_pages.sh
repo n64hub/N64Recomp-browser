@@ -461,16 +461,19 @@ files() { echo "$1.html $1.js $1.wasm $1.data coi_serviceworker.js"; }
 # preloads nothing has no .data).
 hashes() { for f in $(files $1); do if [[ -f $f ]]; then git hash-object "$f"; else echo -; fi; done | tr '\n' ' '; }
 # seed <clone> <copy> <usual copy>: a copy of its own (PAGES_COPY) not yet on the host starts from the game's usual
-# copy's git objects, when that copy is there: its repo is cloned with the usual one's as a reference and each
-# submodule borrows the usual one's (submodule.alternateLocation), so remote_build.sh's sync fetches from GitHub only
-# what the usual copy lacks (a shallow submodule's too). Measured on Banjo-Tooie on a busy host: a cold sync 95 s, rt64
-# and every other submodule cloned from GitHub (on a slow line it ran past 24 min); seeded 46 s, and 11 s to
+# copy's git objects, when that copy is there: its repo is cloned from the usual one's, borrowing its objects
+# (--shared), with origin then set to the fork's URL, and each submodule borrows the usual one's
+# (submodule.alternateLocation), so remote_build.sh's sync fetches from GitHub only what the usual copy lacks (a
+# shallow submodule's too). Cloned on the host and not from GitHub, a private fork (one held unreleased) is seeded too:
+# the host can't fetch it, and the sync sends its main as a bundle. Measured on Banjo-Tooie on a busy host: a cold sync
+# 95 s, rt64 and every other submodule cloned from GitHub (on a slow line it ran past 24 min); seeded 46 s, and 11 s to
 # dissociate. A copy of the usual one's whole folder (cp -a) won't build: its build dirs' CMakeCache.txt name that copy.
 seed() {
     [[ $2 != "$3" ]] || return 0
     ssh -o BatchMode=yes "$BUILD_HOST" "cd ~/rush2049 && if [ ! -d $2/repo/.git ] && [ -d $3/repo/.git ]; then
-        mkdir -p $2 && git clone -q --reference $3/repo -c submodule.alternateLocation=superproject \
-            -c submodule.alternateErrorStrategy=info $(git -C "$1" remote get-url origin) $2/repo; fi"
+        mkdir -p $2 && git clone -q --shared -c submodule.alternateLocation=superproject \
+            -c submodule.alternateErrorStrategy=info $3/repo $2/repo &&
+        git -C $2/repo remote set-url origin $(git -C "$1" remote get-url origin); fi"
 }
 # dissociate <copy>: once synced, a seeded copy copies in what it borrowed and stops borrowing (git repack -a, as
 # git clone --dissociate does), so cleaning the usual copy, or a gc there, can't break it. Submodules go first, so a
