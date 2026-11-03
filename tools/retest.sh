@@ -36,7 +36,7 @@
 # Pages a shared turn, an A/B's play a whole one, the minutes the turn's limit. Without it each runs at once.
 # --note <text> goes into every play's note in plays.jsonl after "retest <tag>": the host, and what else ran beside it.
 # At the end it prints each game's outcome: same (no new bytes, nothing to publish), published, PR (an own
-# recomp's, to merge and publish), held (the gate is shut, its plays done), or what failed, with the step's log.
+# recomp's, to merge, publish and release), held (the gate is shut, its plays done), or what failed, with the step's log.
 # It needs what publish_pages.sh, ab_pages.mjs and play_pages.sh need (BUILD_HOST, ROMS, gh, push access to the forks)
 # and NODE, a node that runs the .mjs tools.
 set -uo pipefail
