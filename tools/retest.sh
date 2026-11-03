@@ -28,7 +28,8 @@
 #   pin commit, which also moves its submodules of upstream's to the commits the tag's patches/patches.txt names, as
 #   the build did (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
 #   build has run), `publish_pages.sh <checkout> <game> --played <dir>/keep` and `play_pages.sh <checkout> firefox
-#   <game>` publish and play it.
+#   <game>` publish and play it, and the recomp's own release tool releases its desktop build from that main (CLAUDE.md,
+#   Releasing).
 # --cpu-throttle is ab_pages.mjs's for the A/B (a desktop GPU's Chrome reads the same ceiling for every build
 # uncapped). --queue <command> takes each build and play's turn in the machine's GPU queue (CLAUDE.md, Playing a page):
 # it is run as `<command> <shared|whole> <minutes> <command line...>`, a build and a smoke play, a boot and a play from

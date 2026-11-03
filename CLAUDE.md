@@ -178,7 +178,7 @@ games that stand for the rest when the tag can move speed), and only a page that
 no worse than Pages moves its fork onto the tag and is published. One that plays worse stays on
 Pages as it was and has work filed. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party 1, 2 and 3,
 Super Smash Bros., Paper Mario and Rayman 2 are retested in the same work, never filed for later: each one's pin moves by a PR on its repo that the retest opens and merges, Rush 2049's even to a tag
-that left its page's bytes alone. A new recomp of the project's own whose game isn't released yet is held unreleased
+that left its page's bytes alone, and each is released (Releasing). A new recomp of the project's own whose game isn't released yet is held unreleased
 (docs/publishing.md): the retest moves its pin the same way, built and played, and publishes nothing for it.
 
 A critical fix doesn't wait for the retest: a fix for a page on Pages that crashes, never boots, loses its WebGPU
@@ -187,19 +187,23 @@ Firefox and publishes each, in the same work. A bug only main has waits for the 
 the retest publishes it, its fix is critical.
 
 **Publishing** is the deploy; no CI job does it. A retest or critical fix publishes the pages it moves, and a change to
-one game's own repo publishes that game's page right after it lands, unasked. So does a change to the games page
+one game's own repo publishes that game's page right after it lands, unasked, and releases its desktop build
+(Releasing). So does a change to the games page
 (`site/`, `frontend/save_sync.js`, `frontend/coi_serviceworker.js`): the work that merges it runs `tools/publish_site.sh`
 from main at once and checks n64hub.com serves it, since until then the merge reaches nobody. Every page is played before it is
 published and booted from Pages after, so Pages holds only played pages. A page found behind main
 (the hub's last gh-pages commit names the main each game's folder was built from) is played and published by whoever finds it. How:
 docs/publishing.md.
 
-**A fix for an issue a player filed** reaches them in a release made in the same work, unasked: most players play the
-desktop build, on Windows or Linux, and the page's publish doesn't reach them. A recomp of the project's own with
-desktop releases gets a new one once the fix merges (its `tools/release.sh`, or Rush 2049's docs/releasing.md): the
-version bumped, notes saying what the player gets, both archives built from that main and booted on Windows and
-Linux before they are published, and the issue's answer names the release. A game fork has no desktop release of its
-own, so its page's publish is its release.
+**Releasing** is the desktop build's deploy, and nothing waits for it: most players play the desktop build, on
+Windows or Linux, and the page's publish doesn't reach them. A recomp of the project's own with desktop releases gets a
+new one in the same work, unasked, whenever its main has something its last release lacks that the desktop build runs:
+a fix or feature in its own code, or a pin moved by the retest, a critical fix or a fork change (the forks are the
+desktop build's RT64 and runtime too). It comes once that merges (its `tools/release.sh`, or Rush 2049's
+docs/releasing.md): the version bumped, notes saying what the player gets, both archives built from that main and
+booted on Windows and Linux before they are published. Only a change the desktop build doesn't run (docs, a play plan,
+the page's shader list, `plays.jsonl`) waits for the next release. A fix for an issue a player filed is answered
+naming its release. A game fork has no desktop release of its own, so its page's publish is its release.
 
 ## The games table
 
