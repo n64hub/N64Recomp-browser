@@ -806,9 +806,11 @@ rt64 08427aa           a slow texture scroll (a quarter texel every few frames, 
                        behind the game's place and never ahead of it, where it was drawn a step at a time, or placed on
                        some frames and not others (Rayman 2's sky in its intro, its language menu's water). A steady
                        scroll of a texel or less a frame is drawn as before. Every build
-rt64 a03baa2           vertices a game's CPU moves under a matrix it keeps, in a group with no matrix ID and vertex
+rt64 a03baa2, f32b1bf  vertices a game's CPU moves under a matrix it keeps, in a group with no matrix ID and vertex
                        interpolation off, move between frames from where the last frame drew them, when both frames
                        have as many and none moved further than their box's largest side: they moved only on the
                        game's own frames against everything else moving on every frame drawn (Rayman 2's menu
-                       cursor). A game that gives matrix IDs or asks for vertex interpolation is untouched. Every build
+                       cursor). A game that gives matrix IDs or asks for vertex interpolation is untouched. In a block
+                       of its own after the extended GBI's interpolation, whose lines Wave Race 64's water patch has
+                       as context. Every build
 ```

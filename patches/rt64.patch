@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web a03baa2ee2e6db6fbab21c2d5dfb472193bed632
+rt64: https://github.com/n64hub/rt64-web f32b1bff175ff9ba760e0c8795323623f4e13656
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2099,7 +2099,7 @@ index 60b0fa4..4531833 100644
          int changeProjection(uint32_t transformsIndex, Projection::Type type);
          bool isEmpty() const;
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
-index 87392d0..ddeebb7 100644
+index 87392d0..667c152 100644
 --- a/src/hle/rt64_game_frame.cpp
 +++ b/src/hle/rt64_game_frame.cpp
 @@ -2,6 +2,8 @@
@@ -2308,7 +2308,7 @@ index 87392d0..ddeebb7 100644
 +                if (workloadQueue.workloads[workloadIndex].fbPairCount > 0) {
 +                    drawn.emplace_back(workloadIndex);
 +                }
-             }
++            }
 +        };
 +
 +        drawnWorkloads(workloads, curDrawn);
@@ -2328,7 +2328,7 @@ index 87392d0..ddeebb7 100644
 +        {
 +            for (uint32_t w = 0; (w < curDrawn.size()) && (w < prevDrawn.size()); w++) {
 +                drawnPairs.emplace_back(curDrawn[w], prevDrawn[w]);
-+            }
+             }
 +        }
 +
 +        for (const std::pair<uint32_t, uint32_t> &drawnPair : drawnPairs) {
@@ -2768,55 +2768,51 @@ index 87392d0..ddeebb7 100644
          }
  
          // Check for look at matches.
-@@ -733,7 +1165,14 @@ namespace RT64 {
-         uint32_t curVertexCount = curWorkload.drawData.worldTransformVertexCount(curTransformIndex);
-         uint32_t prevVertexIndex = prevWorkload.drawData.worldTransformVertexIndices[prevTransformIndex];
-         uint32_t prevVertexCount = prevWorkload.drawData.worldTransformVertexCount(prevTransformIndex);
--        if (((curGroup.vertexInterpolation != G_EX_COMPONENT_SKIP) || (curGroup.texcoordInterpolation == G_EX_COMPONENT_AUTO)) && (curVertexCount == prevVertexCount)) {
+@@ -754,6 +1186,43 @@ namespace RT64 {
+             }
+         }
+ 
 +        // Vertices the game's CPU moves itself under a matrix it keeps (Rayman 2's menu cursor, a butterfly whose eye
 +        // and body it places anew every frame) moved only on the game's own frames, while what moves by its matrix
 +        // moved on every frame drawn. A game that says nothing of them (no matrix ID, so no vertex interpolation of its
 +        // choosing) has them moved between frames too, from where the frame before drew them, when the two have as
 +        // many vertices and none moved further than the largest side of the box they span: the same thing moving, not
-+        // a buffer the game filled with something else.
++        // a buffer the game filled with something else. Apart from the extended GBI's interpolation above, which a
++        // game fork may change in its own patches.
 +        const bool autoVertices = (curGroup.matrixId == G_EX_ID_AUTO) && (curGroup.vertexInterpolation == G_EX_COMPONENT_SKIP);
-+        if (((curGroup.vertexInterpolation != G_EX_COMPONENT_SKIP) || (curGroup.texcoordInterpolation == G_EX_COMPONENT_AUTO) || autoVertices) && (curVertexCount == prevVertexCount)) {
-             const std::vector<float> &curPosFloats = curWorkload.drawData.posFloats;
-             const std::vector<float> &prevPosFloats = prevWorkload.drawData.posFloats;
-             std::vector<float> &curVelFloats = curWorkload.drawData.velFloats;
-@@ -752,6 +1191,31 @@ namespace RT64 {
- 
-                 modifiedBuffers.positionVelocity = true;
-             }
-+            else if (autoVertices && (curVertexCount > 0) && (curVertexHash != prevVertexHash)) {
-+                const float *curPosFloatsRef = &curPosFloats[curVertexIndex * 3];
-+                const float *prevPosFloatsRef = &prevPosFloats[prevVertexIndex * 3];
-+                float minPos[3] = { FLT_MAX, FLT_MAX, FLT_MAX };
-+                float maxPos[3] = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-+                float maxMove = 0.0f;
-+                for (uint32_t i = 0; i < curVertexCount; i++) {
-+                    for (uint32_t j = 0; j < 3; j++) {
-+                        const float pos = curPosFloatsRef[i * 3 + j];
-+                        minPos[j] = std::min(minPos[j], pos);
-+                        maxPos[j] = std::max(maxPos[j], pos);
-+                        maxMove = std::max(maxMove, fabsf(pos - prevPosFloatsRef[i * 3 + j]));
-+                    }
-+                }
-+
-+                const float extent = std::max(std::max(maxPos[0] - minPos[0], maxPos[1] - minPos[1]), maxPos[2] - minPos[2]);
-+                if (maxMove <= extent) {
-+                    float *curVelFloatsRef = &curVelFloats[curVertexIndex * 3];
-+                    for (uint32_t i = 0; i < (curVertexCount * 3); i++) {
-+                        curVelFloatsRef[i] = curPosFloatsRef[i] - prevPosFloatsRef[i];
-+                    }
-+
-+                    modifiedBuffers.positionVelocity = true;
++        if (autoVertices && (curVertexCount > 0) && (curVertexCount == prevVertexCount)) {
++            const std::vector<float> &curPosFloats = curWorkload.drawData.posFloats;
++            const std::vector<float> &prevPosFloats = prevWorkload.drawData.posFloats;
++            std::vector<float> &curVelFloats = curWorkload.drawData.velFloats;
++            const float *curPosFloatsRef = &curPosFloats[curVertexIndex * 3];
++            const float *prevPosFloatsRef = &prevPosFloats[prevVertexIndex * 3];
++            float minPos[3] = { FLT_MAX, FLT_MAX, FLT_MAX };
++            float maxPos[3] = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
++            float maxMove = 0.0f;
++            for (uint32_t i = 0; i < curVertexCount; i++) {
++                for (uint32_t j = 0; j < 3; j++) {
++                    const float pos = curPosFloatsRef[i * 3 + j];
++                    minPos[j] = std::min(minPos[j], pos);
++                    maxPos[j] = std::max(maxPos[j], pos);
++                    maxMove = std::max(maxMove, fabsf(pos - prevPosFloatsRef[i * 3 + j]));
 +                }
 +            }
-         }
- 
++
++            const float extent = std::max(std::max(maxPos[0] - minPos[0], maxPos[1] - minPos[1]), maxPos[2] - minPos[2]);
++            if ((maxMove > 0.0f) && (maxMove <= extent)) {
++                float *curVelFloatsRef = &curVelFloats[curVertexIndex * 3];
++                for (uint32_t i = 0; i < (curVertexCount * 3); i++) {
++                    curVelFloatsRef[i] = curPosFloatsRef[i] - prevPosFloatsRef[i];
++                }
++
++                modifiedBuffers.positionVelocity = true;
++            }
++        }
++
          if ((curGroup.texcoordInterpolation != G_EX_COMPONENT_SKIP) && (curVertexCount == prevVertexCount)) {
-@@ -784,7 +1248,7 @@ namespace RT64 {
+             const std::vector<float> &curTcFloats = curWorkload.drawData.tcFloats;
+             const std::vector<float> &prevTcFloats = prevWorkload.drawData.tcFloats;
+@@ -784,7 +1253,7 @@ namespace RT64 {
          }
      }
      
@@ -2825,7 +2821,7 @@ index 87392d0..ddeebb7 100644
          for (uint32_t c = 0; c < proj.gameCallCount; c++) {
              const GameCall &call = proj.gameCalls[c];
              uint32_t matrixIdHash = 0;
-@@ -802,7 +1266,7 @@ namespace RT64 {
+@@ -802,7 +1271,7 @@ namespace RT64 {
                  doTileMatching = doTileMatching || (group.tileInterpolation == G_EX_COMPONENT_AUTO);
              }
  
