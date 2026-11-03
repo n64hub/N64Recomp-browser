@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 66076451e658182c5550f53f013c4d83b4abd7ee
+rt64: https://github.com/n64hub/rt64-web 0ea44966dac0979c86abd0703c4d2d25e7cb9509
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2099,7 +2099,7 @@ index 60b0fa4..4531833 100644
          int changeProjection(uint32_t transformsIndex, Projection::Type type);
          bool isEmpty() const;
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
-index 87392d0..e7c1e32 100644
+index 87392d0..e57cd8d 100644
 --- a/src/hle/rt64_game_frame.cpp
 +++ b/src/hle/rt64_game_frame.cpp
 @@ -2,6 +2,8 @@
@@ -2602,7 +2602,7 @@ index 87392d0..e7c1e32 100644
          }
  
          // Compute all the differences between transforms and insert them into a vector that will be sorted according to the differences.
-@@ -669,14 +958,48 @@ namespace RT64 {
+@@ -669,17 +958,160 @@ namespace RT64 {
              const bool wrappedUlt = (curTile.cmt == G_TX_WRAP) && (modulo(integerUlt, curTile.maskt * 4) == modulo(expectedUlt, curTile.maskt * 4));
              const bool wrappedLrs = (curTile.cms == G_TX_WRAP) && (modulo(integerLrs, curTile.masks * 4) == modulo(expectedLrs, curTile.masks * 4));
              const bool wrappedLrt = (curTile.cmt == G_TX_WRAP) && (modulo(integerLrt, curTile.maskt * 4) == modulo(expectedLrt, curTile.maskt * 4));
@@ -2652,11 +2652,163 @@ index 87392d0..e7c1e32 100644
 +            curTileMap.prevLrs = placeS ? (curTile.lrs - curTileMap.deltaLrs) : curTile.lrs;
 +            curTileMap.prevUlt = placeT ? (curTile.ult - curTileMap.deltaUlt) : curTile.ult;
 +            curTileMap.prevLrt = placeT ? (curTile.lrt - curTileMap.deltaLrt) : curTile.lrt;
++            curTileMap.curUls = curTile.uls;
++            curTileMap.curUlt = curTile.ult;
++            curTileMap.curLrs = curTile.lrs;
++            curTileMap.curLrt = curTile.lrt;
++
++            // A slow scroll (a quarter texel every few frames, on two frames of three, or 1, 2 and 4 quarters by
++            // turns) isn't steady above, so it was drawn where the game put it, a step at a time, or placed on some
++            // frames and not others, which a magnified texture shows as a stutter. An edge that stepped the same way
++            // at least twice in its last 16 frames and never more than a texel moves on every frame at the rate it
++            // moved at over about its last 32, steered a quarter of the way each frame toward half its largest step
++            // behind the game's place, which follows a scroll that speeds up: each frame starting where the last one
++            // ended, never ahead of the game's own place, so a scroll that stops comes to rest where the game put
++            // it, and never further behind it than two steps and a frame's move. One that steps further, turns back
++            // or jumps starts over, drawn as above. A step across a masked tile's wrap is the step it took inside
++            // the tile.
++            const float curValues[4] = { curTile.uls, curTile.ult, curTile.lrs, curTile.lrt };
++            const float rawDeltas[4] = { deltaUls, deltaUlt, deltaLrs, deltaLrt };
++            const int wrapPeriods[4] = {
++                (curTile.cms == G_TX_WRAP) ? curTile.masks * 4 : 0, (curTile.cmt == G_TX_WRAP) ? curTile.maskt * 4 : 0,
++                (curTile.cms == G_TX_WRAP) ? curTile.masks * 4 : 0, (curTile.cmt == G_TX_WRAP) ? curTile.maskt * 4 : 0
++            };
++
++            float slowFrom[4];
++            float slowTo[4];
++            bool slowMoving[4];
++            bool slowStanding[4];
++            for (uint32_t e = 0; e < 4; e++) {
++                float step = rawDeltas[e];
++                const int period = wrapPeriods[e];
++                if ((period > 0) && (fabsf(step) >= float(period / 2))) {
++                    const int inside = modulo(std::lround(step), period);
++                    step = float((inside > (period / 2)) ? (inside - period) : inside);
++                }
++
++                float &moved = curTileMap.slowMoved[e];
++                float &largest = curTileMap.slowLargest[e];
++                float &behind = curTileMap.slowBehind[e];
++                uint16_t &frames = curTileMap.slowFrames[e];
++                uint16_t &steps = curTileMap.slowSteps[e];
++                const bool turned = (step != 0.0f) && (moved != 0.0f) && ((step < 0.0f) != (moved < 0.0f));
++                const bool leapt = (fabsf(step) > 4.0f);
++                if (turned || leapt) {
++                    moved = 0.0f;
++                    largest = 0.0f;
++                    behind = 0.0f;
++                    frames = 0;
++                    steps = 0;
++                }
++
++                if (!leapt) {
++                    moved += step;
++                    largest = std::max(largest, fabsf(step));
++                    steps = uint16_t((steps << 1) | ((step != 0.0f) ? 1 : 0));
++                    frames++;
++                    if (frames >= 32) {
++                        frames /= 2;
++                        moved /= 2.0f;
++                    }
++                }
++
++                const uint32_t window = std::min(uint32_t(frames), 16U);
++                const uint32_t windowMask = (1U << window) - 1;
++                const uint32_t recent = steps & windowMask;
++                uint32_t stepCount = 0;
++                for (uint32_t r = recent; r != 0; r &= (r - 1)) {
++                    stepCount++;
++                }
++
++                slowMoving[e] = (frames >= 4) && (stepCount >= 2) && (moved != 0.0f);
++                slowStanding[e] = (moved == 0.0f) && (rawDeltas[e] == 0.0f);
++                if (slowMoving[e]) {
++                    const float rate = moved / float(frames);
++                    const float direction = (rate < 0.0f) ? -1.0f : 1.0f;
++                    const float band = (largest * 2.0f) + fabsf(rate);
++                    const float behindStart = std::clamp(direction * (behind + step), 0.0f, band);
++                    const float move = std::max(fabsf(rate) + (behindStart - (largest * 0.5f)) * 0.25f, 0.0f);
++                    const float behindEnd = std::clamp(behindStart - move, 0.0f, band);
++                    behind = direction * behindEnd;
++                    slowFrom[e] = curValues[e] - direction * behindStart;
++                    slowTo[e] = curValues[e] - direction * behindEnd;
++                }
++                else {
++                    behind = 0.0f;
++                    slowFrom[e] = curValues[e];
++                    slowTo[e] = curValues[e];
++                }
++            }
++
++            // Both edges of a direction scroll together, or one stands while the other scrolls, as above.
++            auto slowDirection = [&](uint32_t a, uint32_t b) {
++                return (slowMoving[a] || slowMoving[b]) && (slowMoving[a] || slowStanding[a]) && (slowMoving[b] || slowStanding[b]);
++            };
++
++            const bool slowS = slowDirection(0, 2);
++            const bool slowT = slowDirection(1, 3);
++            if (slowS) {
++                curTileMap.prevUls = slowFrom[0];
++                curTileMap.curUls = slowTo[0];
++                curTileMap.prevLrs = slowFrom[2];
++                curTileMap.curLrs = slowTo[2];
++            }
++
++            if (slowT) {
++                curTileMap.prevUlt = slowFrom[1];
++                curTileMap.curUlt = slowTo[1];
++                curTileMap.prevLrt = slowFrom[3];
++                curTileMap.curLrt = slowTo[3];
++            }
++
              curTileMap.mapped = true;
              firstCurWorkloadMap.prevTilesMapped[indices.second] = true;
-             tileInterpolationUsed = tileInterpolationUsed || tileScrolled;
-@@ -784,7 +1107,7 @@ namespace RT64 {
+-            tileInterpolationUsed = tileInterpolationUsed || tileScrolled;
++            tileInterpolationUsed = tileInterpolationUsed || tileScrolled || slowS || slowT;
          }
+ 
+         // Check for look at matches.
+@@ -782,9 +1214,46 @@ namespace RT64 {
+ 
+             modifiedBuffers.texcoordVelocity = true;
+         }
++
++        // Vertices the game's CPU moves itself under a matrix it keeps (Rayman 2's menu cursor, a butterfly whose eye
++        // and body it places anew every frame) moved only on the game's own frames, while what moves by its matrix
++        // moved on every frame drawn. A game that says nothing of them (no matrix ID, so no vertex interpolation of its
++        // choosing) has them moved between frames too, from where the frame before drew them, when the two have as
++        // many vertices and none moved further than the largest side of the box they span: the same thing moving, not
++        // a buffer the game filled with something else. In a block of its own after the extended GBI's interpolation and
++        // the texture coordinates', whose lines a game fork may change in its own patches.
++        const bool autoVertices = (curGroup.matrixId == G_EX_ID_AUTO) && (curGroup.vertexInterpolation == G_EX_COMPONENT_SKIP);
++        if (autoVertices && (curVertexCount > 0) && (curVertexCount == prevVertexCount)) {
++            const std::vector<float> &curPosFloats = curWorkload.drawData.posFloats;
++            const std::vector<float> &prevPosFloats = prevWorkload.drawData.posFloats;
++            std::vector<float> &curVelFloats = curWorkload.drawData.velFloats;
++            const float *curPosFloatsRef = &curPosFloats[curVertexIndex * 3];
++            const float *prevPosFloatsRef = &prevPosFloats[prevVertexIndex * 3];
++            float minPos[3] = { FLT_MAX, FLT_MAX, FLT_MAX };
++            float maxPos[3] = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
++            float maxMove = 0.0f;
++            for (uint32_t i = 0; i < curVertexCount; i++) {
++                for (uint32_t j = 0; j < 3; j++) {
++                    const float pos = curPosFloatsRef[i * 3 + j];
++                    minPos[j] = std::min(minPos[j], pos);
++                    maxPos[j] = std::max(maxPos[j], pos);
++                    maxMove = std::max(maxMove, fabsf(pos - prevPosFloatsRef[i * 3 + j]));
++                }
++            }
++
++            const float extent = std::max(std::max(maxPos[0] - minPos[0], maxPos[1] - minPos[1]), maxPos[2] - minPos[2]);
++            if ((maxMove > 0.0f) && (maxMove <= extent)) {
++                float *curVelFloatsRef = &curVelFloats[curVertexIndex * 3];
++                for (uint32_t i = 0; i < (curVertexCount * 3); i++) {
++                    curVelFloatsRef[i] = curPosFloatsRef[i] - prevPosFloatsRef[i];
++                }
++
++                modifiedBuffers.positionVelocity = true;
++            }
++        }
      }
      
 -    void GameFrame::buildCallHashMap(uint32_t sceneProjIndex, const Workload &workload, const Projection &proj, std::multimap<uint64_t, GameCallMap> &hashMap) const {
@@ -2664,7 +2816,7 @@ index 87392d0..e7c1e32 100644
          for (uint32_t c = 0; c < proj.gameCallCount; c++) {
              const GameCall &call = proj.gameCalls[c];
              uint32_t matrixIdHash = 0;
-@@ -802,7 +1125,7 @@ namespace RT64 {
+@@ -802,7 +1271,7 @@ namespace RT64 {
                  doTileMatching = doTileMatching || (group.tileInterpolation == G_EX_COMPONENT_AUTO);
              }
  
@@ -2674,10 +2826,29 @@ index 87392d0..e7c1e32 100644
      }
  
 diff --git a/src/hle/rt64_game_frame.h b/src/hle/rt64_game_frame.h
-index 00a72f6..49e9402 100644
+index 00a72f6..5e899ab 100644
 --- a/src/hle/rt64_game_frame.h
 +++ b/src/hle/rt64_game_frame.h
-@@ -126,9 +126,12 @@ namespace RT64 {
+@@ -64,6 +64,18 @@ namespace RT64 {
+             float prevUlt = 0;
+             float prevLrs = 0;
+             float prevLrt = 0;
++            float curUls = 0;
++            float curUlt = 0;
++            float curLrs = 0;
++            float curLrt = 0;
++
++            // Each edge's slow scroll (uls, ult, lrs, lrt): how far it moved over how many frames, which of its last
++            // 16 frames it stepped on, its largest step, and how far behind the game's place the last frame left it.
++            float slowMoved[4] = {};
++            float slowLargest[4] = {};
++            float slowBehind[4] = {};
++            uint16_t slowFrames[4] = {};
++            uint16_t slowSteps[4] = {};
+             bool mapped = false;
+         };
+ 
+@@ -126,9 +138,12 @@ namespace RT64 {
          bool isSceneCompatible(const WorkloadQueue &workloadQueue, const GameScene &scene, const GameIndices::Projection &proj);
          void set(WorkloadQueue &workloadQueue, const uint32_t *workloadIndices, uint32_t indicesCount);
          void match(RenderWorker *worker, WorkloadQueue &workloadQueue, const GameFrame &prevFrame, BufferUploader *velocityUploader, bool &velocityUploaderUsed, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed);
@@ -9234,6 +9405,27 @@ index 9131697..1ed2132 100644
          std::unique_ptr<std::thread> uploadThread;
          std::atomic<bool> uploadThreadRunning;
          std::stack<StreamDescription> streamDescStack;
+diff --git a/src/render/rt64_tile_processor.cpp b/src/render/rt64_tile_processor.cpp
+index c36b5e8..db0df3b 100644
+--- a/src/render/rt64_tile_processor.cpp
++++ b/src/render/rt64_tile_processor.cpp
+@@ -35,12 +35,11 @@ namespace RT64 {
+                         continue;
+                     }
+ 
+-                    const interop::RDPTile &curTile = curRdpTiles[t];
+                     interop::RDPTile &lerpTile = lerpRdpTiles[t];
+-                    lerpTile.uls = tileMap.prevUls + (curTile.uls - tileMap.prevUls) * p.curFrameWeight;
+-                    lerpTile.ult = tileMap.prevUlt + (curTile.ult - tileMap.prevUlt) * p.curFrameWeight;
+-                    lerpTile.lrs = tileMap.prevLrs + (curTile.lrs - tileMap.prevLrs) * p.curFrameWeight;
+-                    lerpTile.lrt = tileMap.prevLrt + (curTile.lrt - tileMap.prevLrt) * p.curFrameWeight;
++                    lerpTile.uls = tileMap.prevUls + (tileMap.curUls - tileMap.prevUls) * p.curFrameWeight;
++                    lerpTile.ult = tileMap.prevUlt + (tileMap.curUlt - tileMap.prevUlt) * p.curFrameWeight;
++                    lerpTile.lrs = tileMap.prevLrs + (tileMap.curLrs - tileMap.prevLrs) * p.curFrameWeight;
++                    lerpTile.lrt = tileMap.prevLrt + (tileMap.curLrt - tileMap.prevLrt) * p.curFrameWeight;
+                 }
+             }
+         }
 diff --git a/src/render/rt64_transform_processor.cpp b/src/render/rt64_transform_processor.cpp
 index cd8004d..8b1a312 100644
 --- a/src/render/rt64_transform_processor.cpp
