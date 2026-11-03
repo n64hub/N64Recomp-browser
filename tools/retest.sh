@@ -28,14 +28,15 @@
 #   pin commit, which also moves its submodules of upstream's to the commits the tag's patches/patches.txt names, as
 #   the build did (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
 #   build has run), `publish_pages.sh <checkout> <game> --played <dir>/keep` and `play_pages.sh <checkout> firefox
-#   <game>` publish and play it.
+#   <game>` publish and play it, and the recomp's own release tool releases its desktop build from that main (CLAUDE.md,
+#   Releasing).
 # --cpu-throttle is ab_pages.mjs's for the A/B (a desktop GPU's Chrome reads the same ceiling for every build
 # uncapped). --queue <command> takes each build and play's turn in the machine's GPU queue (CLAUDE.md, Playing a page):
 # it is run as `<command> <shared|whole> <minutes> <command line...>`, a build and a smoke play, a boot and a play from
 # Pages a shared turn, an A/B's play a whole one, the minutes the turn's limit. Without it each runs at once.
 # --note <text> goes into every play's note in plays.jsonl after "retest <tag>": the host, and what else ran beside it.
 # At the end it prints each game's outcome: same (no new bytes, nothing to publish), published, PR (an own
-# recomp's, to merge and publish), held (the gate is shut, its plays done), or what failed, with the step's log.
+# recomp's, to merge, publish and release), held (the gate is shut, its plays done), or what failed, with the step's log.
 # It needs what publish_pages.sh, ab_pages.mjs and play_pages.sh need (BUILD_HOST, ROMS, gh, push access to the forks)
 # and NODE, a node that runs the .mjs tools.
 set -uo pipefail
