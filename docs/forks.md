@@ -786,6 +786,11 @@ rt64 217b527, ca7dc8d  presents dropped while the rest went out on their slots d
                        went to one present a game frame and stayed there, each try of the number above falling
                        straight back, 45 presents a second against 240 for the last 65 s of a play (Chrome and
                        Firefox, a 240 Hz display, the GPU 2% busy)
+N64ModernRuntime       on Windows RDRAM's 4 GB range is reserved and only its 512 MB committed, on every build: all of it
+d5cac2c                was committed PAGE_NOACCESS, which counts against Windows' commit limit, so a PC with less than
+                       about 4.6 GB of commit to spare showed "Failed to allocate memory!" and never started a game
+                       (Mario Party: Recompiled peaked at 4650 MiB; in a job that held a process to 3 GB it showed that
+                       box). A reserved page faults on access as a PAGE_NOACCESS one does
 rt64 65fd38d           a decomposed matrix's perspective solved with the inverse untransposed, as recomposeMatrix puts
                        it back, on every build: glm's transpose, for its column-major indexing, brought the translation
                        in, and a far, small object's rounding in its last column became a perspective as large as its
