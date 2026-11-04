@@ -362,6 +362,14 @@ played 4 of 4 clean through Defection on that host (3840x2000 uncapped, 4-14% bu
 turn running): 0 WebGPU errors, 0 exceptions, every command answered. Its list had the 3 shaders by then, so none was
 built in line with the device there.
 
+Pokémon Snap's page stopped answering the same way once with that variable set, in a Firefox smoke play of a build on
+a host 100% busy beside a build: 33 s in, 27 s after its last console line ("Game registered"), the tab's and the
+browser's main threads idle (0.00 cores, waiting), every thread of the tab and the GPU process idle too, no WebGPU
+errors or exceptions. Its next play was clean. Played ten more times in Firefox beside a load on every logical
+processor (the host 100% busy through each play, 3840x2000 uncapped), five from Pages and five of the same files served
+locally as the build was, it played its whole plan clean every time, 217-232 presents a second: no wait in its boot
+showed on a starved host, and a stop with both main threads idle stays the browser's.
+
 ## A browser that goes
 
 A play that ends with "the debugging connection closed (code 1006, read ECONNRESET)" lost the browser's own process,
