@@ -32,7 +32,7 @@ A run on a schedule that takes every change since the last one at once:
   left its page's bytes alone, since its desktop build can take something from it. Once a pin's PR merges, that
   recomp's desktop build is released from the merged main, in the same run (CLAUDE.md, Releasing): a pin move is the
   desktop build's RT64 and runtime moving too. A critical fix that plays every game takes it along the same way.
-- A recomp of the project's own is not published until its game is released (Donald Duck: Goin' Quackers is held now): its line in
+- A recomp of the project's own is not published until its game is released (none is held now): its line in
   `tools/publish_pages.sh`'s `unreleased` holds it, builds it only as a dry run and leaves it out of a run that names
   no game. The retest still moves its pin as it does the other recomps' (a PR on its repo that moves
   `lib/N64Recomp-browser` to the tag, its page built with `--dry-run` and played by the smoke play), merges it, and
