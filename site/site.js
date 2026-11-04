@@ -97,6 +97,7 @@ const ART = {
   'rush-2049-recomp': 'icon', 'perfect-dark-recomp': 'icon', 'super-mario-64-recomp': 'icon', 'f-zero-x-recomp': 'icon',
   'mario-party-recomp': 'icon', 'mario-party-2-recomp': 'icon', 'mario-party-3-recomp': 'icon',
   'super-smash-bros-recomp': 'icon', 'paper-mario-recomp': 'icon', 'rayman-2-recomp': 'icon',
+  'donald-duck-goin-quackers-recomp': 'icon',
   'GoldenEye64Recomp-web': 'icon', 'MarioKart64Recomp-web': 'icon', 'Starfox64Recomp-web': 'icon', 'Zelda64Recomp-web': 'icon',
 };
 
@@ -114,6 +115,7 @@ const SCORES = {
   'DKR-R-web': [83, 10], 'Snap64Recomp-web': [79, 9], 'mario-party-2-recomp': [77, 18],
   'super-smash-bros-recomp': [77, 12], 'dino-recomp-web': [77, 13], 'JetForceGemini-Recomp-web': [76, 11],
   'racer-web': [74, 7], 'rush2recompiled-web': [74, 12], 'mario-party-recomp': [71, 13], 'mario-party-3-recomp': [71, 14],
+  'donald-duck-goin-quackers-recomp': [70, 4],
 };
 // A game scored by another's reviews: Dinosaur Planet was never released, and became Star Fox Adventures on the
 // GameCube.

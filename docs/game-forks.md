@@ -646,7 +646,7 @@ the next level's name where the engine reads it, so a plan reaches any level fro
 matching. Its README, CLAUDE.md and docs/web.md have the rest.
 
 `n64hub/donald-duck-goin-quackers-recomp` is Donald Duck: Goin' Quackers (USA), not a fork but this project's own
-recomp (GPL-3.0), with RecompFrontend's launcher and menus, held unreleased. It runs on the engine of Rayman 2's N64
+recomp (GPL-3.0), with RecompFrontend's launcher and menus, released for Windows and Linux and in the browser. It runs on the engine of Rayman 2's N64
 version, so its symbols are written from the ROM as Rayman 2's are and its hooks are Rayman 2's found again at this
 game's addresses: the waits on its controller thread that let the other threads run, the parked idle watchdog, one
 frame a VI, the sound queue that drops what would run past its end, the RSP's done message once RT64 has read a list
