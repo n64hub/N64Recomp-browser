@@ -382,7 +382,8 @@ jobs:
   # web's meet, applies its patches/web/*.patch to them, and merges in the web's change to them since with apply.cmake
   # --since. Its --patches does that step without a ROM, with this checkout as its lib/N64Recomp-browser. Red on a PR
   # means the PR's web change meets the port's own lines in one of them, or in a file it doesn't leave out yet: it is
-  # merged into Snap64Recomp-web's patches/web by hand (its files.txt says how), in that PR's work.
+  # merged into Snap64Recomp-web's patches/web by hand (its files.txt says how), in that PR's work. Then those files are
+  # compiled (below): --since can put a hunk where it applies but doesn't compile.
   snap-patches:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -398,11 +399,65 @@ jobs:
           git clone -q --depth 1 https://github.com/n64hub/Snap64Recomp-web "$snap"
           git -C "$snap" log -1 --format='Snap64Recomp-web %h %s'
           git -C "$snap" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 2 lib/rt64 lib/N64ModernRuntime
-          git -C "$snap/lib/rt64" -c protocol.version=2 submodule update -q --init --depth 1 src/contrib/plume src/contrib/hlslpp
-          git -C "$snap/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 N64Recomp
+          git -C "$snap/lib/rt64" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 4 src/contrib/plume \
+            src/contrib/hlslpp src/contrib/imgui src/contrib/im3d src/contrib/implot src/contrib/re-spirv \
+            src/contrib/xxHash src/contrib/zstd
+          git -C "$snap/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 N64Recomp \
+            thirdparty/miniz
+          git -C "$snap/lib/N64ModernRuntime/N64Recomp" -c protocol.version=2 submodule update -q --init --depth 1 \
+            lib/rabbitizer
           rmdir "$snap/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$snap/lib/N64Recomp-browser"
           bash "$snap/tools/build_web.sh" --patches
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: emsdk-cache
+      # Each C++ file of patches/web/files.txt, as the step above left it, compiled as a page compiles it, with rt64's and
+      # ultramodern's options on as they are with Emscripten (their CMakeLists.txt), syntax only: no shaders are built, so
+      # rt64's generated shader headers are stand-ins declaring their blobs, and miniz's generated export header is too.
+      # Red here and not above means a hunk merged in where it applies but doesn't compile (on v0.173.0 one left a brace
+      # open in rt64_game_frame.cpp), merged into patches/web by hand like one that doesn't apply.
+      - name: Snap64Recomp-web's merged files compile
+        run: |
+          snap="$RUNNER_TEMP/snap" stubs="$RUNNER_TEMP/snap-stubs"
+          rt64="$snap/lib/rt64" runtime="$snap/lib/N64ModernRuntime"
+          common=(-pthread -fwasm-exceptions -msimd128 -sUSE_SDL=2 -fsyntax-only "-DXXH_HAS_INCLUDE(x)=0" "-I$stubs")
+          rt64_flags=(-std=c++17 --use-port=emdawnwebgpu -DFFX_GCC -DHLSL_CPU -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES
+            -DRT64_FREE_DISCARDED_TARGETS=1 -DRT64_GAME_FRAME_WORKLOADS=1 -DRT64_INTERPOLATE_CAMERA_EYE=1
+            -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PARTIAL_SCREEN_PAIRS=1 -DRT64_PER_DRAW_TEXTURES=1 -DRT64_PREBUILT_SHADERS
+            -DRT64_SCISSOR_INSIDE_FRAMEBUFFER=1 -DRT64_SKIP_COLLAPSED_MATCHES=1 -DRT64_UNEVEN_FRAME_RATES=1 -DRT64_WGSL=1)
+          for dir in src src/contrib src/contrib/plume src/contrib/imgui src/contrib/hlslpp/include \
+            src/contrib/mupen64plus-core/src/api src/contrib/nativefiledialog-extended/src/include src/contrib/zstd/lib; do
+            rt64_flags+=("-I$rt64/$dir")
+          done
+          runtime_flags=(-std=c++20 -DULTRAMODERN_HOLD_BLOCKED_MESSAGES=1 -DULTRAMODERN_LIBULTRA_THREAD_STOP=1
+            -DULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS=1 -DULTRAMODERN_RSP_TASKS_COPIED=1
+            -DULTRAMODERN_SCREEN_UPDATE_AFTER_VI=1 -DULTRAMODERN_VIS_WAIT_FOR_RENDERER=1)
+          for dir in ultramodern/include librecomp/include librecomp/include/librecomp librecomp/src thirdparty \
+            thirdparty/concurrentqueue thirdparty/miniz thirdparty/o1heap N64Recomp/include \
+            N64Recomp/lib/rabbitizer/include N64Recomp/lib/rabbitizer/cplusplus/include; do
+            runtime_flags+=("-I$runtime/$dir")
+          done
+          mkdir -p "$stubs/shaders"
+          echo '#define MINIZ_EXPORT' > "$stubs/miniz_export.h"
+          grep -rhoE --exclude-dir=contrib '#\s*include "shaders/[^"]+\.(wgsl|rw)\.h"' "$rt64/src" | sed 's/.*"shaders\///; s/"$//' |
+            sort -u | while read -r header; do
+              case "$header" in *.wgsl.h) blob="${header%%.*}BlobWGSL" ;; *) blob="${header%%.*}Text" ;; esac
+              printf '#pragma once\n#include <stddef.h>\nextern "C" const char %s[1];\nextern "C" const size_t %s_size;\n' \
+                "$blob" "$blob" > "$stubs/shaders/$header"
+            done
+          status=0
+          while read -r project file; do
+            case "$project" in
+              rt64) checkout="$rt64" flags=("${rt64_flags[@]}") ;;
+              N64ModernRuntime) checkout="$runtime" flags=("${runtime_flags[@]}") ;;
+              *) echo "::error::no flags for $project's files here"; status=1; continue ;;
+            esac
+            echo "$project $file"
+            em++ "${common[@]}" "${flags[@]}" "$checkout/$file" || status=1
+          done < <(awk '!/^#/ && $2 ~ /\.cpp$/' "$snap/patches/web/files.txt")
+          exit $status
 
   # The patches under Rush 2's web fork's own (rush2recompiled-web, its main), as Snap64Recomp-web's: its
   # tools/build_web.sh applies Rush 2's lib/patches to rt64, N64ModernRuntime and RecompFrontend first, then these but for
