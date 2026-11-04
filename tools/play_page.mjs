@@ -130,6 +130,11 @@
 // them by section. A miss draws with the ubershader: in Chrome until it is built behind the game, in Firefox for the
 // rest of the visit. On a fresh profile that is everything the list misses on the way; a kept one has built what the
 // visits before it missed (the shell remembers them), so it shows only what is new.
+// A page with no list at all counts no misses, since RT64 learns them only against one, and in Firefox draws every
+// shader with the ubershader: a build configured before a game's src/rt64_shaders.txt was added (its CMake's
+// if (EXISTS) not run again) played Goin' Quackers clean at a fifth of its rate there, its main pass 8 times as long. So
+// the list's size, from RT64's "RT64: <n> prebuilt shaders, ..." line, is the summary's and the run's prebuiltShaders,
+// and a play whose page presented without that line fails, unless its --query asks for ?record-shaders (none built).
 //
 // --record appends the run to a file of runs, one JSON line each, a run that fails too (with "failed"): this repo's
 // plays.jsonl, the history of how each game's page plays. --game is publish_pages.sh's name for the game (rush, ge,
@@ -268,6 +273,7 @@ const median = (values) => {
 // What the console says.
 const shaderWaits = [];
 const shaderMisses = [];
+let prebuiltShaders = null;
 const hex = (x) => (x >>> 0).toString(16).padStart(8, '0');
 const errors = [];
 let exceptions = 0, firstException = null, exceptionAt = null, aborted = null;
@@ -290,6 +296,8 @@ const onLine = (text) => {
   log(text);
   const wait = /RT64: (\d+) (prebuilt shaders|shaders the list missed) built in ([\d.]+) s, the game waiting/.exec(text);
   if (wait) shaderWaits.push({ at: Math.round(seconds()), shaders: Number(wait[1]), seconds: Number(wait[3]), ...(wait[2] === 'prebuilt shaders' ? {} : { missed: true }) });
+  const list = /^RT64: (\d+) prebuilt shaders, /.exec(text);
+  if (list) prebuiltShaders ??= Number(list[1]);
   if (/^WebGPU (error|device lost)/.test(text)) errors.push(text);
   if (faultPhase && faultLines.length < 10) faultLines.push(`${Math.round(seconds())}: ${text.split('\n')[0].slice(0, 300)}`);
   // Emscripten's abort() prints "Aborted(<reason>)" and then traps in the wasm's ___trap, which a worker reports only as
@@ -700,6 +708,10 @@ try {
   if (!recordFile && !jsonFile) await finish(1);
 }
 if (slept && !failure) { log(`failed: ${slept}`); failure = slept; }
+if (!failure && prebuiltShaders === null && !/record-shaders/.test(query) && during.some((s) => s.presents > 0)) {
+  failure = 'the page has no prebuilt shader list (RT64 never said "RT64: <n> prebuilt shaders"): configure its build again';
+  log(`failed: ${failure}`);
+}
 const hostAfter = hostTimes();
 
 // --fault, once the play is over (in its level): each fault in turn, then 30 s of the game running by itself.
@@ -813,7 +825,7 @@ const summary = {
     longestMs: gaps.reduce((m, g) => Math.max(m, g)), over50Ms: gaps.filter((g) => g > 50).length, over100Ms: gaps.filter((g) => g > 100).length,
     over250Ms: gaps.filter((g) => g > 250).length, over100At: longGaps } : null,
   audio: audioAfter ? { played: audioAfter.played - (audioBefore?.played ?? 0), short: audioAfter.short - (audioBefore?.short ?? 0) } : null,
-  shaderWaits, shaderMisses: shaderMisses.length, webgpuErrors: playErrors, exceptions: playExceptions,
+  prebuiltShaders, shaderWaits, shaderMisses: shaderMisses.length, webgpuErrors: playErrors, exceptions: playExceptions,
   gpu: gpuMedians('gpu'), nvidia: gpuMedians('nvidia'),
   cores: during.some((s) => s.gpuProcess !== null) ?
     { gpuProcess: median(during.map((s) => s.gpuProcess)), browser: median(during.map((s) => s.browser)) } : null,
@@ -833,6 +845,7 @@ if (summary.frames) console.log(`  frame gaps p50 ${summary.frames.p50Ms} ms, p9
 if (summary.animationFrames !== null) console.log(`  animation frames/s ${summary.animationFrames}` +
   (noDisplay ? ': the browser had no display to pace it, so a page that interpolates presents as many' : ''));
 console.log(`  audio ${summary.audio ? `${summary.audio.played} frames played, ${summary.audio.short} short` : 'not playing'}`);
+console.log(`  prebuilt shaders ${prebuiltShaders ?? 'none: no list in the page'}`);
 console.log(`  shader waits ${shaderWaits.length ? shaderWaits.map((w) => `${w.seconds} s for ${w.shaders} at ${w.at} s`).join(', ') : 'none'}`);
 const bySection = {};
 for (const m of shaderMisses) bySection[m.section] = (bySection[m.section] ?? 0) + 1;
@@ -858,7 +871,7 @@ if (recordFile) {
     ...(affinity ? { affinity } : {}), ...(fallbackAdapter ? { fallbackAdapter } : {}),
     ...(Object.keys(firefoxPrefs).length ? { firefoxPrefs } : {}), ...(chromeFlags.length ? { chromeFlags } : {}), play: section ? `section ${section}` : playFor ? `${playFor} s` : 'plan', seconds: during.length * interval,
     presents: summary.presents && Object.fromEntries(Object.entries(summary.presents).map(([k, v]) => [k, Math.round(v * 10) / 10])),
-    frames: summary.frames, animationFrames: summary.animationFrames, audioShort: summary.audio?.short ?? null, shaderWaits, shaderMisses,
+    frames: summary.frames, animationFrames: summary.animationFrames, audioShort: summary.audio?.short ?? null, prebuiltShaders, shaderWaits, shaderMisses,
     // Each sample of the play, every interval seconds: presents a second, sound frames short, GPU busy.
     interval, series: { presents: during.map((s) => s.presents === null ? null : Math.round(s.presents * 10) / 10),
       short: during.map((s) => s.short), gpuBusy: during.map((s) => s.gpu?.busy ?? null),
