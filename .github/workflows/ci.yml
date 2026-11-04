@@ -95,7 +95,7 @@ jobs:
           git -C lib/rt64 submodule update --init --depth 1 src/contrib/plume
       - name: Test
         run: |
-          dpkg -s libx11-dev > /dev/null 2>&1 || sudo apt-get install -y --no-install-recommends libx11-dev
+          dpkg -s libx11-dev > /dev/null 2>&1 || { sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libx11-dev; }
           g++ -std=c++20 -O2 -Wall -pthread -Ilib/rt64/src/contrib/plume tests/plume_device_thread_test.cpp \
             lib/rt64/src/contrib/plume/plume_device_thread.cpp -o device_thread_test
           ./device_thread_test
@@ -266,7 +266,7 @@ jobs:
           version: ${{ env.EMSDK_VERSION }}
           actions-cache-folder: emsdk-cache
       - name: SPIRV-Tools
-        run: sudo apt-get install -y --no-install-recommends spirv-tools
+        run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends spirv-tools
       - name: They apply over DKR-R-web's
         run: |
           git clone -q --depth 1 https://github.com/n64hub/DKR-R-web "$RUNNER_TEMP/dkr"
@@ -715,9 +715,10 @@ jobs:
         with:
           version: ${{ env.EMSDK_VERSION }}
           actions-cache-folder: emsdk-cache
-      # spirv-opt, which rt64 runs on the prebuilt shaders (tests/build/shaders.txt) before naga.
+      # spirv-opt, which rt64 runs on the prebuilt shaders (tests/build/shaders.txt) before naga. The update first: a runner
+      # image can come without package lists, and the install then finds no spirv-tools.
       - name: SPIRV-Tools
-        run: sudo apt-get install -y --no-install-recommends spirv-tools
+        run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends spirv-tools
       # Emscripten's cache, where embuilder puts its ports, is in emsdk's folder, cached before they are built. One a leg:
       # a leg's compiles all missed ccache against the other leg's (577 of 578), and hit against its own.
       - id: em-cache
