@@ -650,15 +650,17 @@ recomp (GPL-3.0), with RecompFrontend's launcher and menus, released for Windows
 version, so its symbols are written from the ROM as Rayman 2's are and its hooks are Rayman 2's found again at this
 game's addresses: the waits on its controller thread that let the other threads run, the parked idle watchdog, one
 frame a VI, the sound queue that drops what would run past its end, the RSP's done message once RT64 has read a list
-(`runtime-patches/`), the Controller Pak on port 1. It is on the same rt64, N64ModernRuntime and RecompFrontend commits
-as Rayman 2 (`patches/pins.txt`). On a picture wider than 4:3 the 3D reaches the window's edges and its HUD the
-picture's sides; the scene transition, a spiral of black the CPU writes into the frame, is stretched across it by
-`RT64_STRETCH_CPU_CHANGES`, and the grey stone plate the newscast that starts a new game opens behind, a 3D quad just
-in front of the camera sized to the 4:3 screen, by `RT64_STRETCH_SCREEN_COVERS` (rt64 4550e10). Its list is 89
-shaders: the boot (32, the newscast's, the world map's and the pause menu's among them) and a section for each of
-27 levels of the game's table, recorded by `tools/shader_plan.json` without anyone playing: `tools/survey.js` changes
-level as the game's own exits do, and `tools/play_plan_levels.json` plays every level in turn. Its README,
-CLAUDE.md and docs/web.md have the rest.
+(`runtime-patches/`), the Controller Pak on port 1. One is its own: the last event in the music's sequence player's
+pool is kept for the event that wakes the player each audio frame, since the MIDI messages the game sends while its
+audio is held back (on lavapipe, at the title's first attract demo) used the pool up and froze the game. It is on the
+same rt64, N64ModernRuntime and RecompFrontend commits as Rayman 2 (`patches/pins.txt`). On a picture wider than 4:3
+the 3D reaches the window's edges and its HUD the picture's sides; the scene transition, a spiral of black the CPU
+writes into the frame, is stretched across it by `RT64_STRETCH_CPU_CHANGES`, and the grey stone plate the newscast
+that starts a new game opens behind, a 3D quad just in front of the camera sized to the 4:3 screen, by
+`RT64_STRETCH_SCREEN_COVERS` (rt64 4550e10). Its list is 89 shaders: the boot (32, the newscast's, the world map's and
+the pause menu's among them) and a section for each of 27 levels of the game's table, recorded by
+`tools/shader_plan.json` without anyone playing: `tools/survey.js` changes level as the game's own exits do, and
+`tools/play_plan_levels.json` plays every level in turn. Its README, CLAUDE.md and docs/web.md have the rest.
 
 ## The games' own frame rates
 
