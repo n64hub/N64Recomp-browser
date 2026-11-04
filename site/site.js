@@ -64,12 +64,12 @@ function tile(game, index) {
     cover.append(art);
   }
   cover.append(el('span', { className: 'card-title' }, ...titleCard(game.name)));
-  // Its Metacritic score at the art's top right, coloured as Metacritic colours it, and a floppy at its top left once
-  // this browser or the player's Drive holds a save of it (showSaves()).
+  // Its Metacritic score at the art's top right, and a floppy at its top left once this browser or the player's Drive
+  // holds a save of it (showSaves()).
   const score = SCORES[game.repoName];
   if (score) {
-    cover.append(el('span', { className: 'score ' + (score >= 75 ? 'good' : score >= 50 ? 'mixed' : 'bad'),
-      textContent: score, title: `Metacritic score: ${score}`, ariaLabel: `Metacritic score ${score}` }));
+    cover.append(el('span', { className: 'score', textContent: score,
+      title: `Metacritic score: ${score}`, ariaLabel: `Metacritic score ${score}` }));
   }
   cover.append(Object.assign(el('span', { className: 'saved', title: 'You have saves of this game', role: 'img',
     ariaLabel: 'Has saves', hidden: true }), { innerHTML: FLOPPY }));
