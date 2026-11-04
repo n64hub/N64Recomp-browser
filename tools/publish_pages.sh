@@ -207,6 +207,9 @@ unpatch() {
         git -C $s submodule foreach --recursive -q 'git reset -q --hard && git clean -fdq'
         git -C $s reset -q --hard && git -C $s clean -fdq
     done
+    # And a game's own build script's mark that it patched them, which a build that failed before patched() leaves
+    # naming the new N64Recomp-browser: its next build would skip the patches and build the checkouts unpatched.
+    rm -f build/web-patched build-web-prep/web-patched
 }
 patched() {
     local b=lib
