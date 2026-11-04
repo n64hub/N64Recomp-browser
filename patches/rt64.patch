@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 4550e107d6a4d046d8fbfc3b090a3c0c794e74b6
+rt64: https://github.com/n64hub/rt64-web 963c03717d4843b970e3a31edaf5c306b69212ea
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3680,18 +3680,10 @@ index 6051f4e..f719325 100644
          // Dump memory contents into a file if the process is active.
          if (!state->dumpingTexturesDirectory.empty()) {
 diff --git a/src/hle/rt64_rsp.cpp b/src/hle/rt64_rsp.cpp
-index 1da2550..e885098 100644
+index 1da2550..54a3b96 100644
 --- a/src/hle/rt64_rsp.cpp
 +++ b/src/hle/rt64_rsp.cpp
-@@ -5,6 +5,7 @@
- #include "rt64_rsp.h"
- 
- #include <cassert>
-+#include <cmath>
- 
- #include "../include/rt64_extended_gbi.h"
- #include "common/rt64_common.h"
-@@ -1128,9 +1129,83 @@ namespace RT64 {
+@@ -1128,9 +1128,84 @@ namespace RT64 {
              maxMatrix = std::max(maxMatrix, worldIndices[globalIndex]);
          }
  
@@ -3736,15 +3728,16 @@ index 1da2550..e885098 100644
 +        // and within the viewport's guard band (its size again past each edge), that between them hold the viewport's
 +        // four corners. A scene's own geometry reaches behind the camera or far past the screen, or is more triangles.
 +        if (drawCall.coverPossible) {
++            auto magnitude = [](float v) { return (v < 0.0f) ? -v : v; };
 +            const interop::RSPViewport &coverViewport = viewportStack[viewportStackSize - 1];
-+            const float halfWidth = std::abs(float(coverViewport.scale.x));
-+            const float halfHeight = std::abs(float(coverViewport.scale.y));
++            const float halfWidth = magnitude(float(coverViewport.scale.x));
++            const float halfHeight = magnitude(float(coverViewport.scale.y));
 +            const float centerX = float(coverViewport.translate.x);
 +            const float centerY = float(coverViewport.translate.y);
 +            bool insideGuard = (behindCount == 0) && !unprojectable && (drawCall.triangleCount < 8) && (halfWidth > 0.0f) && (halfHeight > 0.0f);
 +            for (int i = 0; (i < 3) && insideGuard; i++) {
 +                const hlslpp::float3 &s = posScreen[globalIndices[i]];
-+                insideGuard = (std::abs(float(s[0]) - centerX) <= 2.0f * halfWidth) && (std::abs(float(s[1]) - centerY) <= 2.0f * halfHeight);
++                insideGuard = (magnitude(float(s[0]) - centerX) <= 2.0f * halfWidth) && (magnitude(float(s[1]) - centerY) <= 2.0f * halfHeight);
 +            }
 +
 +            if (insideGuard) {
@@ -6210,7 +6203,7 @@ index 69a82ac..1dd31f7 100644
              dstNorm = builder.addReadWriteStructuredBuffer(9);
              dstVel = builder.addReadWriteStructuredBuffer(10);
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index 9fae0d4..0e4516d 100644
+index 9fae0d4..5ce575f 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -151,6 +151,7 @@ namespace RT64 {
@@ -6415,38 +6408,7 @@ index 9fae0d4..0e4516d 100644
          framebuffer.descRealFbSet->setBuffer(framebuffer.descRealFbSet->FbParams, framebuffer.paramsBuffer.get(), sizeof(interop::FramebufferParams));
          framebuffer.descRealFbSet->setTexture(framebuffer.descRealFbSet->gBackgroundColor, backgroundColorTexture, RenderTextureLayout::SHADER_READ, backgroundColorTextureView);
          framebuffer.descRealFbSet->setTexture(framebuffer.descRealFbSet->gBackgroundDepth, p.fbStorage->depthTarget->texture.get(), RenderTextureLayout::DEPTH_READ, p.fbStorage->depthTarget->textureView.get());
-@@ -1482,6 +1558,9 @@ namespace RT64 {
-             triangles.screenOffset = halfPixelOffset;
- 
-             float projInvRatioScale = 1.0f / aspectRatioScale;
-+#       if RT64_STRETCH_SCREEN_COVERS
-+            bool projWideViewport = false;
-+#       endif
-             const int16_t *viewportClipRatios = &drawData.viewportClipRatios[proj.transformsIndex * 4];
-             const uint16_t viewportOrigin = drawData.viewportOrigins[proj.transformsIndex];
-             if (proj.usesViewport()) {
-@@ -1493,6 +1572,9 @@ namespace RT64 {
-                 bool useWideViewport = (viewportOrigin == G_EX_ORIGIN_NONE) && coversWholeWidth && horizontalRatio;
-                 if (useWideViewport) {
-                     projInvRatioScale = 1.0f;
-+#               if RT64_STRETCH_SCREEN_COVERS
-+                    projWideViewport = true;
-+#               endif
-                 }
-                 else {
-                     triangles.screenScale.x = originalWidth / wideWidth;
-@@ -1506,6 +1588,10 @@ namespace RT64 {
-                 viewportClip = convertViewportRect(viewport.rect(viewportClipRatios), p.resolutionScale, p.fbWidth, projInvRatioScale, extOriginPercentage, 0.0f, viewportOrigin, viewportOrigin);
-             }
- 
-+#       if RT64_STRETCH_SCREEN_COVERS
-+            const float projScreenScaleX = triangles.screenScale.x;
-+#       endif
-+
-             for (uint32_t d = 0; (d < proj.gameCallCount) && (globalCallIndex < p.maxGameCall); d++) {
-                 const GameCall &call = proj.gameCalls[d];
-                 renderIndices.instanceIndex = call.callDesc.callIndex;
-@@ -1608,8 +1694,10 @@ namespace RT64 {
+@@ -1608,8 +1684,10 @@ namespace RT64 {
                          triangles.shaderDesc = call.shaderDesc;
  
                          RasterShader *gpuShader = p.ubershadersOnly ? nullptr : p.rasterShaderCache->getGPUShader(call.shaderDesc);
@@ -6457,7 +6419,7 @@ index 9fae0d4..0e4516d 100644
                          }
                          else {
                              const bool copyMode = (call.shaderDesc.otherMode.cycleType() == G_CYC_COPY);
-@@ -1619,7 +1707,7 @@ namespace RT64 {
+@@ -1619,7 +1697,7 @@ namespace RT64 {
                                  (call.shaderDesc.otherMode.cvgDst() == CVG_DST_WRAP) || (call.shaderDesc.otherMode.cvgDst() == CVG_DST_SAVE));
                          }
                          
@@ -6466,22 +6428,24 @@ index 9fae0d4..0e4516d 100644
                          triangles.vertexTestZ = (vertexTestZCallIndex >= 0);
                          triangles.postBlendDitherNoise = false;
  
-@@ -1631,6 +1719,14 @@ namespace RT64 {
+@@ -1631,6 +1709,16 @@ namespace RT64 {
                              instanceDrawCall.type = InstanceDrawCall::Type::IndexedTriangles;
                              triangles.indexStart = triangles.vertexTestZ ? vertexTestZFaceIndicesStart : call.meshDesc.faceIndicesStart;
                              invRatioScale = projInvRatioScale;
 +#                       if RT64_STRETCH_SCREEN_COVERS
-+                            // A screen cover (RSP::drawIndexedTri) in a perspective viewport widened to the picture is
-+                            // stretched across it, as a rect that spans the scissor's width is, so it still covers the
-+                            // picture. An orthographic one is left as it is: a quad that fills a 2D screen is more often a
-+                            // menu's picture than a cover.
-+                            const bool stretchCover = projWideViewport && (proj.type == Projection::Type::Perspective) && call.callDesc.coversViewport;
-+                            triangles.screenScale.x = stretchCover ? (projScreenScaleX * aspectRatioScale) : projScreenScaleX;
++                            // A screen cover (RSP::drawIndexedTri) in a perspective viewport widened to the picture (its
++                            // projInvRatioScale 1 in a picture wider than 4:3, drawn at a screen scale of 1) is stretched
++                            // across it, as a rect that spans the scissor's width is, so it still covers the picture. An
++                            // orthographic one is left as it is: a quad that fills a 2D screen is more often a menu's
++                            // picture than a cover. Only here does the scale change between a projection's calls.
++                            if ((proj.type == Projection::Type::Perspective) && (projInvRatioScale == 1.0f) && (aspectRatioScale > 1.0f)) {
++                                triangles.screenScale.x = call.callDesc.coversViewport ? aspectRatioScale : 1.0f;
++                            }
 +#                       endif
                              break;
                          }
                          case Projection::Type::Rectangle: {
-@@ -1760,7 +1856,215 @@ namespace RT64 {
+@@ -1760,7 +1848,215 @@ namespace RT64 {
          checkRasterScene(rasterScene);
      }
  
@@ -6698,7 +6662,7 @@ index 9fae0d4..0e4516d 100644
          bool shaderViewRtEnabled = false;
          std::vector<BufferUploader::Upload> shaderUploads = {
              { renderIndicesVector.data(), { 0, renderIndicesVector.size() }, sizeof(interop::RenderIndices), RenderBufferFlag::STORAGE, { }, &renderIndicesBuffer},
-@@ -1816,8 +2120,16 @@ namespace RT64 {
+@@ -1816,8 +2112,16 @@ namespace RT64 {
          }
  #   endif
  

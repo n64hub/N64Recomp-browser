@@ -818,10 +818,12 @@ a03baa2, f32b1bf,      interpolation off, move between frames from where the las
                        matchTransform's end, after the extended GBI's interpolation and the texture coordinates', whose
                        lines Wave Race 64's and Conker's Bad Fur Day's own rt64 patches change or have as context. Every
                        build
-rt64 4550e10           RT64_STRETCH_SCREEN_COVERS: a call of at most 8 triangles, each wholly in front of a
-                       perspective camera and within the viewport's guard band, that between them hold the viewport's
+rt64 4550e10,          RT64_STRETCH_SCREEN_COVERS: a call of at most 8 triangles, each wholly in front of a
+963c037                perspective camera and within the viewport's guard band, that between them hold the viewport's
                        four corners is a screen cover, and in a viewport widened to the picture it is stretched across
                        it as a rect that spans the scissor's width is, so a plate or fade a game draws in 3D sized to
-                       the 4:3 screen still covers a wide picture (Donald Duck: Goin' Quackers' newscast opens behind a
-                       grey stone plate, the scene showing past its sides). Off on a desktop build, on with Emscripten
+                       the 4:3 screen still covers a wide picture (Donald Duck: Goin' Quackers' newscast opens behind
+                       a grey stone plate, the scene showing past its sides). Off on a desktop build, on with
+                       Emscripten. Its renderer change is beside the perspective case alone, not in the block that
+                       widens a viewport, where games' own rt64 patches change it
 ```
