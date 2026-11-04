@@ -328,8 +328,11 @@ both change the same lines (`patches/web/files.txt`, 29 of rt64's and 6 of the r
 `patches/web/<project>.patch`, merged by hand. Its `tools/build_web.sh` then takes what N64Recomp-browser has changed in
 those files since that merge (`apply.cmake --since`, README), and stops only where that meets the port's own lines:
 that is merged into its patch by hand. CI's `snap-patches` job runs its `tools/build_web.sh --patches` (that step, no
-ROM) with the PR's checkout, against its main, so a web change that meets the port's lines, in a file left out or one
-that isn't yet, is red in the PR that makes it and is merged into `patches/web` there (a new file added to `files.txt`). On v0.70.0 rt64-web had changed 9 of the then 13 files since its patch was written, which
+ROM) with the PR's checkout, against its main, then compiles each C++ file of `files.txt` as the step left it (syntax
+only, as a page compiles it), so a web change that meets the port's lines, in a file left out or one that isn't yet,
+or that `--since` merges in where it applies but doesn't compile (on v0.173.0 rt64-web's `rt64_game_frame.cpp` lines
+went in with a brace left open), is red in the PR that makes it and is merged into `patches/web` there (a new file
+added to `files.txt`). On v0.70.0 rt64-web had changed 9 of the then 13 files since its patch was written, which
 the build had left out with nothing said. Two of that merge's choices: in `rt64_vi.cpp` frames of uneven VIs
 interpolate as the web has them (rt64 179adb8, 7844c07) and the port's last measured rate is what's left, in place of
 0; in `RasterPS.hlsl` a decal pipeline with `DECAL_DEPTH_BOUNDS` writes the web's bound as its depth (rt64 0560318), and
