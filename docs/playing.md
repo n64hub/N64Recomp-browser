@@ -274,7 +274,10 @@ click plays (the game's page in a frame, or the tab goes to the page where the p
 the game's page is on another origin; never a new tab; on a phone, fullscreen in landscape from that tap, and never
 upright: when the phone leaves landscape, at the ROM picker or Back, the game is covered until a tap locks it again),
 and under it its credit, a link to the game's repo ("Web port") and the
-recomp it is based on (the Recomp cell); the art names the game, so no line does. The header says what the page is
+recomp it is based on (the Recomp cell); the art names the game, so no line does. Over the art's corners are
+its game's critics' score (`SCORES` in `site.js`, the average of its N64 reviews on Wikipedia, as its tooltip says) and a
+floppy where this browser, or the signed-in player's Drive, holds a save of it, and above the grid the player sorts the
+tiles by name (the default), score or saves (the game saved last first), which the browser remembers. The header says what the page is
 and whose the recomps are, What's new under it the first three entries of `site/news.html`, which it links, and a line under the games that it is written with AI, with the link to this repo. It
 shows no frame rates: every game plays smoothly but in Firefox on a laptop's built-in graphics, so only there does
 the header warn (`site.js`); a retest that finds otherwise changes that warning. Firefox on a phone plays no game, so
@@ -303,6 +306,7 @@ it current in the same work as what changes it:
   logo 640 wide with its transparency, an icon 256. `site.js`'s `ART` says how the tile shows it (cover, cover
   unnamed, logo, icon); without one a tile shows a title card, which needs nothing. Clear `sessionStorage` between
   two game pages in one tab, or the second can show the isolation notice (`coi_serviceworker.js`'s reload flag).
+  It gets its score in `site.js`'s `SCORES` too, from its Wikipedia article's review table as `SCORES` says.
 - `node tools/serve_site.mjs` serves it at `http://localhost:8742/` and passes every other path to
   GitHub Pages. `site.js` says how the frame stays cross-origin isolated, why it is navigated by `location.replace`
   (Back returns to the grid) and why fullscreen is the game page's own document.
