@@ -633,8 +633,10 @@ builds frames that fast where a console's never does. Another drops what would r
 engine's queue of calls, 250 long and never checked: each retrace adds the stops of finished voices until an audio
 frame runs them, and a list RT64 takes long to read (lavapipe building a pipeline) holds back the audio task, so
 after about 84 retraces the queue overwrote the voice table after it and the game called garbage ("Failed to find
-function"). Its code is three sections read out of ROM
-once at boot, with no overlays. The loops where the game waits on its controller thread (a Controller Pak request,
+function"). A third keeps the last event in the music's sequence player's pool for the event that wakes the player each
+audio frame: the MIDI messages the game sends while its audio is held back can use the pool up, and the player's loop
+then spins for good (Goin' Quackers froze so on lavapipe). Its code is three sections read out of ROM once at boot,
+with no overlays. The loops where the game waits on its controller thread (a Controller Pak request,
 each frame's read of the controllers) let the other threads run, and the idle thread's watchdog, which reads
 libultra's thread states where the runtime keeps its own, is parked. It saves only to a Controller Pak, which port 1
 reports. Its audio microcode is `aspMain`, recompiled by RSPRecomp. On a picture wider than 4:3 the 3D reaches the
@@ -649,11 +651,10 @@ matching. Its README, CLAUDE.md and docs/web.md have the rest.
 recomp (GPL-3.0), with RecompFrontend's launcher and menus, released for Windows and Linux and in the browser. It runs on the engine of Rayman 2's N64
 version, so its symbols are written from the ROM as Rayman 2's are and its hooks are Rayman 2's found again at this
 game's addresses: the waits on its controller thread that let the other threads run, the parked idle watchdog, one
-frame a VI, the sound queue that drops what would run past its end, the RSP's done message once RT64 has read a list
-(`runtime-patches/`), the Controller Pak on port 1. One is its own: the last event in the music's sequence player's
-pool is kept for the event that wakes the player each audio frame, since the MIDI messages the game sends while its
-audio is held back (on lavapipe, at the title's first attract demo) used the pool up and froze the game. It is on the
-same rt64, N64ModernRuntime and RecompFrontend commits as Rayman 2 (`patches/pins.txt`). On a picture wider than 4:3
+frame a VI, the sound queue that drops what would run past its end, the music's sequence player's last event kept for
+its wake-up (found here first: without it the game froze at the title's first attract demo on lavapipe), the RSP's
+done message once RT64 has read a list (`runtime-patches/`), the Controller Pak on port 1. It is on the same rt64,
+N64ModernRuntime and RecompFrontend commits as Rayman 2 (`patches/pins.txt`). On a picture wider than 4:3
 the 3D reaches the window's edges and its HUD the picture's sides; the scene transition, a spiral of black the CPU
 writes into the frame, is stretched across it by `RT64_STRETCH_CPU_CHANGES`, and the grey stone plate the newscast
 that starts a new game opens behind, a 3D quad just in front of the camera sized to the 4:3 screen, by
