@@ -64,12 +64,13 @@ function tile(game, index) {
     cover.append(art);
   }
   cover.append(el('span', { className: 'card-title' }, ...titleCard(game.name)));
-  // Its Metacritic score at the art's top right, and a floppy at its top left once this browser or the player's Drive
+  // Its score (SCORES) at the art's top right, and a floppy at its top left once this browser or the player's Drive
   // holds a save of it (showSaves()).
   const score = SCORES[game.repoName];
   if (score) {
-    cover.append(el('span', { className: 'score', textContent: score,
-      title: `Metacritic score: ${score}`, ariaLabel: `Metacritic score ${score}` }));
+    const about = SCORE_NOTES[game.repoName];
+    const said = about ? `Score ${score}: ${about}` : `Metacritic score: ${score}`;
+    cover.append(el('span', { className: 'score', textContent: score, title: said, ariaLabel: said }));
   }
   cover.append(Object.assign(el('span', { className: 'saved', title: 'You have saves of this game', role: 'img',
     ariaLabel: 'Has saves', hidden: true }), { innerHTML: FLOPPY }));
@@ -99,9 +100,9 @@ const ART = {
   'GoldenEye64Recomp-web': 'icon', 'MarioKart64Recomp-web': 'icon', 'Starfox64Recomp-web': 'icon', 'Zelda64Recomp-web': 'icon',
 };
 
-// Each game's Metacritic score (its Metascore, the critics'), for the N64 version, by its Repo cell. A game Metacritic has
-// no score for (too few reviews, or never released) has none here, and sorts last by score: Racer, Rush 2, 1080°,
-// Dinosaur Planet and Mario Party 2.
+// Each game's score by its Repo cell: its N64 version's Metascore, read off its Metacritic page, or where Metacritic has
+// none (too few reviews), the mean of its N64 reviews in its Wikipedia article's Reception table, each made 0-100 as
+// Metacritic makes them, and then SCORE_NOTES says what it is. A game with neither has none, and sorts last by score.
 const SCORES = {
   'oot-recompiled-web': 99, 'perfect-dark-recomp': 97, 'GoldenEye64Recomp-web': 96, 'Zelda64Recomp-web': 95,
   'super-mario-64-recomp': 94, 'paper-mario-recomp': 93, 'BanjoRecomp-web': 92, 'CBFD-Recompiled-web': 92,
@@ -109,6 +110,17 @@ const SCORES = {
   'rayman-2-recomp': 90, 'Starfox64Recomp-web': 88, 'DKR-R-web': 88, 'rush-2049-recomp': 86, 'f-zero-x-recomp': 85,
   'MarioKart64Recomp-web': 83, 'pilotwings-64-recomp-web': 80, 'JetForceGemini-Recomp-web': 80,
   'mario-party-recomp': 79, 'super-smash-bros-recomp': 79, 'Snap64Recomp-web': 77, 'mario-party-3-recomp': 74,
+  '1080-Snowboarding-recomp-web': 86, 'dino-recomp-web': 82, 'mario-party-2-recomp': 77, 'racer-web': 74,
+  'rush2recompiled-web': 74,
+};
+// A score that isn't the game's own Metascore, as its tile's tooltip says it. Dinosaur Planet was never released: it
+// became Star Fox Adventures on the GameCube.
+const SCORE_NOTES = {
+  '1080-Snowboarding-recomp-web': "the average of 13 critics' reviews (Metacritic has too few for a score)",
+  'mario-party-2-recomp': "the average of 18 critics' reviews (Metacritic has too few for a score)",
+  'racer-web': "the average of 7 critics' reviews (Metacritic has too few for a score)",
+  'rush2recompiled-web': "the average of 12 critics' reviews (Metacritic has too few for a score)",
+  'dino-recomp-web': "Star Fox Adventures' Metacritic score, the game Dinosaur Planet became",
 };
 
 // A floppy disk: blue, its metal shutter at the top and its white label below.
