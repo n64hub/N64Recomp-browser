@@ -50,7 +50,8 @@ function el(tag, props, ...children) {
 }
 
 function tile(game, index) {
-  // Its colour: the golden angle on from the tile before's, so neighbours never share one.
+  // Its colour: the golden angle on from the tile before's by name, so neighbours never share one in that order, and a
+  // game keeps its colour in the others.
   const h = Math.round(index * 137.5) % 360;
   // The game's art (ART), on a title card, its name on a colour of its own, where the art doesn't name it. The tile has
   // no name line. The art is the Play button: a click on it, or Enter or Space on it, plays.
@@ -63,6 +64,15 @@ function tile(game, index) {
     cover.append(art);
   }
   cover.append(el('span', { className: 'card-title' }, ...titleCard(game.name)));
+  // Its Metacritic score at the art's top right, coloured as Metacritic colours it, and a floppy at its top left once
+  // this browser or the player's Drive holds a save of it (showSaves()).
+  const score = SCORES[game.repoName];
+  if (score) {
+    cover.append(el('span', { className: 'score ' + (score >= 75 ? 'good' : score >= 50 ? 'mixed' : 'bad'),
+      textContent: score, title: `Metacritic score: ${score}`, ariaLabel: `Metacritic score ${score}` }));
+  }
+  cover.append(Object.assign(el('span', { className: 'saved', title: 'You have saves of this game', role: 'img',
+    ariaLabel: 'Has saves', hidden: true }), { innerHTML: FLOPPY }));
   cover.addEventListener('click', () => openGame(game));
   cover.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -88,6 +98,56 @@ const ART = {
   'super-smash-bros-recomp': 'icon', 'paper-mario-recomp': 'icon', 'rayman-2-recomp': 'icon',
   'GoldenEye64Recomp-web': 'icon', 'MarioKart64Recomp-web': 'icon', 'Starfox64Recomp-web': 'icon', 'Zelda64Recomp-web': 'icon',
 };
+
+// Each game's Metacritic score (its Metascore, the critics'), for the N64 version, by its Repo cell. A game Metacritic has
+// no score for (too few reviews, or never released) has none here, and sorts last by score: Racer, Rush 2, 1080°,
+// Dinosaur Planet and Mario Party 2.
+const SCORES = {
+  'oot-recompiled-web': 99, 'perfect-dark-recomp': 97, 'GoldenEye64Recomp-web': 96, 'Zelda64Recomp-web': 95,
+  'super-mario-64-recomp': 94, 'paper-mario-recomp': 93, 'BanjoRecomp-web': 92, 'CBFD-Recompiled-web': 92,
+  'wave-race-64-recomp-web': 92, 'Donkey-Kong-64-Recompiled-web': 90, 'BanjoTooieRecompiled-web': 90,
+  'rayman-2-recomp': 90, 'Starfox64Recomp-web': 88, 'DKR-R-web': 88, 'rush-2049-recomp': 86, 'f-zero-x-recomp': 85,
+  'MarioKart64Recomp-web': 83, 'pilotwings-64-recomp-web': 80, 'JetForceGemini-Recomp-web': 80,
+  'mario-party-recomp': 79, 'super-smash-bros-recomp': 79, 'Snap64Recomp-web': 77, 'mario-party-3-recomp': 74,
+};
+
+// A floppy disk: blue, its metal shutter at the top and its white label below.
+const FLOPPY = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+  '<path fill="#3d7be0" d="M4 2h14l4 4v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>' +
+  '<path fill="#d5dbe6" d="M7 2h10v7H7z"/><path fill="#3d7be0" d="M13 3.5h2.5v4H13z"/>' +
+  '<rect fill="#fff" x="5" y="12.5" width="14" height="8" rx="1"/></svg>';
+
+// The grid's orders, the tiles a player can sort by (#sort): name, the default, as the table's games read without a
+// leading "The"; Metacritic score, best first; or saves, the game saved last first and those without by name.
+const title = (g) => g.name.replace(/^The /, '');
+const byName = (a, b) => title(a).localeCompare(title(b));
+let lastSaved = new Map();  // game id -> its newest save's time (showSaves())
+const ORDERS = {
+  name: byName,
+  score: (a, b) => (SCORES[b.repoName] ?? -1) - (SCORES[a.repoName] ?? -1) || byName(a, b),
+  saves: (a, b) => (lastSaved.get(b.id) ?? 0) - (lastSaved.get(a.id) ?? 0) || byName(a, b),
+};
+// The order the player last picked, kept in this browser.
+let order = ORDERS[localStorage.getItem('hub-sort')] ? localStorage.getItem('hub-sort') : 'name';
+const tiles = new Map();  // game id -> its tile
+function sortGrid() {
+  document.getElementById('grid').append(...[...games].sort(ORDERS[order]).map((g) => tiles.get(g.id)));
+  for (const b of document.querySelectorAll('#sort button')) b.ariaPressed = String(b.value === order);
+}
+document.getElementById('sort').addEventListener('click', (event) => {
+  const value = event.target.closest('button')?.value;
+  if (!value) return;
+  order = value;
+  localStorage.setItem('hub-sort', order);
+  sortGrid();
+});
+
+// The floppies and the order by saves, from the games' newest save times (game id -> time).
+function showSaves(times) {
+  lastSaved = times;
+  for (const [id, t] of tiles) t.querySelector('.saved').hidden = !times.has(id);
+  if (order === 'saves') sortGrid();
+}
 
 // A title card's text: "The Legend of Zelda: Majora's Mask" as the series, small, over "Majora's Mask".
 function titleCard(name) {
@@ -217,7 +277,7 @@ async function openGame(game, push = true) {
 function hideGame() {
   if (frame.contentDocument?.fullscreenElement) frame.contentDocument.exitFullscreen();
   else if (document.fullscreenElement) document.exitFullscreen();  // a phone's (landscape()); it unlocks the orientation
-  frame.addEventListener('load', uploadSaves, { once: true });
+  frame.addEventListener('load', checkSaves, { once: true });
   showFrame('about:blank');  // ends the game: its threads and sound go with the document
   player.hidden = true;
   document.body.classList.remove('playing');
@@ -402,14 +462,23 @@ async function localSaves() {
   return { saves: local, folders };
 }
 
-// Signed in, the saves this browser holds that changed since they last synced go up, as a game's page sends them: when
-// the hub loads without opening a game, and when a game closes. A page built before frontend/save_sync.js sends none of
-// its own, and one that does has sent them already. The Drive's that changed, and a save changed on both sides, are
+// When the hub loads without opening a game, and when a game closes, the tiles show which games have saves in this
+// browser (showSaves()), and signed in, the saves this browser holds that changed since they last synced go up, as a
+// game's page sends them, and then the tiles show the Drive's too. A page built before frontend/save_sync.js sends none
+// of its own, and one that does has sent them already. The Drive's that changed, and a save changed on both sides, are
 // left for the game's page to settle at its start.
-function uploadSaves() {
-  if (!GOOGLE_CLIENT_ID || signingIn || !SaveSync.token()) return;
-  localSaves().then(({ saves }) => SaveSync.sync(saves))
-    .catch((error) => console.error('Save sync: could not upload: ' + error.message));
+function checkSaves() {
+  localSaves().then(async ({ saves, folders }) => {
+    const times = new Map();
+    const saw = (game, time) => game && times.set(game.id, Math.max(times.get(game.id) ?? 0, time || 1));
+    for (const [path, { time }] of saves) saw(gameOf(SaveSync.game(path), folders), time);
+    showSaves(times);
+    if (!GOOGLE_CLIENT_ID || signingIn || !SaveSync.token()) return;
+    await SaveSync.sync(saves).catch((error) => console.error('Save sync: could not upload: ' + error.message));
+    const { saves: drive } = await SaveSync.listing();
+    for (const f of drive) saw(gameOf(SaveSync.game(f.path), folders, drive), f.time);
+    showSaves(times);
+  }).catch((error) => console.error('Could not read the saves: ' + error.message));
 }
 
 // A game by its program id, from its page's folder: where its saves are in this browser (folders, localSaves()), or
@@ -650,13 +719,14 @@ async function main() {
     return;
   }
   listSaves();
-  const title = (g) => g.name.replace(/^The /, '');
-  const sorted = [...games].sort((a, b) => title(a).localeCompare(title(b)));
-  grid.replaceChildren(...sorted.map((g, i) => tile(g, i)));
+  [...games].sort(byName).forEach((g, i) => tiles.set(g.id, tile(g, i)));
+  grid.replaceChildren();
+  sortGrid();
+  document.getElementById('sort').hidden = false;
   const game = gameFromHash();
   // Not before coi_serviceworker.js's reload, nor while a sign-in asks whose saves to keep.
   if (game && window.crossOriginIsolated && !signingIn) openGame(game, false);
-  else uploadSaves();
+  else checkSaves();
 }
 
 // What's new: the first few entries of news.html's list, which holds them all, above the grid.

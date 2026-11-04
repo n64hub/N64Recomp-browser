@@ -135,6 +135,13 @@ footer .source { white-space: nowrap; }
 
 /* Tiles of 200 px or more: six columns on a laptop's screen and wider (the page is 1440 px at most), so 18 games are
    one screen, five at 1280 px, fewer on a tablet. */
+/* The order of the tiles: a row of buttons at the right above them, the one in use lit. */
+.sort { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: 0 0 10px; color: var(--dim); font-size: 13px; }
+.sort[hidden] { display: none; }
+.sort span { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.sort button { padding: 3px 12px; font-size: 13px; color: var(--dim); background: none; border: 0; border-radius: 6px; }
+.sort button:hover { color: var(--text); background: #2a3040; }
+.sort button[aria-pressed="true"] { color: var(--text); background: #2f5fd0; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 
 .tile {
@@ -149,6 +156,18 @@ footer .source { white-space: nowrap; }
     radial-gradient(circle at 80% 20%, hsl(calc(var(--h) + 40) 80% 60% / 0.55), transparent 55%),
     linear-gradient(135deg, hsl(var(--h) 65% 32%), hsl(calc(var(--h) + 60) 55% 14%));
 }
+/* Over the art's corners: its Metacritic score at the top right, in Metacritic's colours, and at the top left a floppy
+   when the game has saves. Over the ▶ a pointer brings up too. */
+.art .score, .art .saved { position: absolute; z-index: 1; top: 6px; display: grid; place-items: center;
+  border-radius: 5px; box-shadow: 0 2px 6px rgb(0 0 0 / 0.5); }
+.art .score { right: 6px; min-width: 28px; height: 24px; padding: 0 4px; font-size: 14px; font-weight: 800; color: #111;
+  font-variant-numeric: tabular-nums; }
+.art .score.good { background: #66cc33; }
+.art .score.mixed { background: #ffcc33; }
+.art .score.bad { background: #ff6874; }
+.art .saved { left: 6px; width: 24px; height: 24px; padding: 2px; color: #e7e9ef; background: rgb(14 16 22 / 0.75); }
+.art .saved[hidden] { display: none; }
+.art .saved svg { width: 100%; height: 100%; }
 /* The title card: hidden behind art that names the game, beside an icon. */
 .card-title small { display: block; margin-bottom: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
 .card-title {
@@ -197,6 +216,9 @@ footer .source { white-space: nowrap; }
   .art.unnamed .card-title { padding: 8px 5px 4px; font-size: 11px; }
   .body { padding: 5px 6px; }
   .recomp { font-size: 9px; }
+  .art .score, .art .saved { top: 3px; height: 18px; border-radius: 4px; }
+  .art .score { right: 3px; min-width: 22px; padding: 0 3px; font-size: 11px; }
+  .art .saved { left: 3px; width: 18px; padding: 2px; }
 }
 
 button {
