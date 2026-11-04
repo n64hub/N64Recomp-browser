@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 963c03717d4843b970e3a31edaf5c306b69212ea
+rt64: https://github.com/n64hub/rt64-web 0dac156fbd5328586ff2597a4623c751743756c7
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3837,7 +3837,7 @@ index 8858dac..a9417c7 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..0191c92 100644
+index 2970e71..86b3124 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -3923,16 +3923,16 @@ index 2970e71..0191c92 100644
  
          // Add the draw call to the FB pair.
          GameCall gameCall;
-@@ -525,6 +565,9 @@ namespace RT64 {
-         drawCall.minWorldMatrix = USHRT_MAX;
-         drawCall.maxWorldMatrix = 0;
-         drawCall.triangleCount = 0;
+@@ -522,6 +562,9 @@ namespace RT64 {
+         drawCall.rectDtdy = 0;
+         drawCall.loadIndex = 0;
+         drawCall.loadCount = 0;
 +        drawCall.coverCorners = 0;
 +        drawCall.coverPossible = true;
 +        drawCall.coversViewport = false;
-     }
-     
-     void State::submitFramebufferPair(FramebufferPair::FlushReason flushReason) {
+         drawCall.minWorldMatrix = USHRT_MAX;
+         drawCall.maxWorldMatrix = 0;
+         drawCall.triangleCount = 0;
 @@ -577,7 +620,41 @@ namespace RT64 {
              }
  
@@ -6203,7 +6203,7 @@ index 69a82ac..1dd31f7 100644
              dstNorm = builder.addReadWriteStructuredBuffer(9);
              dstVel = builder.addReadWriteStructuredBuffer(10);
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index 9fae0d4..5ce575f 100644
+index 9fae0d4..fe10ef3 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -151,6 +151,7 @@ namespace RT64 {
@@ -6428,10 +6428,10 @@ index 9fae0d4..5ce575f 100644
                          triangles.vertexTestZ = (vertexTestZCallIndex >= 0);
                          triangles.postBlendDitherNoise = false;
  
-@@ -1631,6 +1709,16 @@ namespace RT64 {
-                             instanceDrawCall.type = InstanceDrawCall::Type::IndexedTriangles;
-                             triangles.indexStart = triangles.vertexTestZ ? vertexTestZFaceIndicesStart : call.meshDesc.faceIndicesStart;
-                             invRatioScale = projInvRatioScale;
+@@ -1628,6 +1706,16 @@ namespace RT64 {
+                         switch (proj.type) {
+                         case Projection::Type::Perspective:
+                         case Projection::Type::Orthographic: {
 +#                       if RT64_STRETCH_SCREEN_COVERS
 +                            // A screen cover (RSP::drawIndexedTri) in a perspective viewport widened to the picture (its
 +                            // projInvRatioScale 1 in a picture wider than 4:3, drawn at a screen scale of 1) is stretched
@@ -6442,9 +6442,9 @@ index 9fae0d4..5ce575f 100644
 +                                triangles.screenScale.x = call.callDesc.coversViewport ? aspectRatioScale : 1.0f;
 +                            }
 +#                       endif
-                             break;
-                         }
-                         case Projection::Type::Rectangle: {
+                             instanceDrawCall.type = InstanceDrawCall::Type::IndexedTriangles;
+                             triangles.indexStart = triangles.vertexTestZ ? vertexTestZFaceIndicesStart : call.meshDesc.faceIndicesStart;
+                             invRatioScale = projInvRatioScale;
 @@ -1760,7 +1848,215 @@ namespace RT64 {
          checkRasterScene(rasterScene);
      }
