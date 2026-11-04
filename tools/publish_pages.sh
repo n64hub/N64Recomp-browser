@@ -213,6 +213,13 @@ patched() {
     [[ -d $b/N64Recomp-browser ]] || b=tools
     git -C $b/N64Recomp-browser rev-parse HEAD > ../patched
 }
+# failed_log <log>: a failed build's error, from the first line that says so (ninja's FAILED:, a compiler's or CMake's
+# error), else its last lines: with parallel jobs a build's last lines are other files that went on compiling.
+failed_log() {
+    local at
+    at="$(grep -n -m1 -E '^FAILED: |error:|CMake Error' "$1" | cut -d: -f1 || true)"
+    if [[ -n $at ]]; then sed -n "$at,$((at + 30))p" "$1"; else tail -20 "$1"; fi
+}
 # keep_times <dir>... -- <command>: a file the command writes the same as before keeps its old time, so the build
 # recompiles only what the recompiler changed (it rewrites everything).
 keep_times() {
@@ -348,7 +355,7 @@ build_pw() {
 }
 build_bt() {
     embuilder build sdl2-mt freetype-legacysjlj > /dev/null 2>&1
-    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_mk64() {
     [[ -f mk64.us.z64 ]] || cp ../rom.z64 mk64.us.z64
@@ -364,93 +371,93 @@ build_sf64() {
     web Starfox64Recompiled
 }
 build_oot() {
-    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_jfg() {
-    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_racer() {
-    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 
 build_dkr() {
     # Patches its dependencies from clean whenever N64Recomp-browser or its patches moved (build/web-patched).
-    bash scripts/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash scripts/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_snap() {
     # Patches its submodules from clean whenever N64Recomp-browser or patches/web moved (build-web-prep/web-patched).
-    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_rush2() {
     # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
     # (build-web-prep/web-patched).
-    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_1080() {
     # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
     # (build-web-prep/web-patched).
-    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_dino() {
     # Builds Dinomod Enhanced from the ROM too, once per ROM and Dinomod commit; the page holds only a delta to it.
-    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Runs on the host (on_host): both scripts start Docker images of their own. The decomp's build checks the ROM, and
 # makes the relink and syms/ the recompilation is made from (incremental after the first run).
 build_pd() {
-    bash tools/build_decomp.sh ../rom.z64 "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_decomp.sh ../rom.z64 "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
     git diff --quiet syms || { echo "tools/build_decomp.sh changed syms/: main's are not this ROM's"; exit 1; }
-    bash tools/build_web.sh "$BUILD_CPUS" >> ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" >> ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Its tools/build_web.sh recompiles from roms/sm64.us.z64 (the syms/ are in git) and builds the page, in its own image.
 build_sm64() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/sm64.us.z64 || cp ../rom.z64 roms/sm64.us.z64
-    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Its tools/build_web.sh recompiles from roms/fzerox.us.z64 (the syms/ are in git) and builds the page, in its own
 # image.
 build_fzx() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/fzerox.us.z64 || cp ../rom.z64 roms/fzerox.us.z64
-    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Its tools/build_web.sh recompiles from roms/marioparty.us.z64 (the syms/ are in git) and builds the page, in its own
 # image.
 build_mp1() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/marioparty.us.z64 || cp ../rom.z64 roms/marioparty.us.z64
-    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Mario Party 2's, the same from roms/marioparty2.us.z64.
 build_mp2() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/marioparty2.us.z64 || cp ../rom.z64 roms/marioparty2.us.z64
-    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Mario Party 3's, the same from roms/marioparty3.us.z64.
 build_mp3() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/marioparty3.us.z64 || cp ../rom.z64 roms/marioparty3.us.z64
-    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Super Smash Bros.'s, the same from roms/smashbrothers.us.z64.
 build_ssb() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/smashbrothers.us.z64 || cp ../rom.z64 roms/smashbrothers.us.z64
-    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Paper Mario's, the same from roms/papermario.us.z64.
 build_pm() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/papermario.us.z64 || cp ../rom.z64 roms/papermario.us.z64
-    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Rayman 2's, the same from roms/rayman2.us.z64.
 build_r2() {
     mkdir -p roms
     cmp -s ../rom.z64 roms/rayman2.us.z64 || cp ../rom.z64 roms/rayman2.us.z64
-    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
+    bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 on_host=" pd sm64 fzx mp1 mp2 mp3 ssb pm r2 "
 
@@ -576,12 +583,12 @@ for g in "${selected[@]}"; do
         echo "   sync failed:"; tail -5 "$work/$g.log"; failed+=("$g"); continue
     elif [[ $g == rush ]]; then
         again_dirty $copy "$work/$g.log" bash "$remote_build" -n $copy build ||
-            { echo "   build failed:"; tail -20 "$work/$g.log"; failed+=("$g"); continue; }
+            { echo "   build failed:"; failed_log "$work/$g.log"; failed+=("$g"); continue; }
     else
         rom="${ROMS:?set ROMS to the folder holding <game>.z64}/$g.z64"
         have="$(ssh -o BatchMode=yes "$BUILD_HOST" "sha1sum rush2049/$copy/rom.z64 2> /dev/null || true")"  # remote_build.sh's base
         [[ "$have" == "$(sha1sum < "$rom" | cut -c1-40) "* ]] || scp -q "$rom" "$BUILD_HOST:rush2049/$copy/rom.z64"
-        script="set -euo pipefail; trap 'echo \"failed: \$BASH_COMMAND\" >&2' ERR; $(declare -f exclude browser_at unpatch patched keep_times n64recomp web build_$g); exclude;
+        script="set -euo pipefail; trap 'echo \"failed: \$BASH_COMMAND\" >&2' ERR; $(declare -f exclude browser_at unpatch patched failed_log keep_times n64recomp web build_$g); exclude;
             $at unpatch; build_$g; patched"
         if [[ $on_host == *" $g "* ]]; then
             # In the copy as remote_build.sh's run is, holding its lock, but outside its image.
@@ -590,7 +597,7 @@ for g in "${selected[@]}"; do
             run=(bash "$remote_build" -n $copy run "$script")
         fi
         if ! again_dirty $copy "$work/$g.log" "${run[@]}"; then
-            echo "   build failed:"; tail -20 "$work/$g.log"; failed+=("$g"); continue
+            echo "   build failed:"; failed_log "$work/$g.log"; failed+=("$g"); continue
         fi
     fi
     [[ -n $played_dir ]] || built="$(bash "$remote_build" -n $copy run "$(declare -f files hashes); cd $dir && hashes $name")"
