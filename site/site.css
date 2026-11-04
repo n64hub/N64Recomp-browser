@@ -160,7 +160,7 @@ footer .source { white-space: nowrap; }
    floppy when the game has saves. Over the ▶ a pointer brings up too. */
 .art .score, .art .saved { position: absolute; z-index: 1; top: 6px; display: grid; place-items: center;
   border-radius: 5px; box-shadow: 0 2px 6px rgb(0 0 0 / 0.5); }
-.art .score { right: 6px; min-width: 26px; height: 20px; padding: 0 5px; font-size: 12px; font-weight: 700;
+.art .score { right: 6px; min-width: 26px; height: 20px; padding: 0 5px; font-size: 12px; font-weight: 500;
   font-variant-numeric: tabular-nums; color: #fff; background: rgb(14 16 22 / 0.7); box-shadow: none; }
 .art .saved { left: 6px; width: 24px; height: 24px; padding: 2px; background: rgb(14 16 22 / 0.75); }
 .art .saved[hidden] { display: none; }
