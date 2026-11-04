@@ -645,6 +645,20 @@ the next level's name where the engine reads it, so a plan reaches any level fro
 `tools/play_plan_levels.json` plays every level in turn. Before rt64 5051342 its intro story crashed RT64's frame
 matching. Its README, CLAUDE.md and docs/web.md have the rest.
 
+`n64hub/donald-duck-goin-quackers-recomp` is Donald Duck: Goin' Quackers (USA), not a fork but this project's own
+recomp (GPL-3.0), with RecompFrontend's launcher and menus, held unreleased. It runs on the engine of Rayman 2's N64
+version, so its symbols are written from the ROM as Rayman 2's are and its hooks are Rayman 2's found again at this
+game's addresses: the waits on its controller thread that let the other threads run, the parked idle watchdog, one
+frame a VI, the sound queue that drops what would run past its end, the RSP's done message once RT64 has read a list
+(`runtime-patches/`), the Controller Pak on port 1. It is on the same rt64, N64ModernRuntime and RecompFrontend commits
+as Rayman 2 (`patches/pins.txt`). On a picture wider than 4:3 the 3D reaches the window's edges and its HUD the
+picture's sides; the scene transition, a spiral of black the CPU writes into the frame, is stretched across it by
+`RT64_STRETCH_CPU_CHANGES`, and the grey stone plate the newscast that starts a new game opens behind, a 3D quad just
+in front of the camera sized to the 4:3 screen, by `RT64_STRETCH_SCREEN_COVERS` (rt64 4550e10). Its list is SHADERS
+shaders in 28 sections, one a level among them, recorded by `tools/shader_plan.json` without anyone playing:
+`tools/survey.js` changes level as the game's own exits do, and `tools/play_plan_levels.json` plays every level in
+turn. Its README, CLAUDE.md and docs/web.md have the rest.
+
 ## The games' own frame rates
 
 A page presents at the display's rate whatever its game runs at (CLAUDE.md, Rules). The game's own rate, set by the
