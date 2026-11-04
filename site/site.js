@@ -73,7 +73,7 @@ function tile(game, index) {
     cover.append(el('span', { className: 'score', textContent: score, title: said, ariaLabel: said }));
   }
   cover.append(Object.assign(el('span', { className: 'saved', title: 'You have saves of this game', role: 'img',
-    ariaLabel: 'Has saves', hidden: true }), { innerHTML: FLOPPY }));
+    ariaLabel: 'Has saves', hidden: !lastSaved.has(game.id) }), { innerHTML: FLOPPY }));
   cover.addEventListener('click', () => openGame(game));
   cover.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -129,7 +129,9 @@ const FLOPPY = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
 // leading "The"; score, best first; or saves, the game saved last first and those without by name.
 const title = (g) => g.name.replace(/^The /, '');
 const byName = (a, b) => title(a).localeCompare(title(b));
-let lastSaved = new Map();  // game id -> its newest save's time (showSaves())
+// Game id -> its newest save's time (showSaves()), and until the saves are read again the times this browser last
+// read, kept in it ('hub-saved'): reading every game's database, and the Drive, takes a second or two.
+let lastSaved = new Map((() => { try { return JSON.parse(localStorage.getItem('hub-saved')) || []; } catch { return []; } })());
 const ORDERS = {
   name: byName,
   score: (a, b) => (SCORES[b.repoName]?.[0] ?? -1) - (SCORES[a.repoName]?.[0] ?? -1) || byName(a, b),
@@ -153,6 +155,7 @@ document.getElementById('sort').addEventListener('click', (event) => {
 // The floppies and the order by saves, from the games' newest save times (game id -> time).
 function showSaves(times) {
   lastSaved = times;
+  try { localStorage.setItem('hub-saved', JSON.stringify([...times])); } catch {}
   for (const [id, t] of tiles) t.querySelector('.saved').hidden = !times.has(id);
   if (order === 'saves') sortGrid();
 }
@@ -480,8 +483,9 @@ function checkSaves() {
     const times = new Map();
     const saw = (game, time) => game && times.set(game.id, Math.max(times.get(game.id) ?? 0, time || 1));
     for (const [path, { time }] of saves) saw(gameOf(SaveSync.game(path), folders), time);
-    showSaves(times);
-    if (!GOOGLE_CLIENT_ID || signingIn || !SaveSync.token()) return;
+    if (!GOOGLE_CLIENT_ID || signingIn || !SaveSync.token()) return showSaves(times);
+    // Signed in, the Drive's games keep the times last shown until it is listed, so the order doesn't jump twice.
+    showSaves(new Map([...lastSaved, ...times].map(([id]) => [id, Math.max(lastSaved.get(id) ?? 0, times.get(id) ?? 0)])));
     await SaveSync.sync(saves).catch((error) => console.error('Save sync: could not upload: ' + error.message));
     const { saves: drive } = await SaveSync.listing();
     for (const f of drive) saw(gameOf(SaveSync.game(f.path), folders, drive), f.time);
