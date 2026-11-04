@@ -66,10 +66,10 @@ function tile(game, index) {
   cover.append(el('span', { className: 'card-title' }, ...titleCard(game.name)));
   // Its score (SCORES) at the art's top right, and a floppy at its top left once this browser or the player's Drive
   // holds a save of it (showSaves()).
-  const score = SCORES[game.repoName];
+  const [score, reviews] = SCORES[game.repoName] ?? [];
   if (score) {
-    const about = SCORE_NOTES[game.repoName];
-    const said = about ? `Score ${score}: ${about}` : `Metacritic score: ${score}`;
+    const of = SCORED_AS[game.repoName];
+    const said = `Critics' average: ${score}, from ${reviews} reviews on Wikipedia${of ? ' of ' + of : ''}`;
     cover.append(el('span', { className: 'score', textContent: score, title: said, ariaLabel: said }));
   }
   cover.append(Object.assign(el('span', { className: 'saved', title: 'You have saves of this game', role: 'img',
@@ -100,28 +100,24 @@ const ART = {
   'GoldenEye64Recomp-web': 'icon', 'MarioKart64Recomp-web': 'icon', 'Starfox64Recomp-web': 'icon', 'Zelda64Recomp-web': 'icon',
 };
 
-// Each game's score by its Repo cell: its N64 version's Metascore, read off its Metacritic page, or where Metacritic has
-// none (too few reviews), the mean of its N64 reviews in its Wikipedia article's Reception table, each made 0-100 as
-// Metacritic makes them, and then SCORE_NOTES says what it is. A game with neither has none, and sorts last by score.
+// Each game's score by its Repo cell: the critics' average, [score, reviews], the mean of its N64 version's reviews in
+// its Wikipedia article's review table, each outlet once (several of its critics averaged) and made 0-100 as Metacritic
+// makes them (8.5/10 85, 4/5 80, B+ 75), other platforms' and re-releases' reviews and the aggregators' rows left out.
+// One source for every game, as Metacritic has no score for some of them and weights its outlets as it doesn't say.
 const SCORES = {
-  'oot-recompiled-web': 99, 'perfect-dark-recomp': 97, 'GoldenEye64Recomp-web': 96, 'Zelda64Recomp-web': 95,
-  'super-mario-64-recomp': 94, 'paper-mario-recomp': 93, 'BanjoRecomp-web': 92, 'CBFD-Recompiled-web': 92,
-  'wave-race-64-recomp-web': 92, 'Donkey-Kong-64-Recompiled-web': 90, 'BanjoTooieRecompiled-web': 90,
-  'rayman-2-recomp': 90, 'Starfox64Recomp-web': 88, 'DKR-R-web': 88, 'rush-2049-recomp': 86, 'f-zero-x-recomp': 85,
-  'MarioKart64Recomp-web': 83, 'pilotwings-64-recomp-web': 80, 'JetForceGemini-Recomp-web': 80,
-  'mario-party-recomp': 79, 'super-smash-bros-recomp': 79, 'Snap64Recomp-web': 77, 'mario-party-3-recomp': 74,
-  '1080-Snowboarding-recomp-web': 86, 'dino-recomp-web': 82, 'mario-party-2-recomp': 77, 'racer-web': 74,
-  'rush2recompiled-web': 74,
+  'oot-recompiled-web': [99, 14], 'super-mario-64-recomp': [96, 18], 'perfect-dark-recomp': [94, 11],
+  'Zelda64Recomp-web': [93, 14], 'GoldenEye64Recomp-web': [91, 11], 'BanjoRecomp-web': [91, 22],
+  'wave-race-64-recomp-web': [91, 11], 'Starfox64Recomp-web': [89, 9], 'f-zero-x-recomp': [87, 10],
+  'paper-mario-recomp': [87, 16], 'CBFD-Recompiled-web': [86, 14], '1080-Snowboarding-recomp-web': [86, 13],
+  'Donkey-Kong-64-Recompiled-web': [85, 12], 'pilotwings-64-recomp-web': [85, 15], 'rayman-2-recomp': [85, 6],
+  'BanjoTooieRecompiled-web': [84, 11], 'rush-2049-recomp': [84, 7], 'MarioKart64Recomp-web': [83, 18],
+  'DKR-R-web': [83, 10], 'Snap64Recomp-web': [79, 9], 'mario-party-2-recomp': [77, 18],
+  'super-smash-bros-recomp': [77, 12], 'dino-recomp-web': [77, 13], 'JetForceGemini-Recomp-web': [76, 11],
+  'racer-web': [74, 7], 'rush2recompiled-web': [74, 12], 'mario-party-recomp': [71, 13], 'mario-party-3-recomp': [71, 14],
 };
-// A score that isn't the game's own Metascore, as its tile's tooltip says it. Dinosaur Planet was never released: it
-// became Star Fox Adventures on the GameCube.
-const SCORE_NOTES = {
-  '1080-Snowboarding-recomp-web': "the average of 13 critics' reviews (Metacritic has too few for a score)",
-  'mario-party-2-recomp': "the average of 18 critics' reviews (Metacritic has too few for a score)",
-  'racer-web': "the average of 7 critics' reviews (Metacritic has too few for a score)",
-  'rush2recompiled-web': "the average of 12 critics' reviews (Metacritic has too few for a score)",
-  'dino-recomp-web': "Star Fox Adventures' Metacritic score, the game Dinosaur Planet became",
-};
+// A game scored by another's reviews: Dinosaur Planet was never released, and became Star Fox Adventures on the
+// GameCube.
+const SCORED_AS = { 'dino-recomp-web': 'Star Fox Adventures, the game Dinosaur Planet became' };
 
 // A floppy disk: blue, its metal shutter at the top and its white label below.
 const FLOPPY = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
@@ -130,13 +126,13 @@ const FLOPPY = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
   '<rect fill="#fff" x="5" y="12.5" width="14" height="8" rx="1"/></svg>';
 
 // The grid's orders, the tiles a player can sort by (#sort): name, the default, as the table's games read without a
-// leading "The"; Metacritic score, best first; or saves, the game saved last first and those without by name.
+// leading "The"; score, best first; or saves, the game saved last first and those without by name.
 const title = (g) => g.name.replace(/^The /, '');
 const byName = (a, b) => title(a).localeCompare(title(b));
 let lastSaved = new Map();  // game id -> its newest save's time (showSaves())
 const ORDERS = {
   name: byName,
-  score: (a, b) => (SCORES[b.repoName] ?? -1) - (SCORES[a.repoName] ?? -1) || byName(a, b),
+  score: (a, b) => (SCORES[b.repoName]?.[0] ?? -1) - (SCORES[a.repoName]?.[0] ?? -1) || byName(a, b),
   saves: (a, b) => (lastSaved.get(b.id) ?? 0) - (lastSaved.get(a.id) ?? 0) || byName(a, b),
 };
 // The order the player last picked, kept in this browser.

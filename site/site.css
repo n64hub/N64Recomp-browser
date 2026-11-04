@@ -156,7 +156,7 @@ footer .source { white-space: nowrap; }
     radial-gradient(circle at 80% 20%, hsl(calc(var(--h) + 40) 80% 60% / 0.55), transparent 55%),
     linear-gradient(135deg, hsl(var(--h) 65% 32%), hsl(calc(var(--h) + 60) 55% 14%));
 }
-/* Over the art's corners: its Metacritic score at the top right, quietly, white on a dark chip, and at the top left a
+/* Over the art's corners: its critics' score at the top right, quietly, white on a dark chip, and at the top left a
    floppy when the game has saves. Over the ▶ a pointer brings up too. */
 .art .score, .art .saved { position: absolute; z-index: 1; top: 6px; display: grid; place-items: center;
   border-radius: 5px; box-shadow: 0 2px 6px rgb(0 0 0 / 0.5); }
