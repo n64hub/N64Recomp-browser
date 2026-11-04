@@ -724,6 +724,10 @@ RecompFrontend 197853d a page rumbles the gamepad behind a joystick by the brows
 RecompFrontend 060709f a gamepad already there as SDL starts (pressed as the page loads) is opened: the pointer lock's
                        filter went in with SDL_SetEventFilter, which empties SDL's queue, the SDL_CONTROLLERDEVICEADDED
                        SDL_Init queued for it included, so the pad played nothing until plugged in again
+RecompFrontend 0564a83 an SDL_QUIT with no window close before it quits a running game at once, on every build: SDL sends
+                       one for SIGTERM and SIGINT (a session logging out, timeout, Ctrl+C), and the quit prompt it
+                       opened had nobody to answer it, so a Linux build ended only at a SIGKILL. A window's close
+                       still asks first
 N64ModernRuntime       load_overlays loads nothing for a ROM range inside one section, on every build: its first
 8d99dc5                section starting in the range came after the first ending past it, and the loop waited to meet
                        it, walking off the section table into load_overlay (a game reading an overlay in pieces, as
