@@ -49,8 +49,9 @@ builds it: a game's `rt64_shaders.txt` (its header says what was played and what
 - A list added to a build already configured is left out of it until CMake runs again: a game's CMakeLists.txt sets
   `RT64_PREBUILT_SHADER_LIST` only if `src/rt64_shaders.txt` exists, and a commit that adds only the list gives ninja
   nothing to reconfigure for. That page counts no misses, since RT64 learns them only against a list, and Firefox
-  draws everything in it with the ubershader (Goin' Quackers' main pass 20 ms a present against 2.5 with its list), so
-  `play_page.mjs` fails a play whose page never says how many prebuilt shaders it has.
+  draws everything in it with the ubershader: Goin' Quackers' page presented 47 a second there (its main pass 20 ms of
+  GPU a present) and 260 built again with its list, uncapped at 3840x2000 on a desktop GPU. So `play_page.mjs` fails a
+  play whose page never says how many prebuilt shaders it has.
 - Recording: `?record-shaders` prebuilds none and prints an `rt64 shader:` line per description, in the order the game
   asks; add the new ones. `tools/record_shaders.mjs` records from a plan. A game with many levels records by code: a
   survey in its patches library or in JavaScript reaches each level as its own code would (`patches/shader_survey.c` or

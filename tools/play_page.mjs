@@ -708,7 +708,7 @@ try {
   if (!recordFile && !jsonFile) await finish(1);
 }
 if (slept && !failure) { log(`failed: ${slept}`); failure = slept; }
-if (!failure && prebuiltShaders === null && !/record-shaders/.test(query) && during.some((s) => s.presents > 0)) {
+if (!failure && prebuiltShaders === null && !/record-shaders/.test(query) && samples.some((s) => s.playing && s.presents > 0)) {
   failure = 'the page has no prebuilt shader list (RT64 never said "RT64: <n> prebuilt shaders"): configure its build again';
   log(`failed: ${failure}`);
 }
