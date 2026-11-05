@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web 0564a83e3ca16e3b3a6ede5da2c24620a5bc3bbe
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web 369e60680674cc3f30b2cfead2c0f05330079408
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
@@ -70,7 +70,7 @@ index 45bedd1..d6819a0 100644
          int get_sp_controller_profile_index();
          int get_sp_keyboard_profile_index();
 diff --git a/recompinput/src/input_events.cpp b/recompinput/src/input_events.cpp
-index c76a1dc..34052b0 100644
+index c76a1dc..5796e14 100644
 --- a/recompinput/src/input_events.cpp
 +++ b/recompinput/src/input_events.cpp
 @@ -5,6 +5,12 @@
@@ -86,7 +86,7 @@ index c76a1dc..34052b0 100644
  static struct {
      std::list<std::filesystem::path> files_dropped;
  } DropState;
-@@ -38,6 +44,74 @@ void purge_deferred_controller_profiles() {
+@@ -38,7 +44,79 @@ void purge_deferred_controller_profiles() {
      deferred_controller_profiles.clear();
  }
  
@@ -159,9 +159,14 @@ index c76a1dc..34052b0 100644
 +static bool window_closed = false;
 +
  bool sdl_event_filter(void* userdata, SDL_Event* event) {
++    // Before the switch, so each upstream's own handling of window events below stays as it is.
++    if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_CLOSE) {
++        window_closed = true;
++    }
      switch (event->type) {
      case SDL_EventType::SDL_KEYDOWN:
-@@ -95,6 +169,13 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
+     {
+@@ -95,6 +173,13 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
                  profiles::add_controller(guid, profile_index);
              }
          }
@@ -175,16 +180,9 @@ index c76a1dc..34052b0 100644
      }
      break;
      case SDL_EventType::SDL_CONTROLLERDEVICEREMOVED:
-@@ -104,8 +185,19 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
-         recompinput::remove_controller_state(controller_event->which);
+@@ -105,7 +190,12 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
      }
      break;
-+    case SDL_EventType::SDL_WINDOWEVENT:
-+        if (event->window.event == SDL_WINDOWEVENT_CLOSE) {
-+            window_closed = true;
-+        }
-+        queue_if_enabled(event);
-+        break;
      case SDL_EventType::SDL_QUIT: {
 -        if (!ultramodern::is_game_started()) {
 +        // A window closed by its player asks first. SDL sends SDL_QUIT with no window close before it for SIGTERM and
@@ -196,7 +194,7 @@ index c76a1dc..34052b0 100644
              ultramodern::quit();
              return true;
          }
-@@ -250,6 +342,9 @@ void handle_events() {
+@@ -250,6 +340,9 @@ void handle_events() {
      SDL_Event cur_event;
      static bool started = false;
      static bool exited = false;
