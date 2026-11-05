@@ -49,6 +49,7 @@ const profile = profileOption ?? fs.mkdtempSync(path.join(os.tmpdir(), 'record-s
 const only = option(args, '--only', null)?.split(',');
 const from = Number(option(args, '--from', '1'));
 const add = args.includes('--add');
+if (add) args.splice(args.indexOf('--add'), 1);
 const chrome = option(args, '--chrome', undefined);
 if (args.length !== 4) {
   console.error('usage: node tools/record_shaders.mjs <plan.json> <build dir> <rom> <out list> [--port <n>] [--profile <dir>] [--only <section>,...] [--from <load>] [--add] [--chrome <path>]');
