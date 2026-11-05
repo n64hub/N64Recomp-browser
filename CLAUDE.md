@@ -189,23 +189,49 @@ Firefox and publishes each, in the same work. A bug only main has waits for the 
 the retest publishes it, its fix is critical.
 
 **Publishing** is the deploy; no CI job does it. A retest or critical fix publishes the pages it moves, and a change to
-one game's own repo publishes that game's page right after it lands, unasked, and releases its desktop build
-(Releasing). So does a change to the games page
-(`site/`, `frontend/save_sync.js`, `frontend/coi_serviceworker.js`): the work that merges it runs `tools/publish_site.sh`
-from main at once and checks n64hub.com serves it, since until then the merge reaches nobody. Every page is played before it is
-published and booted from Pages after, so Pages holds only played pages. A page found behind main
-(the hub's last gh-pages commit names the main each game's folder was built from) is played and published by whoever finds it. How:
-docs/publishing.md.
+one game's own repo sees that game's page published, unasked, and its desktop build released (Releasing). One publish
+carries every change merged since the last, so the work that lands one doesn't publish a page of its own for it:
+
+- Once it merges, the work stays until a publish that carries it is out: the hub's last gh-pages commit names the main
+  each game's folder was built from. With none of that game's publishes in flight it publishes, unasked; with one in
+  flight it waits for that one and looks again, since a publish started meanwhile may carry it. A publish is in flight
+  from its build until the hub serves it and it has booted from Pages, and the work running one says so, from its
+  build, where the project's work is coordinated. A change merged during one rides the next, a wait of one publish at
+  most, and nobody holds a merge for one: a publish builds main as it is when it starts and publishes that commit's
+  build as it was played, whatever main has since (`tools/publish_pages.sh --keep`, `--played`).
+- Every page is played before it is published and booted from Pages after, so Pages holds only played pages. A page
+  found behind main is played and published by whoever finds it, and one left in flight by work that stopped is
+  finished by whoever finds it.
+
+A change to the games page (`site/`, `frontend/save_sync.js`, `frontend/coi_serviceworker.js`) is published at once:
+the work that merges it runs `tools/publish_site.sh` from main and checks n64hub.com serves it, since until then the
+merge reaches nobody. How: docs/publishing.md.
 
 **Releasing** is the desktop build's deploy, and nothing waits for it: most players play the desktop build, on
 Windows or Linux, and the page's publish doesn't reach them. A recomp of the project's own with desktop releases gets a
-new one in the same work, unasked, whenever its main has something its last release lacks that the desktop build runs:
-a fix or feature in its own code, or a pin moved by the retest, a critical fix or a fork change (the forks are the
-desktop build's RT64 and runtime too). It comes once that merges (its `tools/release.sh`, or Rush 2049's
-docs/releasing.md): the version bumped, notes saying what the player gets, both archives built from that main and
-booted on Windows and Linux before they are published. Only a change the desktop build doesn't run (docs, a play plan,
-the page's shader list, `plays.jsonl`) waits for the next release. A fix for an issue a player filed is answered
-naming its release. A game fork has no desktop release of its own, so its page's publish is its release.
+new one whenever its main has something its last release lacks that the desktop build runs: a fix or feature in its
+own code, or a pin moved by the retest, a critical fix or a fork change (the forks are the desktop build's RT64 and
+runtime too). One release carries every such change merged since the last, so the work that lands one doesn't cut a
+release of its own for it:
+
+- Its PR adds what the player gets to `releases/next.md`, a line under the others (the first change after a release
+  makes the file), and bumps no version.
+- Once it merges, the work stays until a release that carries it is out. With none of that game's releases in flight
+  it releases, unasked; with one in flight it waits for that one and looks again, since a release started meanwhile
+  may carry it. A release is in flight from the moment its PR (`Release v<version>`) is opened until GitHub has the
+  release `v<version>`, so `gh pr list --search "Release v in:title"` and `gh release view v<main's version_string>`
+  tell. A change merged during one rides the next, a wait of one release at most, and nobody holds a merge for one.
+- A release is that PR, which bumps `version_string` and moves `releases/next.md` to `releases/v<version>.md`, in the
+  last release's shape and saying what the player gets, then both archives built from its merge commit and booted on
+  Windows and Linux before they are published (its `tools/release.sh`, which boots each with `boot windows` and
+  `boot linux` through `tools/boot_release.sh` and publishes only archives that booted, from a commit of main without
+  `releases/next.md`, not main's newest; Rush 2049's docs/releasing.md). One left in flight by work that stopped is
+  finished by whoever finds it.
+
+Only a change the desktop build doesn't run (docs, a play plan, the page's shader list, `plays.jsonl`) adds no line and
+waits for the next release. A fix for an issue a player filed is answered naming the release that carries it, once
+that is out, by the work that fixed it. A game fork has no desktop release of its own, so its page's publish is its
+release.
 
 ## The games table
 
@@ -216,9 +242,10 @@ of this in the same work, as docs/playing.md says:
 - Plays it in Chrome and Firefox, always both (Chrome for the numbers, Firefox for what only it turns up: a race in
   the game's loads, an OOM), its build before it is published and from Pages after: launcher, Load ROM, the shader
   wait, menus (look at them, a `shot` step), a level or race, sound, the frame rate, WebGPU errors in the console.
-  In a retest Firefox plays from Pages only the A/B's games and each page whose repo changed more than its pin since
-  the main Pages served: the others' bytes played clean in Firefox from the build, and their serving is the hub's,
-  which those plays and every page's boot from Pages in headless Chrome check (docs/publishing.md, The retest).
+  A publish of the files that were played (a retest's, a game's own repo's) plays from Pages in Firefox only the
+  A/B's games and each page whose `.html` differs from the hub's (its own shell, whose Content-Security-Policy once
+  failed only from Pages): the others' bytes played clean in Firefox from the build, and their serving is the hub's,
+  which those plays and every page's boot from Pages in headless Chrome check (docs/publishing.md).
 - Records every run, failed ones too, in `plays.jsonl` (`play_page.mjs --record`), committed with the work and nowhere
   else.
 - Keeps its numbers good: its median presents a second in Chrome on a laptop's integrated graphics (Intel UHD), or
