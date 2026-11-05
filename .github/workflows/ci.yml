@@ -489,7 +489,9 @@ jobs:
   # The patches under 1080° Snowboarding's web fork's own (1080-Snowboarding-recomp-web, its main), as
   # Snap64Recomp-web's: its rt64, hlslpp, N64Recomp and RecompFrontend are newer than the patches' upstream commits and
   # carry the game's own patches, so its web/patches take over the files where the two meet. Red on a PR means the same
-  # as snap-patches', merged into 1080-Snowboarding-recomp-web's web/patches by hand.
+  # as snap-patches', merged into 1080-Snowboarding-recomp-web's web/patches by hand. Then recompinput's files the
+  # patches change are compiled (below): its RecompFrontend's switch in input_events.cpp has an SDL_WINDOWEVENT case
+  # of its own, and a patch adding one applied over it but didn't compile.
   snowboarding-patches:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -511,6 +513,33 @@ jobs:
           rmdir "$game/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
           bash "$game/tools/build_web.sh" --patches
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: emsdk-cache
+      # Each recompinput/src/*.cpp of patches/RecompFrontend.patch, as the step above left it, compiled as a page compiles
+      # it (recompinput/CMakeLists.txt's includes and options with Emscripten), syntax only.
+      - name: 1080-Snowboarding-recomp-web's recompinput compiles
+        run: |
+          frontend="$RUNNER_TEMP/1080/lib/RecompFrontend" runtime="$RUNNER_TEMP/1080/lib/N64ModernRuntime"
+          git -C "$frontend" -c protocol.version=2 submodule update -q --init --depth 1 lib/GamepadMotionHelpers \
+            recompui/lib/RmlUi
+          git -C "$runtime" -c protocol.version=2 submodule update -q --init --depth 1 thirdparty/xxHash
+          flags=(-std=c++20 -pthread -fwasm-exceptions -sUSE_SDL=2 -fsyntax-only -DHLSL_CPU "-DXXH_HAS_INCLUDE(x)=0"
+            -DRECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED=1)
+          for dir in recompinput/include recompinput/include/recompinput recompinput/src lib/GamepadMotionHelpers \
+            recompui/src recompui/include recompui/lib/RmlUi/Include; do
+            flags+=("-I$frontend/$dir")
+          done
+          for dir in librecomp/include N64Recomp/include ultramodern/include thirdparty thirdparty/concurrentqueue; do
+            flags+=("-I$runtime/$dir")
+          done
+          status=0
+          for file in $(sed -n 's|^diff --git a/\(recompinput/src/[^ ]*\.cpp\) .*|\1|p' patches/RecompFrontend.patch); do
+            echo "RecompFrontend $file"
+            em++ "${flags[@]}" "$frontend/$file" || status=1
+          done
+          exit $status
 
   # The patches under Dinosaur Planet's web fork's own (dino-recomp-web, its main): its tools/build_web.sh moves its
   # rt64 back to the patches' upstream commit and puts patches/apply.cmake's on it, its web/rt64.patch on top, and on its

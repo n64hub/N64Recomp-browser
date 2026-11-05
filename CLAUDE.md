@@ -121,8 +121,9 @@ docs line) is made in the same work like any other.
   JetForceGemini-Recomp-web's, racer-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
   dino-recomp-web's, BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's,
   f-zero-x-recomp's and rush-2049-recomp's own patches, compiles the files Snap64Recomp-web's patches merge by hand as
-  they come out of that, and compiles rt64's files that include ImGui against Jet Force Gemini's newer ImGui. It builds
-  no page (that needs a game), so anything that changes what a page runs is built and played before it lands.
+  they come out of that, recompinput's patched files over 1080-Snowboarding-recomp-web's newer RecompFrontend, and
+  rt64's files that include ImGui against Jet Force Gemini's newer ImGui. It builds no page (that needs a game), so
+  anything that changes what a page runs is built and played before it lands.
   A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play, serve, read and publish pages runs only the
   `changes` job, which also fails while a game in the README's Games table has no entry in `site/news.html`.
 
