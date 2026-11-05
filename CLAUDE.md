@@ -223,7 +223,8 @@ release of its own for it:
   tell. A change merged during one rides the next, a wait of one release at most, and nobody holds a merge for one.
 - A release is that PR, which bumps `version_string` and moves `releases/next.md` to `releases/v<version>.md`, in the
   last release's shape and saying what the player gets, then both archives built from its merge commit and booted on
-  Windows and Linux before they are published (its `tools/release.sh`, which publishes a commit of main without
+  Windows and Linux before they are published (its `tools/release.sh`, which boots each with `boot windows` and
+  `boot linux` through `tools/boot_release.sh` and publishes only archives that booted, from a commit of main without
   `releases/next.md`, not main's newest; Rush 2049's docs/releasing.md). One left in flight by work that stopped is
   finished by whoever finds it.
 
