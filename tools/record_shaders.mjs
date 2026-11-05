@@ -3,7 +3,7 @@
 // each level, and the page, opened with ?record-shaders, prints every shader RT64 meets.
 //
 //   node tools/record_shaders.mjs <plan.json> <build dir> <rom> <out list> [--port <n>] [--profile <dir>] [--only <section>,...]
-//       [--from <load>]
+//       [--from <load>] [--add]
 //
 // The build dir is served on 127.0.0.1 with the cross-origin headers a threaded page needs, on a free port, so
 // recordings and plays started beside each other don't clash, and Chrome's debugging port is a free one too; with
@@ -30,8 +30,11 @@
 // holds what it printed after, less section 0. A section with "boot": true goes into section 0 too, for screens the
 // game shows before its levels that a plan reaches by code (GoldenEye's menus). Sections that share a name are one
 // section of the list, recorded a load each: a world whose levels the plan can reach only one a load (Diddy Kong
-// Racing's). Console lines go to stdout as they come, with the seconds since start, and the list is written after every
-// section, so one stopped partway holds what was recorded until then.
+// Racing's). --add records into the out list as it is, its header and sections kept: section 0 and each section the plan
+// names get the shaders they lack, and a section the list hasn't is added at its end. That is a second plan's way into a
+// game's list, for what the first can't reach in its loads (Goin' Quackers' attract demos, which play only from the
+// title its plan's start presses through). Console lines go to stdout as they come, with the seconds since start, and
+// the list is written after every section, so one stopped partway holds what was recorded until then.
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -45,9 +48,10 @@ const freshProfile = (profileOption === null) || !fs.existsSync(profileOption);
 const profile = profileOption ?? fs.mkdtempSync(path.join(os.tmpdir(), 'record-shaders-'));
 const only = option(args, '--only', null)?.split(',');
 const from = Number(option(args, '--from', '1'));
+const add = args.includes('--add');
 const chrome = option(args, '--chrome', undefined);
 if (args.length !== 4) {
-  console.error('usage: node tools/record_shaders.mjs <plan.json> <build dir> <rom> <out list> [--port <n>] [--profile <dir>] [--only <section>,...] [--from <load>] [--chrome <path>]');
+  console.error('usage: node tools/record_shaders.mjs <plan.json> <build dir> <rom> <out list> [--port <n>] [--profile <dir>] [--only <section>,...] [--from <load>] [--add] [--chrome <path>]');
   process.exit(1);
 }
 const [planFile, buildDir, rom, outFile] = args;
@@ -69,11 +73,12 @@ const run = (steps) => page.run(steps, { keep: (value) => { keep = value; } });
 
 const boot = [];
 const sections = [];
+let header = (plan.header ?? []).map((line) => `# ${line}`.trimEnd());
 const addNew = (list, shaders) => { for (const s of shaders) if (!list.includes(s)) list.push(s); };
 // The list so far, written after every section too, so a recording stopped partway keeps what it had; returns how
 // many shaders it holds.
 const write = () => {
-  const lines = [...(plan.header ?? []).map((line) => `# ${line}`.trimEnd()), ...boot];
+  const lines = [...header, ...boot];
   const all = new Set(boot);
   for (const section of sections) {
     const own = section.shaders.filter((s) => !boot.includes(s));
@@ -84,10 +89,12 @@ const write = () => {
   return all.size;
 };
 // --from <n> goes on with a list stopped partway: the out list as it was written, and the plan's loads from the nth
-// (the log numbers them).
-if (from > 1) {
-  for (const line of fs.readFileSync(outFile, 'utf8').split('\n')) {
-    if (!line || line.startsWith('#')) continue;
+// (the log numbers them). --add starts from the out list too, and keeps its header.
+if (from > 1 || add) {
+  if (add) header = [];
+  for (const line of fs.readFileSync(outFile, 'utf8').split(/\r?\n/)) {
+    if (!line) continue;
+    if (line.startsWith('#')) { if (add) header.push(line); continue; }
     if (line.startsWith('section ')) sections.push({ name: line.slice(8), shaders: [] });
     else (sections.length ? sections[sections.length - 1].shaders : boot).push(line);
   }
