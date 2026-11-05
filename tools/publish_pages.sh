@@ -28,7 +28,7 @@
 #    (CLAUDE.md, Playing a page): a shared turn with a short limit, like a smoke play (docs/playing.md, What a change
 #    plays). Without one it plays at once, beside whatever else holds the GPU, and its presents a second read that.
 # 6. Prints the pages it published, which are then played in Chrome and Firefox (CLAUDE.md,
-#    The games table): that needs Firefox in a window.
+#    The games table): that needs Firefox in a window. A --played publish's were played before it.
 # --dry-run stops after 3, saying which pages differ.
 # --browser <commit> is the retest before the pins move (CLAUDE.md, "The pins"): a dry run of every game with its
 # N64Recomp-browser moved to <commit> (a tag, or a commit this checkout has) in its copy only. An own recomp's (own,
@@ -52,13 +52,17 @@
 # `git -C $PAGES_CACHE/<game> fetch <local clone> <branch>` (Rush 2049's clone is its checkout), its origin left at
 # GitHub: the build host clones from origin's URL, and the sync sends the commit as a bundle on top of origin/main.
 # Every line names the commit built ("commit <sha>", not "main <sha>").
-# --keep <dir> (with --browser) copies each build that differs into <dir>/<game>, with a file `built` naming the main
-# and the N64Recomp-browser commit it was built from and the tree its pin commit has (pin_tree): what the retest plays,
-# which another run's build in the same copy can't overwrite, and the tree retest.sh's pin commit takes. --played <dir>
-# then publishes those files as they were played, without building again: once a game's pin has moved, its
-# origin/main has to have that tree (the same files, so the same bytes), or the game fails and is left alone. That
-# spares the retest a second build of
-# every page (a minute or more each) between its plays and its publish.
+# --keep <dir> (with a dry run: --dry-run, --browser, --ref) copies each build that differs into <dir>/<game>, with a
+# file `built` naming the commit and the N64Recomp-browser commit it was built from (- for its own pin) and the tree
+# it built (with --browser, the tree its pin commit has: pin_tree): what the retest or a game's publish plays, which
+# another run's build in the same copy can't overwrite, and the tree retest.sh's pin commit takes. --played <dir>
+# then publishes those files as they were played, without building again, as the newest commit on origin/main's own
+# line since the one built with that tree (the same files, so the same bytes): that commit, or the one that moved its
+# pin. Main may have moved on since, a change merged during a publish being the next one's (CLAUDE.md, Publishing);
+# with no such commit the game fails and is left alone. That spares a second build (a minute or more a page) between
+# the plays and the publish.
+# A folder the hub serves from a newer main than the one built (its gh-pages commit's line for it) is left alone: a
+# publish that ends after a later one doesn't take its page back.
 # A copy whose N64Recomp-browser moved since its last build puts the checkouts it patches back first, since
 # apply.cmake can't take a checkout from one version of the patches to another.
 #
@@ -91,7 +95,7 @@ done
 [[ ${#args[@]} -ge 1 ]] || { sed -n 5,6p "$0"; exit 1; }
 # A remote gives a commit only by its whole SHA: an abbreviated one failed to fetch, and the build kept the old pin.
 [[ ! $browser =~ ^[0-9a-f]{4,39}$ ]] || browser="$(git -C "$here/.." rev-parse --verify "$browser^{commit}")"
-[[ -z $keep || -n $browser ]] || { echo "--keep keeps a --browser run's builds"; exit 1; }
+[[ -z $keep ]] || $dry_run || { echo "--keep keeps a dry run's builds: --dry-run, --browser or --ref"; exit 1; }
 [[ -z $played_dir || -z "$browser$ref$keep" ]] || { echo "--played publishes builds already made: no --browser, --ref or --keep"; exit 1; }
 [[ -z $keep ]] || { mkdir -p "$keep" && keep="$(cd "$keep" && pwd)"; }
 if [[ -n $browser ]]; then
@@ -550,6 +554,7 @@ work="$(mktemp -d)"
 # A browser that has just quit can still hold a file in it on Windows: a folder left in TMPDIR fails no publish.
 trap 'rm -rf "$work" || true' EXIT
 published=() differ=() failed=()
+declare -A main_of=()  # the commit each published page was built from, which main may have moved past
 for g in "${selected[@]}"; do
     read -r _ repo name dir folder <<< "$(grep "^$g " <<< "$games")"
     start=$SECONDS
@@ -579,14 +584,17 @@ for g in "${selected[@]}"; do
     sha="$(git -C "$clone" rev-parse --short "$from")" label="${ref:+commit $sha}" label="${label:-main $sha}"
     out="$work/$g"
     if [[ -n $played_dir ]]; then
-        # --played: the files a --browser --keep run left, if main is the main they were built from with only the pin
-        # moved, which builds the same bytes.
+        # --played: the files a --keep run left, as the newest commit of main's own line since the one they were
+        # built from that has the tree built, which builds the same bytes.
         out="$played_dir/$g"
         read -r was pin tree < "$out/built" 2> /dev/null || { echo "   no $out/built: build it"; failed+=("$g"); continue; }
-        if [[ "$(git -C "$clone" rev-parse "$from^{tree}")" != "$tree" ]]; then
-            echo "   main $sha is not main ${was:0:7} with its pin moved to N64Recomp-browser ${pin:0:7}: build it"
+        hit="$(git -C "$clone" log --first-parent --format='%H %T' "$from" --not $(git -C "$clone" rev-parse "$was^@") |
+            awk -v t="$tree" '$2 == t { print $1; exit }' || true)"
+        if [[ -z $hit ]]; then
+            echo "   main $sha has no commit since ${was:0:7} with the tree that was built: build it"
             failed+=("$g"); continue
         fi
+        from=$hit sha="$(git -C "$clone" rev-parse --short "$hit")"; label="main $sha"
         built="$(cd "$out" && hashes $name)"
     elif ! { seed "$clone" $copy $usual && bash "$remote_build" -C "$clone" -n $copy sync $target && dissociate $copy; } \
         > "$work/$g.log" 2>&1; then
@@ -617,18 +625,26 @@ for g in "${selected[@]}"; do
         blob="$(awk -v p="${f/$name.html/index.html}" '$1 == p { print $2 }' <<< "$pages")"
         served+="${blob:--} "
     done
-    echo "   $label${browser:+ with N64Recomp-browser $browser} $([[ -n $played_dir ]] && echo "as played" || echo "built in $((SECONDS - start)) s"); $([[ "$built" == "$served" ]] && echo "the same as the hub's" || echo "differs from the hub's")"
-    [[ "$built" != "$served" ]] || continue
+    # The files that differ: an .html among them is the page's own shell, played from Pages in Firefox too.
+    read -ra b <<< "$built"; read -ra v <<< "$served"; changed="" i=0
+    for f in $(files $name); do [[ ${b[i]} == "${v[i]}" ]] || changed+=" ${f/#$name/}"; i=$((i + 1)); done
+    echo "   $label${browser:+ with N64Recomp-browser $browser} $([[ -n $played_dir ]] && echo "as played" || echo "built in $((SECONDS - start)) s"); $([[ -z $changed ]] && echo "the same as the hub's" || echo "differs from the hub's in$changed")"
+    [[ -n $changed ]] || continue
     differ+=("$g")
     if [[ -n $keep ]]; then
         rm -rf "${keep:?}/$g"
         bash "$remote_build" -n $copy get "$dir" "$keep/$g"
-        echo "$from $browser_sha $tree" > "$keep/$g/built"
+        echo "$from ${browser_sha:--} ${tree:-$(git -C "$clone" rev-parse "$from^{tree}")}" > "$keep/$g/built"
     fi
     $dry_run && continue
+    newer="$(gh api "repos/$hub/commits/gh-pages" --jq .commit.message | sed -n "s|^$folder/: built from main \([0-9a-f]*\).*||p" || true)"
+    if [[ -n $newer && "$(git -C "$clone" rev-parse -q --verify "$newer^{commit}")" != "$(git -C "$clone" rev-parse "$from")" ]] &&
+        git -C "$clone" merge-base --is-ancestor "$from" "$newer" 2> /dev/null; then
+        echo "   the hub serves main $newer, which has main $sha: left as it is"; continue
+    fi
     [[ -n $played_dir ]] || bash "$remote_build" -n $copy get "$dir" "$out"
     bash "$here/publish_page.sh" "$out" "$name" "$hub" "$label" --into "$folder" | sed 's/^/   /'
-    published+=("$g")
+    published+=("$g") main_of[$g]=$from
 done
 
 # --- Each published page, from Pages ---
@@ -646,12 +662,12 @@ for g in "${published[@]}"; do
     if [[ $g == rush ]]; then rom="$rush/roms/rush2049.us.z64" clone="$rush"; else rom="$ROMS/$g.z64" clone="$cache/$g"; fi
     # The plan with the scripts its steps load (shader_survey.js): in tools/, or web/ (DKR-R).
     mkdir -p "$work/$g-tools"
-    git -C "$clone" archive origin/main $(git -C "$clone" ls-tree --name-only origin/main tools web) | tar xf - -C "$work/$g-tools"
+    git -C "$clone" archive ${main_of[$g]} $(git -C "$clone" ls-tree --name-only ${main_of[$g]} tools web) | tar xf - -C "$work/$g-tools"
     plan="$work/$g-tools/tools/shader_plan.json"
     [[ -f "$plan" ]] || plan="$work/$g-tools/web/shader_plan.json"
     "${queue[@]}" "$node" "$here/play_page.mjs" chrome "$url/index.html" "$rom" "$plan" --play 20 --uncapped \
         --size 3840x2000 --profile "$work/$g-profile" --json "$work/$g.json" --record "$here/../plays.jsonl" --game $g \
-        --build "Pages, main $(git -C "$clone" rev-parse --short origin/main)" --note "publish_pages.sh's boot check" \
+        --build "Pages, main $(git -C "$clone" rev-parse --short ${main_of[$g]})" --note "publish_pages.sh's boot check" \
         > "$work/$g-play.log" 2>&1 || true
     result="$("$node" -e "const s = require(process.argv[1]); const p = s.presents ? s.presents.median : 0;
         console.log((p > 0 && !s.webgpuErrors.length ? 'ok' : 'FAILED') + ': ' + p + ' presents/s, ' + s.webgpuErrors.length +
@@ -680,10 +696,10 @@ $dry_run && { echo "dry run: nothing published"; [[ ${#failed[@]} -eq 0 ]]; exit
 if [[ ${#published[@]} -eq 0 ]]; then
     echo "every page is what its main builds: nothing published"
 else
-    echo "published, to play in Chrome and Firefox:"
+    [[ -n $played_dir ]] && echo "published, as played:" || echo "published, to play in Chrome and Firefox:"
     for g in "${published[@]}"; do
         read -r _ repo name dir folder <<< "$(grep "^$g " <<< "$games")"
-        echo "  $g $hub_url$folder/ (main $(git -C "$([[ $g == rush ]] && echo "$rush" || echo "$cache/$g")" rev-parse --short origin/main))"
+        echo "  $g $hub_url$folder/ (main $(git -C "$([[ $g == rush ]] && echo "$rush" || echo "$cache/$g")" rev-parse --short ${main_of[$g]}))"
     done
 fi
 [[ ${#failed[@]} -eq 0 ]]
