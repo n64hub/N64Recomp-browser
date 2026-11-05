@@ -90,10 +90,11 @@ docs line) is made in the same work like any other.
   (no fix under way, an upstream nobody keeps up) is fixed in the game fork's own code and offered upstream where it
   takes one (GoldenEye64Recomp-web's, docs/game-forks.md). What a kept-up upstream has under way or on its roadmap
   is left to it for a while, out of respect, and done in the game fork if it doesn't come. New features of its own (mouse aim, controls, enhancements) are asked about first,
-  as any request a rule turns away is (How work lands). The two it has are a change that runs its game faster when
-  that makes the page play better (docs/game-forks.md, The games' own frame rates), and GoldenEye's keyboard and mouse
-  as the PC ports play it (mouse look and aim, click to fire, the wheel for weapons, keys for reload and crouch), since
-  a page is played with keyboard and mouse: all of it in GoldenEye64Recomp-web's own code and none in the forks.
+  as any request a rule turns away is (How work lands). The three it has are a change that runs its game faster when
+  that makes the page play better (docs/game-forks.md, The games' own frame rates), GoldenEye's keyboard and mouse as
+  the PC ports play it (mouse look and aim, click to fire, the wheel for weapons, keys for reload and crouch), since a
+  page is played with keyboard and mouse, and GoldenEye's Ext, a modern pad's twin sticks as the PC ports play them
+  and the style a new file plays: all of it in GoldenEye64Recomp-web's own code and none in the forks.
 - Every page interpolates to the display's rate and draws at the canvas's size: RT64's Framerate Display and resolution
   Auto, in every game fork and new port, whatever its recomp's desktop build defaults to (README, The recomp's own
   code). A page held to its game's own rate reads that rate uncapped whatever a change costs or saves (DKR-R 29.8-30.0,
