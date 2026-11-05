@@ -331,6 +331,17 @@ jobs:
         with:
           version: ${{ env.EMSDK_VERSION }}
           actions-cache-folder: emsdk-cache
+      # emdawnwebgpu (--use-port) is a zip em++ downloads from Dawn's GitHub releases into Emscripten's cache at the
+      # first compile that uses it, and emsdk's cache above is saved before that: fetched here, retried, so a 504 from
+      # GitHub's releases doesn't turn the compiles red.
+      - name: emdawnwebgpu
+        run: |
+          touch "$RUNNER_TEMP/empty.cpp"
+          for wait in 15 30 60 120 0; do
+            em++ --use-port=emdawnwebgpu -fsyntax-only "$RUNNER_TEMP/empty.cpp" && exit 0
+            sleep "$wait"
+          done
+          exit 1
       # The port's rt64 pins a newer ImGui than upstream's (1.93 against 1.90), and the web support's code in rt64 is
       # otherwise compiled only against upstream's: each of its files that includes ImGui is compiled here, as a page
       # compiles it (syntax only: no shaders are built), against the port's patched rt64 and its ImGui.
@@ -413,6 +424,15 @@ jobs:
         with:
           version: ${{ env.EMSDK_VERSION }}
           actions-cache-folder: emsdk-cache
+      # emdawnwebgpu's download, retried (jfg-patches says why).
+      - name: emdawnwebgpu
+        run: |
+          touch "$RUNNER_TEMP/empty.cpp"
+          for wait in 15 30 60 120 0; do
+            em++ --use-port=emdawnwebgpu -fsyntax-only "$RUNNER_TEMP/empty.cpp" && exit 0
+            sleep "$wait"
+          done
+          exit 1
       # Each C++ file of patches/web/files.txt, as the step above left it, compiled as a page compiles it, with rt64's and
       # ultramodern's options on as they are with Emscripten (their CMakeLists.txt), syntax only: no shaders are built, so
       # rt64's generated shader headers are stand-ins declaring their blobs, and miniz's generated export header is too.
@@ -425,9 +445,9 @@ jobs:
           common=(-pthread -fwasm-exceptions -msimd128 -sUSE_SDL=2 -fsyntax-only "-DXXH_HAS_INCLUDE(x)=0" "-I$stubs")
           rt64_flags=(-std=c++17 --use-port=emdawnwebgpu -DFFX_GCC -DHLSL_CPU -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES
             -DRT64_FREE_DISCARDED_TARGETS=1 -DRT64_GAME_FRAME_WORKLOADS=1 -DRT64_INTERPOLATE_CAMERA_EYE=1
-            -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PARTIAL_SCREEN_PAIRS=1 -DRT64_PER_DRAW_TEXTURES=1 -DRT64_PREBUILT_SHADERS
-            -DRT64_SCISSOR_INSIDE_FRAMEBUFFER=1 -DRT64_SKIP_COLLAPSED_MATCHES=1 -DRT64_STRETCH_SCREEN_COVERS=1
-            -DRT64_UNEVEN_FRAME_RATES=1 -DRT64_WGSL=1)
+            -DRT64_MATCH_SCALES=1 -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PARTIAL_SCREEN_PAIRS=1 -DRT64_PER_DRAW_TEXTURES=1
+            -DRT64_PREBUILT_SHADERS -DRT64_SCISSOR_INSIDE_FRAMEBUFFER=1 -DRT64_SKIP_COLLAPSED_MATCHES=1
+            -DRT64_STRETCH_SCREEN_COVERS=1 -DRT64_UNEVEN_FRAME_RATES=1 -DRT64_WGSL=1)
           for dir in src src/contrib src/contrib/plume src/contrib/imgui src/contrib/hlslpp/include \
             src/contrib/mupen64plus-core/src/api src/contrib/nativefiledialog-extended/src/include src/contrib/zstd/lib; do
             rt64_flags+=("-I$rt64/$dir")
@@ -757,6 +777,15 @@ jobs:
         with:
           path: ${{ steps.em-cache.outputs.dir }}
           key: em-cache-${{ env.EMSDK_VERSION }}-${{ matrix.source }}-sdl2-mt-freetype-legacysjlj-${{ runner.os }}
+      # emdawnwebgpu's download, retried (jfg-patches says why), nothing to do once the cache above holds it.
+      - name: emdawnwebgpu
+        run: |
+          touch "$RUNNER_TEMP/empty.cpp"
+          for wait in 15 30 60 120 0; do
+            em++ --use-port=emdawnwebgpu -fsyntax-only "$RUNNER_TEMP/empty.cpp" && exit 0
+            sleep "$wait"
+          done
+          exit 1
       - name: Emscripten's SDL2 and FreeType
         run: embuilder build sdl2-mt freetype-legacysjlj
       # frontend/build_speed.cmake puts ccache in front of every compile once it is on PATH.
