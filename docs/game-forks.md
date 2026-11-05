@@ -88,6 +88,10 @@ needs (its README, What differs from podulator's main):
   `tools_weaken_patched.py` repairs the code after, which the page's build doesn't run), the C library's names renamed,
   `syms.ld`'s comments as `/* */`, which ld.lld reads, and his launcher remembering a ROM picked in it (the runtime's
   `is_rom_valid` knows only the one stored at start, so Start game stayed Select ROM until a restart).
+- Ext, a ninth control style, after 2.4, for a modern pad as the PC ports play one, and the style a new file plays
+  (its README, A modern pad: Ext): the game plays it as its own 2.4, which has the twin sticks with two N64 pads, and
+  the program makes those two of one modern pad and the keyboard while it plays (`patches/ext_controls.c`,
+  `src/game/ext_controls.cpp`). A save keeps it in a bit of its options the game never sets.
 - The shader list, its recording (`patches/shader_survey.c`, `tools/`) and the play plans, which press Enter on his
   launcher's first item at its bottom right, until the game has started (a ROM given takes the focus).
 
