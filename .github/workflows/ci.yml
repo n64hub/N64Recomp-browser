@@ -524,7 +524,8 @@ jobs:
           frontend="$RUNNER_TEMP/1080/lib/RecompFrontend" runtime="$RUNNER_TEMP/1080/lib/N64ModernRuntime"
           git -C "$frontend" -c protocol.version=2 submodule update -q --init --depth 1 lib/GamepadMotionHelpers \
             recompui/lib/RmlUi
-          flags=(-std=c++20 -pthread -fwasm-exceptions -sUSE_SDL=2 -fsyntax-only -DHLSL_CPU
+          git -C "$runtime" -c protocol.version=2 submodule update -q --init --depth 1 thirdparty/xxHash
+          flags=(-std=c++20 -pthread -fwasm-exceptions -sUSE_SDL=2 -fsyntax-only -DHLSL_CPU "-DXXH_HAS_INCLUDE(x)=0"
             -DRECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED=1)
           for dir in recompinput/include recompinput/include/recompinput recompinput/src lib/GamepadMotionHelpers \
             recompui/src recompui/include recompui/lib/RmlUi/Include; do
