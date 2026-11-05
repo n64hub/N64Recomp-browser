@@ -51,8 +51,8 @@ A run on a schedule that takes every change since the last one at once:
   `tools/publish_pages.sh <rush-2049-recomp checkout> <game> --played <dir>` publishes the files that were played,
   with no second build (it checks the moved main has the tree that was built) and boots it from Pages in
   headless Chrome, in a whole turn of its own between the next game's plays. Then the A/B's
-  games, and each page whose repo changed more than its pin since the main Pages served (its own shell, patches or
-  plan: a page's own Content-Security-Policy that blocked the hub's favicon failed only from Pages, in Firefox), are
+  games, and each page whose `.html` differs from the hub's (the run names the files that differ: its own shell, as a
+  page's own Content-Security-Policy that blocked the hub's favicon failed only from Pages, in Firefox), are
   played from Pages in Firefox by their regular plans, `tools/play_pages.sh <rush-2049-recomp checkout> firefox
   <game>...`. The rest are not, about 3 minutes a page: their bytes played clean in Firefox from the build, and how the
   hub serves them is what those plays and the boots check. play_pages.sh needs no build: a second machine with the ROMs
@@ -96,8 +96,19 @@ which its `tools/remote_build.sh -C <checkout>` builds in; a tool a build lacks 
 `tools/publish_pages.sh` does it for every game, or the ones it is given, each into its folder (its list). The hub's
 last commit names, a line each, the main each folder was built from (`<folder>/: built from main <sha>
 (n64hub/<fork>)`, in `git log -1 --format=%b` of its gh-pages). A game fork's own Pages, at
-`https://n64hub.com/<fork>/` under the org site's domain, is a page that sends a player on to the game's folder. A change to one game's own repo is played from a `--dry-run` build of
-that game, then published by a `tools/publish_pages.sh` run with its name.
+`https://n64hub.com/<fork>/` under the org site's domain, is a page that sends a player on to the game's folder.
+
+A game's own repo's changes reach its page by one publish that carries every change merged since the last
+(CLAUDE.md, Publishing), built once and published as it was played:
+
+- `tools/publish_pages.sh <rush-2049-recomp checkout> <game> --dry-run --keep <dir>` builds the game's main as it is
+  then and keeps the build in `<dir>/<game>`, if it differs from what Pages serves, with the commit it was built from.
+- It is played from `<dir>` in Chrome and Firefox, by what its changes can break (docs/playing.md).
+- `tools/publish_pages.sh <rush-2049-recomp checkout> <game> --played <dir>` publishes those files with no second
+  build, labelled with the commit they were built from though main has moved on since, and boots them from Pages in
+  headless Chrome. A change that merged meanwhile is the next publish's. The Firefox play from Pages is left out
+  unless the page's `.html` differs from the hub's (CLAUDE.md, The games table), and a folder the hub serves from a
+  newer main stays as it is.
 
 A test page, a game fork's branch to be played by hand before it lands, is published on its fork's own Pages, beside
 that page, with `tools/publish_page.sh <build dir> <name> n64hub/<fork> "<branch> <sha>" --into <branch>`, at
