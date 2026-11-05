@@ -7,6 +7,13 @@
 //                             the program has started SDL (the launcher is SDL's), say at the start of the plan's
 //                             "start" steps, before Start Game: a page whose RecompFrontend is older than 060709f
 //                             never opens a pad that is there as SDL starts (site/touch_pad.js).
+//   padSet(index, state)      moves pad <index>'s sticks and buttons and leaves them there, as a player holds them:
+//                             state.axes is the standard mapping's [left x, left y, right x, right y], -1 to 1, down
+//                             positive, a null left as it is, and state.buttons an object of the standard mapping's
+//                             button numbers (0 A, 1 B, 2 X, 3 Y, 4 LB, 5 RB, 6 LT, 7 RT, 9 Start, 10 and 11 the
+//                             sticks' clicks, 12-15 the d-pad's up, down, left and right) to a value, 0 to 1 (true is
+//                             1); padSet(index) lets go of all of it. The pad's timestamp moves, as SDL reads a pad
+//                             only when it has (SDL_emscriptenjoystick.c). true, or false while no pad <index> is in.
 //   padRumbles()              what reached each pad's vibrationActuator: "plays <n per pad> resets <n per pad> peak
 //                             <the strongest weakMagnitude per pad>"
 //   padRumbleCalls()          the rumbles that came in, from RecompFrontend's recompinput_web_rumble (its EM_JS, which
@@ -20,9 +27,9 @@
 // after its id as it comes over Emscripten's EmscriptenGamepadEvent, 63 bytes at most, and renames it
 // (SDL_CreateJoystickName: spaces, a maker's name, a word it finds again later cut off the front), so the ids a real
 // browser gives (Chrome's "DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)") can be given
-// to see that the page still finds each pad. The buttons and sticks stay at rest: the keyboard plays port 1 beside
-// them, and a plan writes what a port's player does through the game's own memory. The rumble's arguments are read
-// through the calling function's, which a page built in strict mode doesn't allow; then it logs that it can't.
+// to see that the page still finds each pad. The buttons and sticks stay at rest until padSet moves them: the keyboard
+// plays port 1 beside them. The rumble's arguments are read through the calling function's, which a page built in
+// strict mode doesn't allow; then it logs that it can't.
 if (navigator.getGamepads && !self.__gamepadProbe) {
   self.__gamepadProbe = true;
   let pads = [];
@@ -67,6 +74,18 @@ if (navigator.getGamepads && !self.__gamepadProbe) {
       dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: p }));
     }
     console.log('gamepadprobe plugged', pads.length);
+    return true;
+  };
+  self.padSet = (index, state) => {
+    const p = pads[index];
+    if (!p) return false;
+    const { axes = [], buttons = {} } = state || { axes: [0, 0, 0, 0], buttons: Object.fromEntries(p.buttons.map((_, i) => [i, 0])) };
+    axes.forEach((v, i) => { if (v !== null && v !== undefined) p.axes[i] = v; });
+    for (const [i, v] of Object.entries(buttons)) {
+      const value = Number(v);
+      p.buttons[i] = { pressed: value > 0.5, touched: value > 0, value };
+    }
+    p.timestamp = performance.now();
     return true;
   };
   self.padRumbles = () => `plays ${plays.join(' ')} resets ${resets.join(' ')} peak ${peak.map((x) => x.toFixed(2)).join(' ')}`;
