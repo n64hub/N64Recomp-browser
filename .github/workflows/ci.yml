@@ -445,9 +445,9 @@ jobs:
           common=(-pthread -fwasm-exceptions -msimd128 -sUSE_SDL=2 -fsyntax-only "-DXXH_HAS_INCLUDE(x)=0" "-I$stubs")
           rt64_flags=(-std=c++17 --use-port=emdawnwebgpu -DFFX_GCC -DHLSL_CPU -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES
             -DRT64_FREE_DISCARDED_TARGETS=1 -DRT64_GAME_FRAME_WORKLOADS=1 -DRT64_INTERPOLATE_CAMERA_EYE=1
-            -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PARTIAL_SCREEN_PAIRS=1 -DRT64_PER_DRAW_TEXTURES=1 -DRT64_PREBUILT_SHADERS
-            -DRT64_SCISSOR_INSIDE_FRAMEBUFFER=1 -DRT64_SKIP_COLLAPSED_MATCHES=1 -DRT64_STRETCH_SCREEN_COVERS=1
-            -DRT64_UNEVEN_FRAME_RATES=1 -DRT64_WGSL=1)
+            -DRT64_MATCH_SCALES=1 -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PARTIAL_SCREEN_PAIRS=1 -DRT64_PER_DRAW_TEXTURES=1
+            -DRT64_PREBUILT_SHADERS -DRT64_SCISSOR_INSIDE_FRAMEBUFFER=1 -DRT64_SKIP_COLLAPSED_MATCHES=1
+            -DRT64_STRETCH_SCREEN_COVERS=1 -DRT64_UNEVEN_FRAME_RATES=1 -DRT64_WGSL=1)
           for dir in src src/contrib src/contrib/plume src/contrib/imgui src/contrib/hlslpp/include \
             src/contrib/mupen64plus-core/src/api src/contrib/nativefiledialog-extended/src/include src/contrib/zstd/lib; do
             rt64_flags+=("-I$rt64/$dir")

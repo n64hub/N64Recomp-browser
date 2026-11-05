@@ -828,4 +828,10 @@ d3f2a5e                perspective camera and within the viewport's guard band, 
                        a grey stone plate, the scene showing past its sides). Off on a desktop build, on with
                        Emscripten. Its renderer change is beside the perspective case alone, not in the block that
                        widens a viewport, where games' own rt64 patches change it
+rt64 a70046c,          RT64_MATCH_SCALES: a transform is paired with one of the frame before also by how far apart
+                       their scales are (each axis's length ratio, as a log), beside their places and orientations,
+                       so parts of one object drawn at one place and orientation and only scaled apart no longer tie
+                       and get paired across, the frames between drawing one part toward another's size and place
+                       (Donald Duck: Goin' Quackers' outfit machine drew its body over its lid at 120 Hz). Off on a
+                       desktop build, on with Emscripten
 ```
