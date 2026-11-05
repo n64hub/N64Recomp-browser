@@ -331,9 +331,9 @@ jobs:
         with:
           version: ${{ env.EMSDK_VERSION }}
           actions-cache-folder: emsdk-cache
-      # emdawnwebgpu (--use-port) is a zip em++ downloads from Dawn's GitHub releases into Emscripten's cache at the first
-      # compile that uses it, and emsdk's cache above is saved before that: fetched here, retried, so a 504 from GitHub's
-      # releases doesn't turn the compiles red.
+      # emdawnwebgpu (--use-port) is a zip em++ downloads from Dawn's GitHub releases into Emscripten's cache at the
+      # first compile that uses it, and emsdk's cache above is saved before that: fetched here, retried, so a 504 from
+      # GitHub's releases doesn't turn the compiles red.
       - name: emdawnwebgpu
         run: |
           touch "$RUNNER_TEMP/empty.cpp"
