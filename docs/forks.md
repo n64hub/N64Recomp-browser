@@ -728,6 +728,8 @@ RecompFrontend 0564a83 an SDL_QUIT with no window close before it quits a runnin
                        one for SIGTERM and SIGINT (a session logging out, timeout, Ctrl+C), and the quit prompt it
                        opened had nobody to answer it, so a Linux build ended only at a SIGKILL. A window's close
                        still asks first
+RecompFrontend 369e606 0564a83's window close noted before sdl_event_filter's switch, not in an SDL_WINDOWEVENT case:
+                       a newer RecompFrontend has that case already (its HiDPI one), and the two didn't compile
 N64ModernRuntime       load_overlays loads nothing for a ROM range inside one section, on every build: its first
 8d99dc5                section starting in the range came after the first ending past it, and the loop waited to meet
                        it, walking off the section table into load_overlay (a game reading an overlay in pieces, as
