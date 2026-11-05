@@ -11,7 +11,8 @@
 # program, which portable.txt makes the folder for it, the config and saves). <dir> is emptied and gets the folder,
 # the program's stdout.log and stderr.log, and captures of its window, boot-<s>.png every 10 s and at the end. The
 # program args follow --boot: a recomp's --input script, say, to get past a screen that waits for a button.
-# BOOT_SECONDS (40) is how long it runs.
+# BOOT_SECONDS (30) is how long it runs: past the first menu in every recomp, and before lavapipe crashes in some
+# (boot_release.Dockerfile).
 #
 # It passes when the program still runs at the end, its stderr has no "Crash:" (the recomps' crash trace) and no
 # "--boot: no valid stored ROM", and a capture shows more than one flat colour (a game's screen changes go through
@@ -27,7 +28,7 @@ set -euo pipefail
 [ $# -ge 4 ] || { echo "usage: tools/boot_release.sh <archive> <rom> <game id> <dir> [program args...]" >&2; exit 1; }
 archive=$1 rom=$2 game_id=$3 dir=$4
 shift 4
-seconds=${BOOT_SECONDS:-40}
+seconds=${BOOT_SECONDS:-30}
 here=$(cd "$(dirname "$0")" && pwd)
 [ -f "$archive" ] || { echo "no archive $archive" >&2; exit 1; }
 [ -f "$rom" ] || { echo "no ROM $rom" >&2; exit 1; }
