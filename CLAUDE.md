@@ -92,13 +92,12 @@ docs line) is made in the same work like any other.
   main, or of a better-kept fork of it (GoldenEye64Recomp-web merges podulator's). A player blames the page for
   whatever it does wrong, whoever's code it is, so a bug in the recomp that the page shows and upstream isn't fixing
   (no fix under way, an upstream nobody keeps up) is fixed in the game fork's own code and offered upstream where it
-  takes one (GoldenEye64Recomp-web's, docs/game-forks.md). What a kept-up upstream has under way or on its roadmap
-  is left to it for a while, out of respect, and done in the game fork if it doesn't come. New features of its own (mouse aim, controls, enhancements) are asked about first,
-  as any request a rule turns away is (How work lands). The three it has are a change that runs its game faster when
-  that makes the page play better (docs/game-forks.md, The games' own frame rates), GoldenEye's keyboard and mouse as
-  the PC ports play it (mouse look and aim, click to fire, the wheel for weapons, keys for reload and crouch), since a
-  page is played with keyboard and mouse, and GoldenEye's Ext, a modern pad's twin sticks as the PC ports play them
-  and the style a new file plays: all of it in GoldenEye64Recomp-web's own code and none in the forks.
+  takes one (GoldenEye64Recomp-web's, docs/game-forks.md). What a kept-up upstream has under way or on its roadmap is
+  left to it for a while, out of respect, and done in the game fork if it doesn't come. New features of its own (mouse
+  aim, controls, enhancements) are asked about first, as any request a rule turns away is (How work lands). The three it
+  has (docs/game-forks.md) are a change that runs its game faster when that makes the page play better, and GoldenEye's
+  keyboard and mouse and its Ext pad style as the PC ports play them: all in GoldenEye64Recomp-web's own code and none
+  in the forks.
 - Every page interpolates to the display's rate and draws at the canvas's size: RT64's Framerate Display and resolution
   Auto, in every game fork and new port, whatever its recomp's desktop build defaults to (README, The recomp's own
   code). A page held to its game's own rate reads that rate uncapped whatever a change costs or saves (DKR-R 29.8-30.0,
@@ -120,15 +119,10 @@ docs line) is made in the same work like any other.
   is built where the ROM is, never in CI, and its `.data` holds only what it preloads (`tools/publish_page.sh`).
 - Nothing here names a game, includes from a game's repo or needs its ROM: the web side gets what it needs through the
   runtime's own interfaces, as every recomp does.
-- CI (`.github/workflows/ci.yml`) builds every library of a page with Emscripten from the forks, checks every WGSL
-  shader, the plume device thread and hlslpp's wasm SIMD backend, and checks that `patches/` match the forks and apply
-  to every recomp commit in `patches/pins.txt` and over DKR-R-web's, CBFD-Recompiled-web's,
-  JetForceGemini-Recomp-web's, racer-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
-  BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's,
-  f-zero-x-recomp's and rush-2049-recomp's own patches, compiles the files Snap64Recomp-web's patches merge by hand as
-  they come out of that, recompinput's patched files over 1080-Snowboarding-recomp-web's newer RecompFrontend, and
-  rt64's files that include ImGui against Jet Force Gemini's newer ImGui. It builds no page (that needs a game), so
-  anything that changes what a page runs is built and played before it lands.
+- CI (`.github/workflows/ci.yml`, each job's comment says what it checks) builds every library of a page with Emscripten
+  from the forks and checks the shaders, and that `patches/` match the forks and apply to every recomp and game fork
+  it is built over. It builds no page (that needs a game), so anything that changes what a page runs is built and
+  played before it lands.
   A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play, serve, read and publish pages runs only the
   `changes` job, which also fails while a game in the README's Games table has no entry in `site/news.html`.
 
@@ -140,16 +134,8 @@ hlslpp-web; N64ModernRuntime-web's `N64Recomp` is N64Recomp-web. Notes name a ch
 `rt64-0010`) or by fork and commit (`rt64 c89ced0`): `docs/forks.md` has every one, a line each, and a change pushed to
 a fork gets its row there in the PR that moves `forks.txt` onto it.
 
-Sixteen options are off on a desktop build, on with Emscripten, and settable natively: `RT64_FLIPPED_RECT_HIGH_RES`
-(rt64 fe91344), `RT64_UNEVEN_FRAME_RATES` (rt64 179adb8), `RT64_GAME_FRAME_WORKLOADS` (rt64 bce5e11),
-`RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA_EYE` (rt64 2c4230e),
-`RT64_SCISSOR_INSIDE_FRAMEBUFFER` (rt64 cad03e4), `RT64_SKIP_COLLAPSED_MATCHES` (rt64 f6a01be),
-`RT64_PARTIAL_SCREEN_PAIRS` (rt64 89abe33), `RT64_STRETCH_SCREEN_COVERS` (rt64 4550e10),
-`ULTRAMODERN_LIBULTRA_THREAD_STOP` (N64ModernRuntime 0df8334),
-`ULTRAMODERN_HOLD_BLOCKED_MESSAGES` (N64ModernRuntime 66539ab), `ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS`
-(N64ModernRuntime bf96a62), `ULTRAMODERN_RSP_TASKS_COPIED` (N64ModernRuntime 0ec6c51),
-`ULTRAMODERN_SCREEN_UPDATE_AFTER_VI` (N64ModernRuntime c700131), `ULTRAMODERN_VIS_WAIT_FOR_RENDERER`
-(N64ModernRuntime 05d95be) and `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED` (RecompFrontend bf01590).
+Sixteen options are off on a desktop build, on with Emscripten, and settable natively: docs/forks.md lists them
+(Options off on a desktop build).
 
 ## Changing it
 
@@ -288,56 +274,41 @@ of this in the same work, as docs/playing.md says:
 
 ## Ruled out, so don't retry
 
-The measurements behind each are in docs/findings.md (Ruled out, measured).
+What each was and what it measured is in docs/findings.md (Ruled out, measured).
 
-- Presents waiting for the animation frame in every browser, not only where timed waits end late: on a laptop's Intel
-  UHD Chrome drew as many, but its GPU and the browser worked harder and long gaps doubled.
+- Presents waiting for the animation frame in every browser: on a laptop's Intel UHD Chrome drew as many, with the GPU
+  and the browser working harder and twice the long gaps.
 - One of plume's WebGPU calls as what grows Firefox's GPU process: none grew it on a test page that submits.
-- coi_serviceworker.js's reload missed because its worker got further than register()'s promise: in ~100 cold Firefox
-  visits the reload always came. A first visit that never started was the program's own fetches before the reload
-  (shell.html says how).
-- A cheaper render-to-RAM readback (upload buffers mapped without a trip to the main thread, polling without sleeps):
-  the time per list stayed. Chrome paces the readback itself.
-- Pilotwings 64's 85-180 ms frame gaps as its screens change as the page's: they are its own music stop and screen
-  load, 42-75 ms of them on a console and natively too.
-- Perfect Dark's 133 ms frames in its opening cutscenes as the page's: each shot's start stops and restarts the
-  controllers' polling for each of 4 ports, 8 waits of one retrace each, on its desktop build and a console too.
-- Holding back the list Chrome builds behind the game (a pause after each dropped present, fewer threads): the build
-  costs the page little or nothing.
-- Building Firefox's pipelines in parallel from the page: every device and worker's WebGPU goes to one thread of its
-  GPU process, so it is slower. Nor does the driver's shader cache spare a rebuild (DXC runs before the driver anyway).
-- Shorter web builds by other means: ccache behind emcc (`EM_COMPILER_WRAPPER`) still starts emcc's Python each hit, so
-  it goes in front; configure checks compiled without linking measured nothing; `RecompiledFuncs/` at -O2 would touch
-  3.5% of the compile time. Precompiled headers are off for a page: ccache can't cache a file that includes one.
-- A fixed heap in place of memory growth (no faster), and `-sGROWABLE_ARRAYBUFFERS=2` (emdawnwebgpu passes WebGPU views
-  of the heap, which Chrome refuses over a growable buffer).
-- A cheaper GPU frame for Rush 2049's, Majora's Mask's and Conker's pages in the web's own parts (pass breaks, render to
-  RAM's passes, the copies, rt64 008f380's loops). What costs is what the desktop build draws too: RT64's pixel shaders
-  and Auto's resolution rounded up to a whole multiple of the game's lines, and changing either would draw differently
-  from the desktop's RT64. On a phone's Mali too: folding the canvas's clear into the pass that draws into it saved
-  0.14 ms of Conker's 13, and Conker there is held by its game's frames, not its GPU (docs/phones.md).
+- coi_serviceworker.js's reload missed because its worker got further than register()'s promise: ~100 cold Firefox
+  visits always reloaded (shell.html says what a first visit that never started was).
+- A cheaper render-to-RAM readback: the time per list stayed, since Chrome paces the readback itself.
+- Pilotwings 64's 85-180 ms gaps as its screens change, and Perfect Dark's 133 ms frames in its opening cutscenes, as
+  the page's: both are the game's own, on a console and natively too.
+- Holding back the list Chrome builds behind the game: the build costs the page little or nothing.
+- Building Firefox's pipelines in parallel from the page: its GPU process runs every WebGPU call on one thread, so it
+  is slower, and the driver's shader cache spares no rebuild.
+- Shorter web builds by ccache behind emcc (it goes in front), configure checks without linking, `RecompiledFuncs/` at
+  -O2, or precompiled headers (off for a page: ccache can't cache a file that includes one).
+- A fixed heap in place of memory growth (no faster), and `-sGROWABLE_ARRAYBUFFERS=2` (Chrome refuses WebGPU views of a
+  growable heap).
+- A cheaper GPU frame for Rush 2049's, Majora's Mask's and Conker's pages in the web's own parts: what costs is RT64's
+  pixel shaders and Auto's resolution, as on the desktop, and on a phone's Mali too (docs/phones.md).
 - A DirectComposition overlay for a WebGPU canvas in Chrome on Windows: Chromium makes one only of video and
-  low-latency canvases, so no flag or page setting gives one.
-- Building Firefox's shader misses where the game sends no frames or with a later section's wait, not at once: a
-  recomp's loads are too short to give a pause after most misses, and they come after the list's last section.
-- A present's wait() trips to the page's thread, or Firefox's late timed waits, as what paces a page to 30 on a
-  laptop's screen: without the trips Banjo paced the same; what each present costs the GPU in Firefox's compositing
-  (Windows' included) decides it.
-- The present thread's wait() before its slot sleep, a try's first 0.5 s left out of pace()'s count, or 3 presents in
-  flight, for Banjo held at 30 in Firefox on a laptop's screen: each paced as often, the GPU 94-100% busy at 60.
-- The most common of a game's last frames' VIs as RT64_UNEVEN_FRAME_RATES's guess at a frame's length: late at both
-  ends of a slow stretch, at no stretch's length does it judder less than the fastest of three.
-- A list started with the list before's render-to-RAM late copy still pending, for Perfect Dark at 30 in its
-  levels: it drew 30 either way, its main thread waiting for a controller sample (`joy_debug_joy`), not for the copy.
-- Judging a page's timed waits both ways as it plays (back to timed once they end on time): judged from the frame
-  waits it turned several times a second, and tries before each frame wait cost a sixth and never saw them on time.
-- A missed shader built in line with the device in Firefox as what stops Perfect Dark's page answering at
-  Defection: the page kept drawing, and it was Firefox's own process that answered every BiDi command late.
-- A timed wait to just before a present's slot in Chrome, to spare the core plume's spin from the last frame takes: a
-  tenth of a game page's timed waits end 4-16 ms late, on the system timer's tick, with a 1 ms timer kept pending too.
-- wasm SIMD for RT64's TMEM loads and CI4 hashes: up to 9 times as fast alone, and no page drew faster, on a phone or
-  a desktop GPU.
-- RT64 waiting for a frame drawn in many workloads once, after its last, not after each: with the page's thread
-  slow, the game ran at half its rate.
+  low-latency canvases.
+- Building Firefox's shader misses later (where the game sends no frames, or with a later section's wait): a recomp's
+  loads are too short, and they come after the list's last section.
+- As what paces a page to 30 on a laptop's screen in Firefox: a present's wait() trips to the page's thread, late timed
+  waits, the present thread's wait() before its slot sleep, a try's first 0.5 s left out of pace()'s count, 3 presents
+  in flight. Each paced the same: what each present costs the GPU in Firefox's compositing decides it.
+- The most common of the last frames' VIs as RT64_UNEVEN_FRAME_RATES's frame length: it judders more than the fastest
+  of three.
+- A list started with the last one's late copy pending, for Perfect Dark at 30 in its levels: its main thread waits for
+  a controller sample (`joy_debug_joy`), not the copy.
+- Judging a page's timed waits both ways as it plays: it turned several times a second, and the tries cost a sixth.
+- A missed shader built in line in Firefox as what stops Perfect Dark's page answering at Defection: the page kept
+  drawing, and Firefox's own process answered BiDi late.
+- A timed wait to just before a present's slot in Chrome: a tenth end 4-16 ms late, on the system timer's tick.
+- wasm SIMD for RT64's TMEM loads and CI4 hashes: up to 9 times as fast alone, and no page drew faster.
+- RT64 waiting once for a frame drawn in many workloads, after its last: the game ran at half its rate.
 - Skipping or batching the device thread's round trips to keep a hidden page's game running in Chrome: Chrome idles a
-  silent hidden tab's process (a muted test's too), and the trips were a small part of the time its game lost.
+  silent hidden tab's process, and the trips were a small part of what it lost.
