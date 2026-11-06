@@ -2,3 +2,7 @@
 patches/*.patch -text
 # A line a run, appended on many branches: a merge keeps both sides' lines.
 plays.jsonl merge=union
+# Run on Linux from a Windows checkout's copy too (a release's boot on its build host): LF whatever core.autocrlf says,
+# or bash there stops at `set -o pipefail\r`.
+*.sh text eol=lf
+*.Dockerfile text eol=lf
