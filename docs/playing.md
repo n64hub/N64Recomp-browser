@@ -183,7 +183,9 @@ work, naming the game, the browser, the time and the curve.
   the page starts (docs/findings.md, A host that holds Chrome's presents).
 - How much of its heap a page has taken, and what ran it out: `--preload tools/heap_probe.js` logs the heap's break
   and length each second (`heap <s> sbrk <MB> len <MB>`) and, before an `Aborted(OOM)`, the request's size and the
-  stack that made it (`heapoom`) (docs/findings.md, Memory).
+  stack that made it (`heapoom`) (docs/findings.md, Memory). With `--query ?heapwalk` it also walks dlmalloc's chunks
+  every 20 s (`heapwalk`): the sizes that hold the most and that grew, and what points at the most grown, which names
+  the vector or map a leak piles into.
 - What a game makes of several controllers, and where its rumble goes: `--preload tools/gamepad_probe.js` gives the
   page stand-in pads, plugged in by a plan's `plugPads()` once SDL runs (before Start Game), and says what reached
   each pad's vibrationActuator (`padRumbles()`) and which pad the page looked for (its header).

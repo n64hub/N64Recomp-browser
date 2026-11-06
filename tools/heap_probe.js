@@ -9,6 +9,19 @@
 //   heapgrow <thread> asked <bytes>: <stack>
 //                                       the same on a page linked to grow its heap: the heap grows, or the malloc fails
 //
+// and, with heapwalk in the page's query (play_page.mjs --query ?heapwalk), what the heap holds, every 20 s:
+//
+//   heapwalk <s> brk <MB> used <MB> free <MB> chunks <n>       dlmalloc's chunks from the heap's start to its top
+//   heapwalk <s> most: <size>x<count>=<MB> ...                  the chunk sizes that hold the most, in use
+//   heapwalk <s> grew: <size>x+<count>=<MB> ...                 the sizes that gained the most since the last walk
+//   heapwalk <s> sample <size> at <hex>: <words>               the first words of two of the most grown sizes' newest
+//   heapwalk <s> held <hex> by <hex> in <size> +<offset>: <words>
+//                                       a word anywhere in the heap that points at one of the most grown size's
+//                                       chunks (six of them, old and new), the chunk that word is in and that chunk's
+//                                       first words, or "static" for one below the heap: what keeps them. A growing
+//                                       vector or map shows as one chunk holding them all at a stride, reallocated
+//                                       larger as it grows; none at all is a leak, a malloc never freed
+//
 // A page's heap is INITIAL_MEMORY (frontend/CMakeLists.txt) and never grows, so a malloc that doesn't fit calls
 // Emscripten's resize import, which aborts with "Aborted(OOM)" and a trap in Emscripten's abort() that names nothing
 // (tools/wasm_offset.mjs). A game's own link options can let it grow instead (Conker's page: -sALLOW_MEMORY_GROWTH,
@@ -136,4 +149,87 @@ if (self.crossOriginIsolated && !self.__heapProbe) {
     const breaks = sbrks.map((a) => heap[a >>> 2]).filter((v) => !(v & 7) && v > 1 << 20 && v <= memory.buffer.byteLength);
     if (breaks.length) console.log(`heap ${secs()} sbrk ${(Math.max(...breaks) / 1048576).toFixed(1)} len ${(memory.buffer.byteLength / 1048576).toFixed(1)}`);
   }, 1000);
+  // The walk, in a worker of its own over the shared heap, so the page's threads run on beside it (a walk of 1.4 GB
+  // takes about a second, the pointer search most of it). dlmalloc's state (the page's one mspace, in its static data)
+  // is found by its fields: topsize, least_addr and top at words 3, 4 and 6, top past least_addr and top + topsize at
+  // the break. Each chunk from least_addr is a header word (+4) of its size and flags (2: in use), up to top. Other
+  // threads malloc while it walks, so a walk can stop short at a chunk being split: it says so, and the next one is
+  // whole.
+  if (/[?&]heapwalk\b/.test(location.search)) {
+    const walker = () => {
+      let heap = null, state = -1, last = null;
+      const hex = (v) => (v >>> 0).toString(16).padStart(8, '0');
+      const mb = (v) => (v / 1048576).toFixed(1);
+      const words = (address, count, size) => {
+        const w = [];
+        for (let k = 0; k < count && k * 4 < size; k++) w.push(hex(heap[(address >>> 2) + k]));
+        return w.join(' ');
+      };
+      // Every chunk from the first to top: fn(chunk, size, used).
+      const chunks = (fn) => {
+        const least = heap[state + 4], top = heap[state + 6];
+        for (let p = least + ((8 - ((least + 8) & 7)) & 7); p < top;) {
+          const head = heap[(p + 4) >>> 2], size = head & ~7;
+          if (size < 16 || p + size > top) return `stopped at a chunk being made at ${hex(p)}`;
+          fn(p, size, (head & 2) !== 0);
+          p += size;
+        }
+        return '';
+      };
+      onmessage = ({ data }) => {
+        if (data.buffer) { heap = new Uint32Array(data.buffer); return; }
+        const { brk, t } = data;
+        if (state < 0) {
+          for (let i = 1, end = Math.min(heap.length - 8, (64 << 20) >>> 2); i < end && state < 0; i++) {
+            const least = heap[i + 4], top = heap[i + 6], to = top + heap[i + 3];
+            if (least >= 1 << 20 && (least >>> 2) > i && top > least && top < brk && to <= brk && to > brk - 4096) state = i;
+          }
+          if (state < 0) { postMessage(`heapwalk ${t} no dlmalloc state found yet`); return; }
+        }
+        const sizes = new Map();
+        let used = 0, free = 0, count = 0;
+        const stopped = chunks((p, size, inUse) => {
+          count++;
+          if (!inUse) { free += size; return; }
+          used += size;
+          let e = sizes.get(size);
+          if (!e) sizes.set(size, e = { count: 0, old: [], newest: [] });
+          if (e.count++ % 97 === 50 && e.old.length < 3) e.old.push(p);
+          e.newest.push(p);
+          if (e.newest.length > 3) e.newest.shift();
+        });
+        const lines = [`heapwalk ${t} brk ${mb(brk)} used ${mb(used)} free ${mb(free)} chunks ${count} ${stopped}`];
+        const list = (entries) => entries.map(([size, n]) => `${size}x${n}=${mb(size * Math.abs(n))}`).join(' ');
+        lines.push(`heapwalk ${t} most: ` + list([...sizes].map(([size, e]) => [size, e.count]).sort((a, b) => b[0] * b[1] - a[0] * a[1]).slice(0, 12)));
+        if (last) {
+          const grew = [...sizes].map(([size, e]) => [size, e.count - (last.get(size) || 0), e]).filter((g) => g[1] > 0)
+            .sort((a, b) => b[0] * b[1] - a[0] * a[1]);
+          lines.push(`heapwalk ${t} grew: ` + list(grew.slice(0, 12)).replace(/x(\d)/g, 'x+$1'));
+          for (const [size, , e] of grew.slice(0, 3)) for (const p of e.newest.slice(-2)) lines.push(`heapwalk ${t} sample ${size} at ${hex(p + 8)}: ${words(p + 8, 24, size - 8)}`);
+          if (grew.length) {
+            const targets = new Set([...grew[0][2].old, ...grew[0][2].newest].map((p) => p + 8));
+            const hits = [];
+            for (let i = 0, end = Math.min(heap.length, heap[state + 6] >>> 2); i < end && hits.length < 16; i++) if (targets.has(heap[i])) hits.push(i * 4);
+            if (!hits.length) lines.push(`heapwalk ${t} held: nothing points at ${[...targets].map(hex).join(' ')}`);
+            for (const a of hits) if (a < heap[state + 4]) lines.push(`heapwalk ${t} held ${hex(heap[a >>> 2])} by ${hex(a)} static: ${words(a - 16, 12, 48)}`);
+            chunks((p, size, inUse) => {
+              for (const a of hits) if (a >= p + 8 && a < p + size) lines.push(`heapwalk ${t} held ${hex(heap[a >>> 2])} by ${hex(a)} in ${size}${inUse ? '' : ' (free)'} +${a - p - 8}: ${words(p + 8, 16, size - 8)}`);
+            });
+          }
+        }
+        last = new Map([...sizes].map(([size, e]) => [size, e.count]));
+        postMessage(lines.join('\n'));
+      };
+    };
+    const walk = new PageWorker(URL.createObjectURL(new Blob([`(${walker})();`], { type: 'text/javascript' })));
+    walk.onmessage = ({ data }) => { for (const line of data.split('\n')) console.log(line); };
+    let given = false;
+    setInterval(() => {
+      if (!memory || !sbrks.length) return;
+      if (!given) { walk.postMessage({ buffer: memory.buffer }); given = true; }
+      const heap = new Uint32Array(memory.buffer);
+      const breaks = sbrks.map((a) => heap[a >>> 2]).filter((v) => !(v & 7) && v > 1 << 20 && v <= memory.buffer.byteLength);
+      if (breaks.length) walk.postMessage({ brk: Math.max(...breaks), t: secs() });
+    }, 20000);
+  }
 }
