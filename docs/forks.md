@@ -852,4 +852,7 @@ rt64 24fc22f,          a scene whose camera isn't finite pairs only with another
 d4658b8                next, never with one that is: its NaN difference to every scene left the sort of scene pairs
                        with no order, so a real scene could be paired with the frame before's shadow camera while its
                        own match was free (Dinosaur Planet's opening flight, about 6 times in 90 s). Every build
+rt64 3fb48ed           a tile copy from a 4-bit framebuffer takes a pixel as one byte, two pixels to it, as an 8-bit
+                       one is, not 0 bytes, on every build: makeFramebufferTile divided by it and trapped (Dinosaur
+                       Planet's desktop build in Dragon Rock's Skeetla fight, its memory already corrupt there)
 ```
