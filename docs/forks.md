@@ -6,6 +6,20 @@ fork's Nth web commit (`plume-0003`) or its fork and short SHA (`rt64 c89ced0`).
 it. CLAUDE.md, The forks, says how the forks are laid out; a change pushed to a fork gets its row here in the PR that
 moves `forks.txt` onto it.
 
+## Options off on a desktop build
+
+Sixteen options are off on a desktop build, on with Emscripten, and settable natively, each by the commit that adds it:
+`RT64_FLIPPED_RECT_HIGH_RES` (rt64 fe91344), `RT64_UNEVEN_FRAME_RATES` (rt64 179adb8), `RT64_GAME_FRAME_WORKLOADS` (rt64
+bce5e11), `RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA_EYE` (rt64 2c4230e),
+`RT64_SCISSOR_INSIDE_FRAMEBUFFER` (rt64 cad03e4), `RT64_SKIP_COLLAPSED_MATCHES` (rt64 f6a01be),
+`RT64_PARTIAL_SCREEN_PAIRS` (rt64 89abe33), `RT64_STRETCH_SCREEN_COVERS` (rt64 4550e10),
+`ULTRAMODERN_LIBULTRA_THREAD_STOP` (N64ModernRuntime 0df8334), `ULTRAMODERN_HOLD_BLOCKED_MESSAGES` (N64ModernRuntime
+66539ab), `ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS` (N64ModernRuntime bf96a62), `ULTRAMODERN_RSP_TASKS_COPIED`
+(N64ModernRuntime 0ec6c51), `ULTRAMODERN_SCREEN_UPDATE_AFTER_VI` (N64ModernRuntime c700131),
+`ULTRAMODERN_VIS_WAIT_FOR_RENDERER` (N64ModernRuntime 05d95be) and `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED`
+(RecompFrontend bf01590).
+
+## Every commit
 
 ```
 N64ModernRuntime-0003  Emscripten: no live recompiler (mods off), RDRAM without a guard region, SDL window handle,
