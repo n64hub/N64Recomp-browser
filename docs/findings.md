@@ -326,7 +326,11 @@ builds without the fix it made that one 640x234, and those climbed to 1,380 MB a
 640x479 and 320x239, and they held at 898 MB. The history now starts over before each upload unless a render to RAM is
 still to be read back from it (rt64-web 6655470, docs/forks.md). A build of it counting those resets made the 640x234
 one in 1 of 6 plays, started its history over 1,024 times by 105 s, and held at 905 MB at 130 s. f81e9cb's reset at a
-VI alone left the check before a list growing.
+VI alone left the check before a list growing. The desktop build grew the same way, in video memory: a new game started
+at SwapStone Hollow 25 s after its logos (Vulkan, an RTX 2070, a busy host) grew its dedicated memory about 9 MB a
+second and its shared memory about 10 in 4 of 4 runs, at 2560x1440 and at 960x720 (702 to 1824 MB and 138 to 1316 MB in
+two minutes), and held at 861 and 150 MB with the reset on every build (rt64-web 7edd8f3), played in turn with it.
+Started 2 s in, before the logos, it held flat without the reset, as the page did when it made the framebuffer 640x479.
 
 ## A page that stops answering
 

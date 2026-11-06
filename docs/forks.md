@@ -856,8 +856,9 @@ rt64 3fb48ed           a tile copy from a 4-bit framebuffer takes a pixel as one
                        one is, not 0 bytes, on every build: makeFramebufferTile divided by it and trapped (Dinosaur
                        Planet's desktop build in Dragon Rock's Skeetla fight, its memory already corrupt there)
 rt64 f81e9cb,          a framebuffer starts its read buffer history over before each upload of its RAM, in the check of
-6655470                RAM before a list and at a VI alike, unless a render to RAM is still to be read back from it:
-                       written by the CPU and never drawn into, it took a new entry (two buffers of its size and a copy
-                       of its bytes) at every check, and Dinosaur Planet's page grew its heap 9 MB a second until it
-                       aborted (Aborted(OOM)) about 140 s in. Web only
+6655470, 7edd8f3       RAM before a list and at a VI alike, unless a render to RAM is still to be read back from it:
+                       written by the CPU and never drawn into, it took a new entry (two buffers of its size, and on
+                       the web a copy of its bytes) at every check: Dinosaur Planet's page grew its heap 9 MB a second
+                       until it aborted (Aborted(OOM)) about 140 s in, and its desktop build its video memory about
+                       20 MB a second. Every build
 ```
