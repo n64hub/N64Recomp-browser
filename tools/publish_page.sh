@@ -24,6 +24,12 @@
 # page was built from ("The web page, built from main <sha>", which is what `git log -1 origin/gh-pages` reads), and
 # a line in its body each test page's ("<dir>/: built from <branch> <sha>"). The hub (tools/publish_site.sh) is the
 # same: its top is the games' page, and each game's page is published into a folder of it with --into.
+#
+# Publishes of several pages can be started at once. On one machine they take turns at a repo's gh-pages, each holding
+# a lock from its fetch to its push: two pushes of big pages to one repo at the same moment both fail on GitHub's side
+# ("remote unpack failed: index-pack failed"), and five tries a few seconds apart weren't enough to get one through.
+# One from another machine is retried: a push the lease refuses (gh-pages moved since the fetch) or GitHub refuses
+# starts again on top of what gh-pages holds then, after a wait that grows and is jittered so two retries part.
 set -euo pipefail
 dry_run=false into="" drop=""
 args=()
@@ -42,7 +48,6 @@ folder="$into$drop"
 if [ -n "$drop" ]; then
     [ ${#args[@]} -eq 1 ] || { sed -n '9p' "$0"; exit 1; }
     repo="${args[0]}" stage="$(mktemp -d)"
-    trap 'rm -rf "$stage"' EXIT
 else
     [ ${#args[@]} -ge 3 ] || { sed -n '8p' "$0"; exit 1; }
     build="${args[0]}" name="${args[1]}" repo="${args[2]}" from="${args[3]:-}"
@@ -61,6 +66,17 @@ fi
 
 url="https://github.com/$repo"
 git=(git -C "$stage")
+# The lock is a directory holding its publish's PID (Git for Windows' bash has no flock), taken over once that process
+# is gone.
+lock="${TMPDIR:-/tmp}/publish_page.${repo//\//_}.lock"
+until mkdir "$lock" 2> /dev/null; do
+    pid="$(cat "$lock/pid" 2> /dev/null || true)"
+    if [ -n "$pid" ] && ! kill -0 "$pid" 2> /dev/null; then rm -rf "$lock"; continue; fi
+    [ -n "${waiting:-}" ] || { echo "waiting for another publish to $repo from this machine"; waiting=1; }
+    sleep 5
+done
+echo $$ > "$lock/pid"
+trap 'rm -rf "$lock" ${drop:+"$stage"}' EXIT
 # publish_once: a commit on top of what gh-pages holds now, pushed with a lease on it. Called as a condition, where
 # set -e is off, so each step that matters returns on its own failure.
 publish_once() {
@@ -104,14 +120,13 @@ fi
 "${git[@]}" commit -q -F - <<< "${subject:-The web page}${lines:+$'\n\n'$lines}" || return 1
 "${git[@]}" push -q "${lease[@]}" "$url" gh-pages
 }
-# Another publish to this gh-pages (a page in another of its folders, the hub's page) pushed since the fetch: the lease
-# refuses the push, and it starts again from the gh-pages that publish left, so publishes of several pages can run at
-# once.
+# A refused push (git's own lines above say whether the lease or GitHub refused it) starts again from what gh-pages
+# holds then, after 10-19 s, 20-29 s, 30-39 s and 40-49 s.
 for try in 1 2 3 4 5; do
     publish_once && break
     [ $try -lt 5 ] || { echo "gh-pages refused this publish $try times"; exit 1; }
-    echo "gh-pages moved during this publish: again on top of it"
-    sleep $((try * 3))
+    echo "the push to gh-pages failed: again on top of what it holds now"
+    sleep $((try * 10 + RANDOM % 10))
 done
 # A first push of gh-pages to a public repo can switch Pages on by itself in the seconds between the check and the
 # POST, which then answers 409 "already enabled": so a refused POST is checked again.
