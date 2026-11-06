@@ -848,8 +848,8 @@ rt64 a70046c,          a transform is paired with one of the frame before also b
                        across, the frames between drawing one part toward another's size and place (Donald Duck:
                        Goin' Quackers' outfit machine drew its body over its lid at 120 Hz). Every build: it was
                        RT64_MATCH_SCALES, off on a desktop build, which every recomp building the fork would turn on
-rt64 24fc22f           a scene whose camera isn't finite pairs only with another such scene from one game frame to the
-                       next, never with one that is: its NaN difference to every scene left the sort of scene pairs
+rt64 24fc22f,          a scene whose camera isn't finite pairs only with another such scene from one game frame to the
+d4658b8                next, never with one that is: its NaN difference to every scene left the sort of scene pairs
                        with no order, so a real scene could be paired with the frame before's shadow camera while its
                        own match was free (Dinosaur Planet's opening flight, about 6 times in 90 s). Every build
 ```
