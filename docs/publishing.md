@@ -34,7 +34,7 @@ A run on a schedule that takes every change since the last one at once:
   is one: a pin move is the desktop build's RT64 and runtime moving too. The pin's PR is the tree that was built, so
   it adds nothing to `releases/next.md`; the run says what the move brings in the release it cuts, and a release cut by
   other work meanwhile carries it unnamed. A critical fix that plays every game takes it along the same way.
-- A recomp of the project's own is not published until its game is released (none is held now): its line in
+- A recomp of the project's own is not published until its game is released (Dinosaur Planet is held now): its line in
   `tools/publish_pages.sh`'s `unreleased` holds it, builds it only as a dry run and leaves it out of a run that names
   no game. The retest still moves its pin as it does the other recomps' (a PR on its repo that moves
   `lib/N64Recomp-browser` to the tag, its page built with `--dry-run` and played by the smoke play), merges it, and
