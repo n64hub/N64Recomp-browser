@@ -104,11 +104,11 @@ docs line) is made in the same work like any other.
 - Never open a PR, issue or discussion upstream at rt64, plume, N64Recomp, N64ModernRuntime, RecompFrontend,
   BanjoRecomp, Zelda64Recomp or Donkey-Kong-64-Recompiled: their CONTRIBUTING.md asks for no LLM-written code (plume's,
   no AI-made contribution and no AI talking to its maintainers). Nor at dino-recomp or dinomod-enhanced-recompiled, or in
-  their Discord: dino-recomp bans AI-made contributions and asks its forks to keep the ban, which dino-recomp-web
-  doesn't, and Dinomod Enhanced is made with no AI. Each fork's README opens with a banner, and its GitHub
-  description with "AI-written fork:", saying it is AI-written, not upstream's, and offered to nobody upstream
-  (hlslpp-web's says only the first two: hlslpp has no ban). Keep that true of a new fork and of a game fork's README.
-  A game's own repo is decided case by case: a game fork offers it only what it takes, said to be AI-written
+  their Discord: dino-recomp bans AI-made contributions and asks its forks to keep the ban, and Dinomod Enhanced is made
+  with no AI and consents to no AI fork bundling it, so neither is forked here. Each fork's README opens with a banner,
+  and its GitHub description with "AI-written fork:", saying it is AI-written, not upstream's, and offered to nobody
+  upstream (hlslpp-web's says only the first two: hlslpp has no ban). Keep that true of a new fork and of a game fork's
+  README. A game's own repo is decided case by case: a game fork offers it only what it takes, said to be AI-written
   (GoldenEye64Recomp-web: to podulator's, fixes for bugs its desktop build has too, without the web or mouse code).
 - A repo without a license is forked, ported and copied from like a licensed one. That is this project's choice, not
   the law's: in law no license leaves every right with its author.
@@ -120,7 +120,7 @@ docs line) is made in the same work like any other.
   shader, the plume device thread and hlslpp's wasm SIMD backend, and checks that `patches/` match the forks and apply
   to every recomp commit in `patches/pins.txt` and over DKR-R-web's, CBFD-Recompiled-web's,
   JetForceGemini-Recomp-web's, racer-web's, Snap64Recomp-web's, rush2recompiled-web's, 1080-Snowboarding-recomp-web's,
-  dino-recomp-web's, BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's,
+  BanjoTooieRecompiled-web's, wave-race-64-recomp-web's, super-mario-64-recomp's,
   f-zero-x-recomp's and rush-2049-recomp's own patches, compiles the files Snap64Recomp-web's patches merge by hand as
   they come out of that, recompinput's patched files over 1080-Snowboarding-recomp-web's newer RecompFrontend, and
   rt64's files that include ImGui against Jet Force Gemini's newer ImGui. It builds no page (that needs a game), so

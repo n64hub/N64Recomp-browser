@@ -68,8 +68,7 @@ function tile(game, index) {
   // holds a save of it (showSaves()).
   const [score, reviews] = SCORES[game.repoName] ?? [];
   if (score) {
-    const of = SCORED_AS[game.repoName];
-    const said = `Critics' average: ${score}, from ${reviews} reviews on Wikipedia${of ? ' of ' + of : ''}`;
+    const said = `Critics' average: ${score}, from ${reviews} reviews on Wikipedia`;
     cover.append(el('span', { className: 'score', textContent: score, title: said, ariaLabel: said }));
   }
   cover.append(Object.assign(el('span', { className: 'saved', title: 'You have saves of this game', role: 'img',
@@ -113,13 +112,10 @@ const SCORES = {
   'Donkey-Kong-64-Recompiled-web': [85, 12], 'pilotwings-64-recomp-web': [85, 15], 'rayman-2-recomp': [85, 6],
   'BanjoTooieRecompiled-web': [84, 11], 'rush-2049-recomp': [84, 7], 'MarioKart64Recomp-web': [83, 18],
   'DKR-R-web': [83, 10], 'Snap64Recomp-web': [79, 9], 'mario-party-2-recomp': [77, 18],
-  'super-smash-bros-recomp': [77, 12], 'dino-recomp-web': [77, 13], 'JetForceGemini-Recomp-web': [76, 11],
+  'super-smash-bros-recomp': [77, 12], 'JetForceGemini-Recomp-web': [76, 11],
   'racer-web': [74, 7], 'rush2recompiled-web': [74, 12], 'mario-party-recomp': [71, 13], 'mario-party-3-recomp': [71, 14],
   'donald-duck-goin-quackers-recomp': [70, 4],
 };
-// A game scored by another's reviews: Dinosaur Planet was never released, and became Star Fox Adventures on the
-// GameCube.
-const SCORED_AS = { 'dino-recomp-web': 'Star Fox Adventures, the game Dinosaur Planet became' };
 
 // A floppy disk: blue, its metal shutter at the top and its white label below.
 const FLOPPY = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
