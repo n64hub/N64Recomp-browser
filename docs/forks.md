@@ -855,4 +855,8 @@ d4658b8                next, never with one that is: its NaN difference to every
 rt64 3fb48ed           a tile copy from a 4-bit framebuffer takes a pixel as one byte, two pixels to it, as an 8-bit
                        one is, not 0 bytes, on every build: makeFramebufferTile divided by it and trapped (Dinosaur
                        Planet's desktop build in Dragon Rock's Skeetla fight, its memory already corrupt there)
+rt64 f81e9cb           the framebuffer the VI shows starts its read buffer history over before each upload of its
+                       RAM at a VI, as the present queue's scratch framebuffer does: shown without being drawn into,
+                       it took a new entry (two buffers of its size and a copy of its bytes) every time, and Dinosaur
+                       Planet's page grew its heap 9 MB a second until it aborted (Aborted(OOM)) about 140 s in. Web only
 ```

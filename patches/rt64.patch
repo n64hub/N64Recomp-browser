@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 3fb48ed1df71fecaf26d74d7983a2055d006c9ea
+rt64: https://github.com/n64hub/rt64-web f81e9cbe89b87f2f69f9905a3b65e9927bd2ee3c
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3937,7 +3937,7 @@ index 8858dac..a9417c7 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..262c4f1 100644
+index 2970e71..71be5f8 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -4536,7 +4536,7 @@ index 2970e71..262c4f1 100644
              }
              else if (viVisible) {
                  lastScreenFactorCounter++;
-@@ -1909,6 +2258,7 @@ namespace RT64 {
+@@ -1909,10 +2258,21 @@ namespace RT64 {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
@@ -4544,7 +4544,21 @@ index 2970e71..262c4f1 100644
                          {
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
-@@ -1952,7 +2302,16 @@ namespace RT64 {
+                             const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
++#                       if defined(__EMSCRIPTEN__)
++                            // Each upload from RAM takes the next read buffer of the framebuffer's history, which only a
++                            // workload that draws into the framebuffer resets. One the game shows without drawing into it
++                            // (the CPU writes it, or copies the frame it drew elsewhere into it) took a new one at every VI
++                            // its RAM changed, a buffer and an upload buffer of the framebuffer's size each, and on the web
++                            // the copy of its bytes that the CPU's change count compares with: Dinosaur Planet's page grew
++                            // its heap 9 MB and Chrome's GPU process 25-30 MB a second until it ran out. The present
++                            // queue's scratch framebuffer starts its history over before each of its uploads the same way.
++                            screenFb->nativeTarget.resetBufferHistory();
++#                       endif
+                             framebufferManager.uploadRAM(worker, &screenFb, 1, ext.presentQueue->screenFbChangePool, RDRAM, false, present.fbOperations, fbDiscards, ext.shaderLibrary);
+                             fbDiscards.clear();
+ 
+@@ -1952,7 +2312,16 @@ namespace RT64 {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
              advancePresent(present, false);
@@ -4561,7 +4575,7 @@ index 2970e71..262c4f1 100644
  
              // This presentation originates from screen changes being made manually by the CPU
              // or the game somehow not doing some form of buffering (instant input romhacks).
-@@ -1971,6 +2330,9 @@ namespace RT64 {
+@@ -1971,6 +2340,9 @@ namespace RT64 {
          renderTargetManager.destroyAll();
          renderTargetManager.setMultisampling(multisampling);
          dummyDepthTarget.reset();
@@ -4571,7 +4585,7 @@ index 2970e71..262c4f1 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,12 +3022,101 @@ namespace RT64 {
+@@ -2660,12 +3032,101 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -4673,7 +4687,7 @@ index 2970e71..262c4f1 100644
          present.debuggerFramebuffer.address = debuggerInspector.renderer.framebufferAddress;
          present.debuggerFramebuffer.view = (debuggerInspector.renderer.framebufferIndex >= 0);
      }
-@@ -2724,6 +3175,25 @@ namespace RT64 {
+@@ -2724,6 +3185,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  
