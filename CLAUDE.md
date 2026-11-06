@@ -40,6 +40,10 @@ sentence. Keep that word on the line above.
 A change here is one PR on this repo. It merges once CI is green and what it changes has been played (Changing it).
 Work found while doing other work is filed and not started, unless it is a critical fix (The pins).
 
+A slow step the work repeats (a build, a generator or disassembler run, a recompile, a boot) is made fast before the
+work leans on it, unasked: incremental, cached by what it reads, run in parallel. A repo's own tool is fixed in that
+repo, in the same work (a game's tools/ by its PR); a script of the work's own, in the scratch.
+
 A request that a rule here turns away is asked about, never answered no and closed: say which rule and what it would
 mean to do it anyway, and let whoever asked decide. The rule may be what is wrong, and if so it changes in the same
 work.
