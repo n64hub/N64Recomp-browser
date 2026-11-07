@@ -23,13 +23,14 @@
 #   boots it from Pages in headless Chrome). An --ab game, and one whose repo changed more than its pin since the main
 #   Pages served, is then played from Pages in Firefox (play_pages.sh); the rest are not (docs/publishing.md, The
 #   retest). Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party 1, 2 and 3, Super Smash Bros., Paper
-#   Mario, Rayman 2, Donald Duck: Goin' Quackers and Dinosaur Planet move by a PR on their own repos (CLAUDE.md, The pins), though the games publish_pages.sh holds as unreleased (Dinosaur Planet now) are left
-#   out of a run that names no game, since Pages serves no page of theirs to play against: for each, the run pushes the
-#   pin commit, which also moves its submodules of upstream's to the commits the tag's patches/patches.txt names, as
-#   the build did (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there; once it merges (Rush 2049's after its desktop
-#   build has run), `publish_pages.sh <checkout> <game> --played <dir>/keep` and `play_pages.sh <checkout> firefox
-#   <game>` publish and play it, and the recomp's own release tool releases its desktop build from that main (CLAUDE.md,
-#   Releasing).
+#   Mario, Rayman 2, Donald Duck: Goin' Quackers and Dinosaur Planet move by a PR on their own repos (CLAUDE.md, The
+#   pins), though a game publish_pages.sh holds as unreleased (Dinosaur Planet now) is left out of a run that names no
+#   game, since Pages serves no page of its own to play against: for each, the run pushes the pin commit, which also
+#   moves its submodules of upstream's to the commits the tag's patches/patches.txt names, as the build did
+#   (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there. Its merge is the run's by hand (Rush 2049's after its
+#   desktop build has run); started again with the same <dir>, the run publishes and plays each one whose main now has
+#   the tree that was built, as it does a fork's above, and the recomp's own release tool releases its desktop build
+#   from that main (CLAUDE.md, Releasing).
 # --cpu-throttle is ab_pages.mjs's for the A/B (a desktop GPU's Chrome reads the same ceiling for every build
 # uncapped). --queue <command> takes each build and play's turn in the machine's GPU queue (CLAUDE.md, Playing a page):
 # it is run as `<command> <shared|whole> <minutes> <command line...>`, a build and a smoke play, a boot and a play from
@@ -179,10 +180,18 @@ for g in "${order[@]}"; do
         { outcome "$g" "smoke play not clean: $run/$g.smoke.log"; continue; }
     [[ $gate == open ]] || { outcome "$g" "held: an A/B read worse or not clean"; continue; }
     step "$g" pin move_pin "$g" || { outcome "$g" "pin not moved: $run/$g.pin.log"; continue; }
-    if [[ $own == *" $g "* ]]; then outcome "$g" "PR $(tail -1 "$run/$g.pin.log")"; continue; fi
+    if [[ $own == *" $g "* ]]; then
+        # Its PR merged level with main leaves a commit on main's own line with the tree that was built, which
+        # --played publishes however far main has moved on since (a release PR, say).
+        read -r _ _ tree < "$run/keep/$g/built"
+        git -C "$clone" fetch -q origin main
+        git -C "$clone" log --first-parent --format=%T origin/main --not $(git -C "$clone" rev-parse "$was^@") |
+            grep -qx "$tree" ||
+            { outcome "$g" "PR $(tail -1 "$run/$g.pin.log") (once it merges, run again to publish it)"; continue; }
+    fi
     step "$g" publish bash "$here/publish_pages.sh" "$rush" "$g" --played "$run/keep" -- $(qwords shared 5) ||
         { outcome "$g" "publish failed: $run/$g.publish.log"; continue; }
-    if [[ " ${ab[*]} " != *" $g "* && $own_changes == no ]]; then
+    if [[ " ${ab[*]} " != *" $g "* && $own_changes == no && ! -f "$run/$g.firefox" ]]; then
         outcome "$g" "published (its pin alone changed: no Firefox play from Pages)"
     else
         step "$g" firefox bash "$here/play_pages.sh" "$rush" firefox "$g" --note "retest $tag${note:+; $note}" -- $(qwords shared 8) &&
