@@ -181,15 +181,17 @@ for g in "${order[@]}"; do
     [[ $gate == open ]] || { outcome "$g" "held: an A/B read worse or not clean"; continue; }
     step "$g" pin move_pin "$g" || { outcome "$g" "pin not moved: $run/$g.pin.log"; continue; }
     if [[ $own == *" $g "* ]]; then
-        # Its PR merged level with main leaves main with the tree that was built, which --played publishes.
+        # Its PR merged level with main leaves a commit on main's own line with the tree that was built, which
+        # --played publishes however far main has moved on since (a release PR, say).
         read -r _ _ tree < "$run/keep/$g/built"
         git -C "$clone" fetch -q origin main
-        [[ "$(git -C "$clone" rev-parse "origin/main^{tree}")" == "$tree" ]] ||
+        git -C "$clone" log --first-parent --format=%T origin/main --not $(git -C "$clone" rev-parse "$was^@") |
+            grep -qx "$tree" ||
             { outcome "$g" "PR $(tail -1 "$run/$g.pin.log") (once it merges, run again to publish it)"; continue; }
     fi
     step "$g" publish bash "$here/publish_pages.sh" "$rush" "$g" --played "$run/keep" -- $(qwords shared 5) ||
         { outcome "$g" "publish failed: $run/$g.publish.log"; continue; }
-    if [[ " ${ab[*]} " != *" $g "* && $own_changes == no ]]; then
+    if [[ " ${ab[*]} " != *" $g "* && $own_changes == no && ! -f "$run/$g.firefox" ]]; then
         outcome "$g" "published (its pin alone changed: no Firefox play from Pages)"
     else
         step "$g" firefox bash "$here/play_pages.sh" "$rush" firefox "$g" --note "retest $tag${note:+; $note}" -- $(qwords shared 8) &&
