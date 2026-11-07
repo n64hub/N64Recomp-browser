@@ -23,11 +23,11 @@
 #   boots it from Pages in headless Chrome). An --ab game, and one whose repo changed more than its pin since the main
 #   Pages served, is then played from Pages in Firefox (play_pages.sh); the rest are not (docs/publishing.md, The
 #   retest). Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party 1, 2 and 3, Super Smash Bros., Paper
-#   Mario, Rayman 2 and Donald Duck: Goin' Quackers move by a PR on their own repos (CLAUDE.md, The pins), though a
-#   game publish_pages.sh holds as unreleased is left out of a run that names no game, since Pages serves no page of
-#   its own to play against: for each, the run pushes the pin commit, which also moves its submodules of upstream's to
-#   the commits the tag's patches/patches.txt names, as the build did (publish_pages.sh's pin_tree), as branch
-#   n64recomp-browser-<tag> and opens that PR, and stops there. Its merge is the run's by hand (Rush 2049's after its
+#   Mario, Rayman 2, Donald Duck: Goin' Quackers and Dinosaur Planet move by a PR on their own repos (CLAUDE.md, The
+#   pins), though a game publish_pages.sh holds as unreleased (Dinosaur Planet now) is left out of a run that names no
+#   game, since Pages serves no page of its own to play against: for each, the run pushes the pin commit, which also
+#   moves its submodules of upstream's to the commits the tag's patches/patches.txt names, as the build did
+#   (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there. Its merge is the run's by hand (Rush 2049's after its
 #   desktop build has run); started again with the same <dir>, the run publishes and plays each one whose main now has
 #   the tree that was built, as it does a fork's above, and the recomp's own release tool releases its desktop build
 #   from that main (CLAUDE.md, Releasing).
