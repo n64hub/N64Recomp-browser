@@ -745,10 +745,11 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
   // agent points remote settings at a dummy server (services.settings.server) so that they stay off the network, but a
   // release Firefox ignores that pref unless MOZ_REMOTE_SETTINGS_DEVTOOLS is 1. Without it session.new took 30 s to over
   // 8 minutes on some hosts, which ran smoke plays out of their turns; with it a headless start answered in 2-14 s
-  // (docs/findings.md, Firefox slow to start).
+  // (docs/findings.md, Firefox slow to start). What needs system access (setViewport, the chrome context) needs both
+  // --remote-allow-system-access and MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1: Firefox 158 refuses setViewport without the latter.
   const proc = spawnHeld(affinity, browserExecutable('firefox', executable), ['-no-remote', '-profile', profile,
     '--remote-debugging-port', String(port), '--remote-allow-system-access', 'about:blank'],
-    { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, MOZ_REMOTE_SETTINGS_DEVTOOLS: '1', MOZ_CRASHREPORTER_NO_REPORT: '1' } });
+    { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, MOZ_REMOTE_SETTINGS_DEVTOOLS: '1', MOZ_REMOTE_ALLOW_SYSTEM_ACCESS: '1', MOZ_CRASHREPORTER_NO_REPORT: '1' } });
   const watch = watchBrowser(proc, 'Firefox', profile, 'minidumps', line);
   let send = null, closing = false;
   for (let i = 0; i < 150 && !send; i++) {
@@ -786,7 +787,7 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
     // What about:memory says of the GPU process, in MB (null if Firefox has none): private bytes, Firefox's own heap
     // (mozjemalloc: Gecko's WebGPU code and wgpu), the system heap (Windows' heaps: the D3D12 runtime, the GPU's
     // driver, DXC) and the GPU memory it has committed, dedicated and shared. Read from nsIMemoryReporterManager in
-    // the browser's chrome context, which BiDi reaches only with --remote-allow-system-access; about:memory itself
+    // the browser's chrome context, which BiDi reaches only with system access (above); about:memory itself
     // can't be opened from BiDi. A leak there shows which of them grows, so whose it is.
     gpuProcessMemory: async () => {
       const chrome = (await send('browsingContext.getTree', { 'moz:scope': 'chrome' })).result?.contexts?.[0]?.context;
