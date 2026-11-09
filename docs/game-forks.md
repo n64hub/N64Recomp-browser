@@ -404,8 +404,10 @@ newer than the web's: its texture decoder is shared with the CPU (`src/shared`, 
 game's otherwise. The page leaves out RetroAchievements, which needs a server, and MSAA, turns render to RAM off,
 since the game reads no frame back and the exact copy held a phone's game frames to 15-16 a second against 26 (the
 copy a list late would land on the level data it loads into its framebuffers' memory: docs/phones.md), with RT64
-still checking RDRAM for what the CPU wrote over a framebuffer as it does after a copy (its rt64 patch), and keeps
-every other option at the desktop's defaults. Its own runtime patch reports a graphics task done only once RT64 has
+still checking RDRAM for what the CPU wrote over a framebuffer as it does after a copy (its rt64 patch), leaves out
+upstream 1.2.2's TV Background, since no pictures come with the page and a player can't add any, and keeps every
+other option at the desktop's defaults: N64 Slowdown off, and the launcher's Cheats page (GameShark and Action Replay
+codes) there. Its own runtime patch reports a graphics task done only once RT64 has
 drawn it, so on the page the graphics task yields to an audio task when the game's scheduler asks, as the RSP's
 does: held behind a renderer stalled on Firefox's pipeline builds, with the VIs held too, the audio task ran from a
 list made before the title demo's load and wrote over what the load had put in its buffers. Its list is 57 shaders: the boot (the launcher, the intro, the title and
