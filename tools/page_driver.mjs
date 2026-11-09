@@ -746,7 +746,8 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
   // release Firefox ignores that pref unless MOZ_REMOTE_SETTINGS_DEVTOOLS is 1. Without it session.new took 30 s to over
   // 8 minutes on some hosts, which ran smoke plays out of their turns; with it a headless start answered in 2-14 s
   // (docs/findings.md, Firefox slow to start). What needs system access (setViewport, the chrome context) needs both
-  // --remote-allow-system-access and MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1: Firefox 158 refuses setViewport without the latter.
+  // --remote-allow-system-access and MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1: some Firefox builds refuse setViewport without the
+  // latter ("System access is required"), and the page then plays at the window's size, not --size.
   const proc = spawnHeld(affinity, browserExecutable('firefox', executable), ['-no-remote', '-profile', profile,
     '--remote-debugging-port', String(port), '--remote-allow-system-access', 'about:blank'],
     { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, MOZ_REMOTE_SETTINGS_DEVTOOLS: '1', MOZ_REMOTE_ALLOW_SYSTEM_ACCESS: '1', MOZ_CRASHREPORTER_NO_REPORT: '1' } });
