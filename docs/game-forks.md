@@ -368,7 +368,7 @@ rides it to its end, taking photos and throwing the items. Its docs/WEB.md and t
 `lib/patches/<submodule>.patch` change (4,900 lines on rt64's 46 files: car reflection and ambient occlusion shaders,
 the Variable frame rate's timeline, generated mipmaps, MSAA's coverage), patched by the N64Recomp-browser tag its
 `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` applies Rush 2's patches first, then `apply.cmake` project by
-project, but for the files where both change the same lines (`web/patches/files.txt`: 12 of rt64's, the runtime's
+project, but for the files where both change the same lines (`web/patches/files.txt`: 13 of rt64's, the runtime's
 `config.cpp` and `events.cpp`, 2 of RecompFrontend's), whose web change is its `web/patches/<project>.patch`, merged by hand, and what N64Recomp-browser
 has changed in them since is merged in by `apply.cmake --since`, as Snap64's is, and CI's `rush2-patches` job runs its
 `tools/build_web.sh --patches` on each PR as `snap-patches` does Snap64's. One of them applies as is but names what the port renamed (`ui_mod_menu.cpp`), so it is listed too. Two of
@@ -377,12 +377,15 @@ texture slots (`sampleTileTextureGrad()`, `loadTileTexture()`), and `RasterPS.hl
 is left out of a page's shaders, since naga takes no sample mask output and the page draws one sample a pixel. Its
 texture cache binds a generated-mipmap texture with no view as the decoder's storage target for the first level, which
 plume 827a073 binds as that level, as D3D12 does (before it every race drew black, 10,208 WebGPU errors in one play).
+It merges upstream's master, up to 31033bb. Upstream's Sky Fog and Fill Scenery Gaps are off as options, but the setup
+screen's Enhanced preset, a new player's, turns both on: about a tenth more draws in a race, which the page keeps as
+upstream made it, since it still reads several times 60 on the stand-in.
 The page leaves out online play, for
 `src/online/online_web.cpp`, an offline machine to the game, the texture upscaler, which starts a program, and N64:
 Recompiled code mods. Render to RAM is off: nothing in the game reads a frame back, and on a phone the exact copy
 held its demos to half the game frames (docs/phones.md, Rush 2 on a Galaxy S21). Its own on-screen controls
 (upstream's `src/touch_controls.cpp`) have a phone's touchscreen while they are on Auto or On, and tell the page so
-(`Module.gameTouchControls`, docs/porting.md), which keeps its own controller out of their way. Its list is 82 shaders: the boot (the launcher, the title and the menus, 37) and 9 sections (the
+(`Module.gameTouchControls`, docs/porting.md), which keeps its own controller out of their way. Its list is 91 shaders: the boot (the launcher, the title and the menus, 38) and 9 sections (the
 title's demos, a race on each of the 7 tracks, a stunt course), recorded by `web/shader_plan.json`, which drives the
 menus by the front end's screen and the track select's entry in RDRAM. Its docs/BUILDING.md (The web page) and the
 header of `tools/build_web.sh` has the rest.
