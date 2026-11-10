@@ -313,6 +313,25 @@ it (WebGPU has no sample positions); with its default MSAA 2x it doesn't, since 
 frame into its target instead of drawing into it, and the mission's targets stay 1286x660. So the page keeps them as
 RT64 sizes them.
 
+Dinosaur Planet's page could grow its heap about 9 MB a second from its first level on, and Chrome's GPU process 20-30
+MB a second, until it aborted (Aborted(OOM)) at 1536 MB 2-3 minutes in. A walk of dlmalloc's chunks (`heap_probe.js`
+with `?heapwalk`) named the growth: chunks of 299,528 bytes, about 27 a second, each a 640x234 16-bit framebuffer's
+bytes, held from one vector of 52-byte entries that kept doubling, `NativeTarget::readBufferHistory` and its read
+buffers' `uploadedData`. Every upload of a framebuffer's RAM takes the next read buffer of its history (a buffer and an
+upload buffer of its size, and on the web the copy of its bytes), and only a workload that draws into the framebuffer
+started the history over. This one the CPU writes and no workload draws into, so the check of RAM before each list
+took a new one at every check its RAM changed in, its one render to RAM long read back. It comes and goes with how
+RT64 sizes the game's framebuffers as the first level starts: in 4 of 7 plays of the regular plan at 3840x2000 on
+builds without the fix it made that one 640x234, and those climbed to 1,380 MB at 130 s; in the others it made it
+640x479 and 320x239, and they held at 898 MB. The history now starts over before each upload unless a render to RAM is
+still to be read back from it (rt64-web 6655470, docs/forks.md). A build of it counting those resets made the 640x234
+one in 1 of 6 plays, started its history over 1,024 times by 105 s, and held at 905 MB at 130 s. f81e9cb's reset at a
+VI alone left the check before a list growing. The desktop build grew the same way, in video memory: a new game started
+at SwapStone Hollow 25 s after its logos (Vulkan, an RTX 2070, a busy host) grew its dedicated memory about 9 MB a
+second and its shared memory about 10 in 4 of 4 runs, at 2560x1440 and at 960x720 (702 to 1824 MB and 138 to 1316 MB in
+two minutes), and held at 861 and 150 MB with the reset on every build (rt64-web 7edd8f3), played in turn with it.
+Started 2 s in, before the logos, it held flat without the reset, as the page did when it made the framebuffer 640x479.
+
 ## A page that stops answering
 
 Firefox drops play_page's connection at its 4,098th message when page_driver.mjs speaks WebSocket with Node's own
