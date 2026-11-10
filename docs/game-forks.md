@@ -652,6 +652,16 @@ the pause menu's among them) and a section for each of 27 levels of the game's t
 `tools/shader_plan.json` without anyone playing: `tools/survey.js` changes level as the game's own exits do, and
 `tools/play_plan_levels.json` plays every level in turn. Its README, CLAUDE.md and docs/web.md have the rest.
 
+`n64hub/dinosaur-planet-recomp` is Dinosaur Planet's December 2000 prototype, not a fork but this project's own recomp
+(GPL-3.0), with RecompFrontend's launcher and menus, released for Windows and Linux and in the browser. It was made from
+Goin' Quackers' recomp: its symbols are written from the ROM, the main segment's and those of the 796 DLLs the game
+loads as it plays, each DLL a relocatable section, loaded and unloaded by the game's own loader (`src/game/dlls.cpp`).
+The prototype is unfinished, so its patches fix what crashes, softlocks or has no way on, and restore what the story
+left unfinished, each restoration behind a setting (README, Progression fixes). Its list is 880 shaders in 29
+sections, the boot, the title and a new game's opening first and then an area a section, recorded by
+`tools/shader_plan.json` from story points (`docs/story-points.md`) without anyone playing. Its README, CLAUDE.md and
+docs/web.md have the rest.
+
 ## The games' own frame rates
 
 A page presents at the display's rate whatever its game runs at (CLAUDE.md, Rules). The game's own rate, set by the
