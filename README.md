@@ -428,7 +428,8 @@ take the web support without moving its submodules to the forks (Using it in a r
 - `tools/`: `fetch_forks.sh` checks out the forks at `forks.txt`'s commits (CI uses it), `fetch_pins.sh` a recomp's
   own commits in `patches/pins.txt`, patched, and `publish_page.sh` puts
   a recomp's built page on GitHub Pages, in its folder of the hub (n64hub), as the only commit on an orphan `gh-pages`
-  branch (its header says how); `publish_site.sh` publishes the games' page (`site/`) at the hub's top. A page holds the recompiled code, so it is built where the ROM is, never in CI. `publish_pages.sh` is the
+  branch (its header says how); `publish_site.sh` publishes the games' page (`site/`) at the hub's top. Each
+  waits until Pages has deployed what it pushed, building it again when a deploy fails (`wait_pages.sh`). A page holds the recompiled code, so it is built where the ROM is, never in CI. `publish_pages.sh` is the
   deploy after a change: it rebuilds every game's page in the Games table from its main on a build host, publishes
   only those whose files differ from what Pages serves (a commit builds the same bytes in any checkout), and boots
   each one it published from Pages in headless Chrome; `play_pages.sh` then plays the pages Pages serves by their

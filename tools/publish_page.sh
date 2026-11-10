@@ -8,7 +8,8 @@
 # the page rather than every one published. The first time, Pages is switched on for that branch (with gh).
 #
 #   bash tools/publish_page.sh <build dir> <name> <owner/repo> [<what it was built from>] [--into <dir>] [--dry-run]
-#   bash tools/publish_page.sh --drop <dir> <owner/repo>
+#       [--no-wait]
+#   bash tools/publish_page.sh --drop <dir> <owner/repo> [--no-wait]
 #
 # e.g. bash lib/N64Recomp-browser/tools/publish_page.sh build-web BanjoRecompiled n64hub/n64hub.github.io \
 #          "main $(git rev-parse --short HEAD)" --into banjo-kazooie
@@ -30,14 +31,18 @@
 # ("remote unpack failed: index-pack failed"), and five tries a few seconds apart weren't enough to get one through.
 # One from another machine is retried: a push the lease refuses (gh-pages moved since the fetch) or GitHub refuses
 # starts again on top of what gh-pages holds then, after a wait that grows and is jittered so two retries part.
+# Then it waits for Pages to deploy the push, building it again if the deploy fails (tools/wait_pages.sh), and fails
+# if Pages never does: a push only starts the deploy. --no-wait leaves that to the caller (publish_pages.sh waits once
+# for all the pages it pushes).
 set -euo pipefail
-dry_run=false into="" drop=""
+dry_run=false into="" drop="" wait=true
 args=()
 while [ $# -gt 0 ]; do
     case "$1" in
         --dry-run) dry_run=true ;;
         --into) into="${2:-}"; shift ;;
         --drop) drop="${2:-}"; shift ;;
+        --no-wait) wait=false ;;
         *) args+=("$1") ;;
     esac
     shift
@@ -133,4 +138,9 @@ done
 gh api "repos/$repo/pages" > /dev/null 2>&1 ||
     gh api -X POST "repos/$repo/pages" -f "source[branch]=gh-pages" -f "source[path]=/" > /dev/null 2>&1 ||
     gh api "repos/$repo/pages" > /dev/null
-echo "pushed gh-pages: $(gh api "repos/$repo/pages" --jq .html_url)${folder:+$folder/} $([ -n "$drop" ] && echo "is gone" || echo "serves it") in a minute or two"
+pushed="$("${git[@]}" rev-parse HEAD)"
+echo "pushed gh-pages ${pushed:0:7}"
+rm -rf "$lock"  # the next publish's push needn't wait for this one's deploy
+$wait || exit 0
+bash "$(dirname "$0")/wait_pages.sh" "$repo" "$pushed"
+echo "$(gh api "repos/$repo/pages" --jq .html_url)${folder:+$folder/} $([ -n "$drop" ] && echo "is gone" || echo "is served")"
