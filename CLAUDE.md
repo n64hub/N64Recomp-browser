@@ -65,8 +65,8 @@ by a PR there, built and played like a pin move. Code one Mario Party recomp wou
 
 Branches don't outlive their work: every one of these repos deletes a PR's branch when it merges ("Automatically
 delete head branches", on in each, a new fork included), and a branch pushed to a fork to hold work not on `main` yet
-(`web-wip`, `wip/<topic>`) is deleted by the work that lands or drops it. A fork keeps `main`, `gh-pages` and those
-branches only: upstream's others are deleted when it is made.
+(`web-wip`, `wip/<topic>`, a game fork's `fix/<topic>` offered upstream) is deleted by the work that lands or drops
+it. A fork keeps `main`, `gh-pages` and those branches only: upstream's others are deleted when it is made.
 
 ## If the change reaches another repo, YOU make it
 
@@ -97,7 +97,7 @@ docs line) is made in the same work like any other.
   aim, controls, enhancements) are asked about first, as any request a rule turns away is (How work lands). The three it
   has (docs/game-forks.md) are a change that runs its game faster when that makes the page play better, and GoldenEye's
   keyboard and mouse and its Ext pad style as the PC ports play them: all in GoldenEye64Recomp-web's own code and none
-  in the forks.
+  in the forks, and the keyboard and mouse in podulator's since it took them.
 - Every page interpolates to the display's rate and draws at the canvas's size: RT64's Framerate Display and resolution
   Auto, in every game fork and new port, whatever its recomp's desktop build defaults to (README, The recomp's own
   code). A page held to its game's own rate reads that rate uncapped whatever a change costs or saves (DKR-R 29.8-30.0,
@@ -112,7 +112,9 @@ docs line) is made in the same work like any other.
   and its GitHub description with "AI-written fork:", saying it is AI-written, not upstream's, and offered to nobody
   upstream (hlslpp-web's says only the first two: hlslpp has no ban). Keep that true of a new fork and of a game fork's
   README. A game's own repo is decided case by case: a game fork offers it only what it takes, said to be AI-written
-  (GoldenEye64Recomp-web: to podulator's, fixes for bugs its desktop build has too, without the web or mouse code).
+  (GoldenEye64Recomp-web: to podulator's, which takes fixes, features and build work, each a PR of its own from a
+  `fix/<topic>` branch of the fork cut from its `main`, played on its desktop build, without the web code;
+  docs/game-forks.md).
 - A repo without a license is forked, ported and copied from like a licensed one. That is this project's choice, not
   the law's: in law no license leaves every right with its author.
 - No ROMs, ROM-derived assets or extracted game data in git, CI, PRs or pages. A page holds the recompiled code, so it
