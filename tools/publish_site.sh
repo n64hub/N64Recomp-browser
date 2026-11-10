@@ -5,7 +5,8 @@
 # same origin, so a game plays in the page's frame. The top is site/'s files, frontend/coi_serviceworker.js (Pages
 # can't send the cross-origin headers a frame with threads needs), frontend/save_sync.js (sign-in's upload), a .nojekyll, and a CNAME naming the domain once the
 # repo has one; they replace the files at the top of gh-pages and every folder stays. The page reads the Games table
-# from main's README.md each visit, so only a change to site/ needs publishing again.
+# from main's README.md each visit, so only a change to site/ needs publishing again. It ends once Pages has deployed
+# the push (tools/wait_pages.sh, which builds it again if the deploy fails), and fails if Pages never does.
 # The domain is set once, in the repo's Pages settings, after its DNS points at GitHub Pages: a CNAME published before
 # then would send every game's page to a domain that doesn't serve them. From then on each publish keeps it.
 #
@@ -45,4 +46,7 @@ subject="The games' page, from $(git -C "$root" rev-parse --abbrev-ref HEAD) $(g
 "${git[@]}" commit -q -F - <<< "$subject${lines:+$'\n\n'$lines}"
 # Another publish (a game's folder) pushed since the fetch: refused, so run it again.
 "${git[@]}" push -q --force-with-lease="gh-pages:$had" "$url" gh-pages
-echo "pushed gh-pages: $(gh api "repos/$repo/pages" --jq .html_url) serves it in a minute or two"
+pushed="$("${git[@]}" rev-parse HEAD)"
+echo "pushed gh-pages ${pushed:0:7}"
+bash "$root/tools/wait_pages.sh" "$repo" "$pushed"
+echo "$(gh api "repos/$repo/pages" --jq .html_url) serves it"

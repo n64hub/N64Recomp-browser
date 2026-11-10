@@ -19,7 +19,8 @@
 #    (frontend/build_speed.cmake, once the game's N64Recomp-browser pin has it: before, a ccache hit could carry another
 #    checkout's path in), so a page whose code didn't change is left alone, and one built from an older main but the same bytes stays too.
 # 4. Publishes those that differ into their folders of the hub with tools/publish_page.sh --into, as "main <sha>".
-# 5. Waits for Pages to serve the new .js, then boots each published page from Pages in headless Chrome
+# 5. Waits for Pages to deploy them (tools/wait_pages.sh, which builds gh-pages again if a deploy fails) and to serve
+#    each new .js, then boots each published page from Pages in headless Chrome
 #    (tools/play_page.mjs) with the game's own shader_plan.json (tools/, DKR-R's web/): launcher, ROM, Start Game,
 #    then 20 s of the game running by itself, uncapped at the stand-in's 3840x2000 as every measured play is (docs/playing.md,
 #    Uncapped, and the browsers' clocks), which has to present frames with no WebGPU error. Each run goes into
@@ -648,20 +649,24 @@ for g in "${selected[@]}"; do
         echo "   the hub serves main $newer, which has main $sha: left as it is"; continue
     fi
     [[ -n $played_dir ]] || bash "$remote_build" -n $copy get "$dir" "$out"
-    bash "$here/publish_page.sh" "$out" "$name" "$hub" "$label" --into "$folder" | sed 's/^/   /'
+    bash "$here/publish_page.sh" "$out" "$name" "$hub" "$label" --into "$folder" --no-wait | sed 's/^/   /'
     published+=("$g") main_of[$g]=$from
 done
 
 # --- Each published page, from Pages ---
 
 played=()
+# The newest gh-pages carries every page pushed above.
+[[ ${#published[@]} -eq 0 ]] || bash "$here/wait_pages.sh" "$hub" "$(gh api "repos/$hub/commits/gh-pages" --jq .sha)" ||
+    { failed+=("${published[@]}"); published=(); }
 for g in "${published[@]}"; do
     read -r _ repo name dir folder <<< "$(grep "^$g " <<< "$games")"
     url="$hub_url$folder"
     out="$work/$g"; [[ -z $played_dir ]] || out="$played_dir/$g"
     js="$(git hash-object "$out/$name.js")"
-    for i in $(seq 60); do
+    for i in $(seq 61); do
         [[ "$(curl -sf "$url/$name.js" | git hash-object --stdin)" == "$js" ]] && break
+        [[ $i -lt 61 ]] || { echo "== $g: Pages still serves the old $name.js after 10 minutes"; failed+=("$g"); continue 2; }
         sleep 10
     done
     if [[ $g == rush ]]; then rom="$rush/roms/rush2049.us.z64" clone="$rush"; else rom="$ROMS/$g.z64" clone="$cache/$g"; fi
