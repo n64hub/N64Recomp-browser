@@ -567,7 +567,10 @@ for g in "${selected[@]}"; do
         from="$(base "$clone")" || { failed+=("$g"); continue; }
     else
         clone="$cache/$g" copy="${PAGES_COPY:-pages}-$g" usual=pages-$g
+        # The list above names the repo, so a clone made before a repo was renamed follows it (GitHub forgets an old
+        # name once another repo takes it, or for a private repo).
         [[ -d "$clone/.git" ]] || git clone -q --filter=blob:none --no-checkout "https://github.com/$repo" "$clone"
+        git -C "$clone" remote set-url origin "https://github.com/$repo"
         git -C "$clone" fetch -q origin main
         from="$(base "$clone")" || { failed+=("$g"); continue; }
     fi
