@@ -140,6 +140,7 @@ gh api "repos/$repo/pages" > /dev/null 2>&1 ||
     gh api "repos/$repo/pages" > /dev/null
 pushed="$("${git[@]}" rev-parse HEAD)"
 echo "pushed gh-pages ${pushed:0:7}"
+rm -rf "$lock"  # the next publish's push needn't wait for this one's deploy
 $wait || exit 0
 bash "$(dirname "$0")/wait_pages.sh" "$repo" "$pushed"
 echo "$(gh api "repos/$repo/pages" --jq .html_url)${folder:+$folder/} $([ -n "$drop" ] && echo "is gone" || echo "is served")"
