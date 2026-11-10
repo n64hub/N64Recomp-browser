@@ -65,7 +65,9 @@ options; `docs/findings.md` has what was measured this way.
   a core, running, is the page's script in a loop (or Emscripten's spin on a futex); the tab's waiting with the
   browser's at a core is the browser's driver. Nothing from inside the page tells them apart: a worker's console lines
   stop with the page's main thread in Firefox and don't reach the driver in Chrome (docs/findings.md, A page that stops
-  answering).
+  answering). The browser's waiting at no cores while the page goes on is the browser held from outside: on Windows,
+  Task Manager open on the desktop holds win32k's lock through a Firefox page's play, and Firefox's driver, on the
+  browser's main thread, stops answering for minutes, so a play host keeps it closed.
 - After any mouse click (Load ROM's included) recompui is in mouse mode with nothing focused, and the first key only
   brings the focus back (`update_focus` in `ui_state.cpp` runs after the key reached RmlUi): Enter starts the game on
   the second press, or click Start Game. Every RecompFrontend game does it, desktop too.

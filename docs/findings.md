@@ -393,12 +393,28 @@ On the RTX 2070 host, Firefox 159.0.1 stopped answering the same way as pages bo
 uncapped on a fresh profile: Rush 2049's local builds of v0.1.60 twice, v0.1.61 once and v0.1.62 three times (at a
 different point of the boot each time, before its game code loaded or 28 s after its hires font was made), its page
 from Pages (v0.1.61) once, 1080 Snowboarding's build once and Rush 2's build and page from Pages once each. Each
-played clean on a later try. Once the browser and GPU processes sat idle (0 cores, waiting), as above; once, on an
-idle host, the tab's CanvasRenderer and two DOM Workers ran at a core each and the GPU at 90% through 3 minutes
-without an answer. On an RTX 5080 on an idle host Rush 2049's page from Pages (v0.1.62, the same play) played clean
-10 of 10 in Firefox 158.0 and 10 of 10 in that Firefox 159.0.1 build (20261102144711), 185-323 presents a second, and
-3 of 3 at `--scale 2` (which loaded that GPU no more, 12-13% busy). So it is that host's, not the page's or the
-Firefox release's. What holds it there is unread: that takes a `--gecko-profile` of a run that stops, on that host.
+played clean on a later try. On an RTX 5080 on an idle host Rush 2049's page from Pages (v0.1.62, the same play)
+played clean 10 of 10 in Firefox 158.0 and 10 of 10 in that Firefox 159.0.1 build (20261102144711), 185-323 presents
+a second, and 3 of 3 at `--scale 2`.
+
+What held it was Windows' Task Manager, open on that host's desktop for days, as in Firefox slow to start (below). Two
+plays of Rush 2049's page from Pages (v0.1.62) on that host, each a shared turn with no other turn running (the host
+22-38% busy), both stopped answering 7-30 s after the navigate. A `--gecko-profile` of the first, from the navigate:
+through the 100 s it gave no answer, the browser's main thread sat 74% of its samples in `NtUserPeekMessage` (under
+MSCTF's hook) and 26% in `NtUserPostMessage`, using 0.25 s of CPU in 75 s, while the page went on: the tab's main
+thread waited for a task half its samples and ran the page's `writeBuffer` calls the rest, and the GPU process's
+CanvasRenderer handled the page's WebGPU messages (wgpu encoding render passes and writing buffers) in 77% of its
+samples. Its console lines and every answer came 100 s late, in a burst, and the game had played on. The second,
+with win32k's lock traced (`Microsoft-Windows-Win32k:0x10000000`, no stacks), never answered again before its turn's
+limit ended it at 9 minutes: from the page's boot on, Task Manager held the lock 8.3-9.5 s of every 10 s (3.4 s
+before Firefox opened), Firefox's browser process waited 20 ms or more for it 400-820 times every 10 s, holding it
+0.01 s, and Task Manager was the last to release it before 35-45% of the desktop's 3,500-8,000 such waits every 10 s.
+With Task Manager closed, the same play five times in a row, each with the trace: 5 of 5 clean, 159-172 presents a
+second, 0 WebGPU errors or exceptions, Firefox's browser process never waiting 20 ms, and the desktop at most 40 such
+waits in 10 s. So no busy host is needed: the page itself, drawing uncapped in a tab of many threads, keeps Task
+Manager's process list laying itself out, which holds win32k for every windowed process, and BiDi lives on the
+browser's main thread, which waits there. The stop is the host's, not the page's or Firefox's, and a play host keeps
+Task Manager closed.
 
 ## A browser that goes
 
