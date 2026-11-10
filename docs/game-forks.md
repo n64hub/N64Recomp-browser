@@ -99,17 +99,26 @@ His sky and water are drawn as vertex triangles where cblock85's filled the scre
 raw RDP triangles).
 GoldenEye draws its world relative to the room the camera is in, so on the frame the camera crosses a room seam every
 matrix jumps, and RT64's frames between that one and the one before drew the world shifted (through a door, the clear
-colour): its `patches/origin_interpolation.c` gives that frame matrix groups RT64 pairs with nothing, and is the fix
-offered to podulator's, which takes AI-written fixes for bugs its desktop build has too. It draws a room seen through a
-portal, and the props and guards in it, clipped to the portal's box on screen, and the walls around a portal don't hide
-what is behind them: its `patches/widescreen.c` had made every one of those clips the whole screen, which drew Frigate's
-bridge consoles and guards on the bridge's outer wall, blinking as the game toggled them on screen, and a building over
-Surface's tree wall. RT64 widens a projection only if its draws' scissors together span the screen, and the game loads
-its projection for every room, so its `bgScissorCurrentPlayerView` gives a room cut narrower than the screen one empty
-triangle under the whole screen's scissor first, and its box in the widened projection's terms; a box kept to the 4:3
-view drew those rooms 4:3, leaving strips of sky at a 16:9 view's edges (Dam's mountain). A wait that polls memory or the clock without
-an OS call starves every other game thread on any recomp, as its `patches/fps.c` did; a trace of the count
-calls a second found this one. A game's `get_frames_remaining` must match how its audio manager reads osAiGetLength.
+colour): its `patches/origin_interpolation.c` gives that frame matrix groups RT64 pairs with nothing. It draws a room
+seen through a portal, and the props and guards in it, clipped to the portal's box on screen, and the walls around a
+portal don't hide what is behind them: its `patches/widescreen.c` had made every one of those clips the whole screen,
+which drew Frigate's bridge consoles and guards on the bridge's outer wall, blinking as the game toggled them on
+screen, and a building over Surface's tree wall. RT64 widens a projection only if its draws' scissors together span
+the screen, and the game loads its projection for every room, so its `bgScissorCurrentPlayerView` gives a room cut
+narrower than the screen one empty triangle under the whole screen's scissor first, and its box in the widened
+projection's terms; a box kept to the 4:3 view drew those rooms 4:3, leaving strips of sky at a 16:9 view's edges
+(Dam's mountain).
+podulator's takes AI-written changes, and has merged nine of the fork's, each a pull request of its own, said to be
+AI-written and without the web code: RT64 moved to upstream's 5473732, a Windows build, the keyboard and mouse, both
+fixes above, the move onto RecompFrontend (his launcher looking as it did), the intro, front end and attract demos and
+the in-game HUD across a wider window, and CI that builds every pull request and releases on merge. A change is made
+in the fork's `main` first, as any other, then ported to a branch of the fork cut from podulator's `main`
+(`fix/<topic>`), written against his code and input, built natively with the fork's other open branches merged in,
+played on that desktop build, and offered from it. The fork's next merge of his `main` meets the change twice and
+keeps `main`'s. The branch is deleted by hand once its pull request merges or is dropped: a base repo's setting
+deletes only its own head branches, not a fork's. A wait that polls memory or the clock without an OS call starves
+every other game thread on any recomp, as its `patches/fps.c` did; a trace of the count calls a second found this one.
+A game's `get_frames_remaining` must match how its audio manager reads osAiGetLength.
 With render to RAM's copy a list late, through its whole shader plan its CPU never wrote to a framebuffer whose copy was
 pending. Every level adds dozens of shaders (26 combiners, but many render modes: palette textures, fog, depth). Without
 the boot section, a cold visit built 13 shaders behind the intro, which fell to ~15 frames a second. In Chrome 155
