@@ -389,6 +389,17 @@ processor (the host 100% busy through each play, 3840x2000 uncapped), five from 
 locally as the build was, it played its whole plan clean every time, 217-232 presents a second: no wait in its boot
 showed on a starved host, and a stop with both main threads idle stays the browser's.
 
+On the RTX 2070 host, Firefox 159.0.1 stopped answering the same way as pages booted, in `--play 25` at 3840x2000
+uncapped on a fresh profile: Rush 2049's local builds of v0.1.60 twice, v0.1.61 once and v0.1.62 three times (at a
+different point of the boot each time, before its game code loaded or 28 s after its hires font was made), its page
+from Pages (v0.1.61) once, 1080 Snowboarding's build once and Rush 2's build and page from Pages once each. Each
+played clean on a later try. Once the browser and GPU processes sat idle (0 cores, waiting), as above; once, on an
+idle host, the tab's CanvasRenderer and two DOM Workers ran at a core each and the GPU at 90% through 3 minutes
+without an answer. On an RTX 5080 on an idle host Rush 2049's page from Pages (v0.1.62, the same play) played clean
+10 of 10 in Firefox 158.0 and 10 of 10 in that Firefox 159.0.1 build (20261102144711), 185-323 presents a second, and
+3 of 3 at `--scale 2` (which loaded that GPU no more, 12-13% busy). So it is that host's, not the page's or the
+Firefox release's. What holds it there is unread: that takes a `--gecko-profile` of a run that stops, on that host.
+
 ## A browser that goes
 
 A play that ends with "the debugging connection closed (code 1006, read ECONNRESET)" lost the browser's own process,
