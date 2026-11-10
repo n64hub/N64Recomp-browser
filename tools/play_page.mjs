@@ -54,10 +54,11 @@
 // hears a tab that plays sound and keeps it at a player's priority when it is hidden, which --fault hidden needs
 // (docs/findings.md, A page in a hidden tab). A run records its flags and is compared only with runs that set the same
 // ones.
-// --gecko-profile (Firefox only) runs the Gecko profiler over the play, every process and the GPU process's
-// CanvasRenderer thread among them (page_driver.mjs's geckoProfile), and writes the profile to the file (a run that
-// failed in its play too, a page that stopped answering among them, once the browser's own process answers), to open in
-// profiler.firefox.com, which symbolicates it. It samples every 10 ms: the profiler asks Windows for 1 ms timers
+// --gecko-profile (Firefox only) runs the Gecko profiler from the page's navigate to the end of the play, so the boot
+// too, every process and the GPU process's CanvasRenderer thread among them (page_driver.mjs's geckoProfile), and
+// writes the profile to the file (a run that failed too, a page that stopped answering as it booted among them, once the
+// browser's own process answers, waiting up to 3 minutes for it), to open in profiler.firefox.com, which symbolicates
+// it. It samples every 10 ms: the profiler asks Windows for 1 ms timers
 // below that, which changes how Firefox's waits end (docs/playing.md, Uncapped, and the browsers' clocks).
 // --chrome-trace (Chrome only) records a Chrome trace over the play, every thread's JavaScript and wasm stacks sampled
 // (page_driver.mjs's chromeTrace), and writes it to the file, to open in DevTools' Performance panel or
@@ -672,7 +673,9 @@ const boot = async () => {
   return { loaded: tenths(loaded), firstPresent: first ? tenths((first - from) / 1000) : null };
 };
 let firstBoot = null;
+let profiling = false;
 try {
+  if (geckoProfileFile) { await page.geckoProfile.start(); profiling = true; }
   firstBoot = await boot();
   await page.run([...(freshProfile ? (plan.setup ?? []) : []), ...(plan.start ?? [])], steps);
   audioBefore = last?.audio ?? null;
@@ -682,7 +685,6 @@ try {
   // it has passed, and none from before the play comes into them.
   if (memoryBefore) await sleep(500);
   await page.evaluate('window.__gaps = []; undefined').catch(() => {});
-  if (geckoProfileFile) await page.geckoProfile.start();
   if (chromeTraceFile) await page.chromeTrace.start();
   playing = true;
   hostBefore = hostTimes();
@@ -691,16 +693,20 @@ try {
   await page.run(shotFile ? [...play, ['shot', path.resolve(shotFile)]] : play, steps);
   await sample();
   playing = false;
-  if (geckoProfileFile) await page.geckoProfile.dump(geckoProfileFile);
+  if (geckoProfileFile) { profiling = false; await page.geckoProfile.dump(geckoProfileFile); }
   if (chromeTraceFile) await page.chromeTrace.stop(path.resolve(chromeTraceFile));
   memoryAfter = page.gpuProcessMemory ? await page.gpuProcessMemory().catch(() => null) : null;
 } catch (error) {
   log(`failed: ${error.message}`);
   failure = error.message;
-  // A run that failed in its play has its profile too. The browser's own process writes it, so where that process is
-  // what stopped answering (docs/findings.md, A page that stops answering) it comes once that process answers again.
-  if (geckoProfileFile && playing) {
-    await page.geckoProfile.dump(geckoProfileFile).then(() => log(`gecko profile written to ${geckoProfileFile}`),
+  // A run that failed has its profile too, its boot's included. The browser's own process writes it, so where that
+  // process is what stopped answering (docs/findings.md, A page that stops answering) it comes once that process
+  // answers again, if it does within 3 minutes.
+  if (profiling) {
+    const from = Date.now();
+    await Promise.race([page.geckoProfile.dump(geckoProfileFile),
+      sleep(180000).then(() => { throw new Error('the browser gave no answer in 3 minutes'); })]).then(
+      () => log(`gecko profile written to ${geckoProfileFile}, ${Math.round((Date.now() - from) / 1000)} s after it was asked for`),
       (e) => log(`no gecko profile: ${e.message}`));
   }
   // A run that failed before the play still records the viewport it had, on screen the window's, not --size.
