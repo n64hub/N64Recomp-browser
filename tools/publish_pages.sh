@@ -136,6 +136,7 @@ dkr    n64hub/DKR-R-web                      DKR-R                build-web/bin/
 snap   n64hub/Snap64Recomp-web               Snap64Recomp         build-web pokemon-snap
 rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush-2
 1080   n64hub/1080-Snowboarding-recomp-web   1080SnowboardingRecompiled build-web 1080-snowboarding
+sssv   n64hub/SSSV_Recomp-web                SSSVRecompiled       build-web space-station-silicon-valley
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
 fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-zero-x
@@ -150,7 +151,7 @@ dino   n64hub/dinosaur-planet-recomp         DinosaurPlanet       build/web dino
 "
 # Games whose pages are not published until the games are released: left out of a run that names no game, and built
 # only as a dry run (--dry-run, --browser, --ref), so their pins can still be built and played.
-unreleased=" "
+unreleased=" sssv "
 # This project's own recomps, whose pins move by a pull request on their repos (CLAUDE.md, The pins), and which pin
 # upstream's own commits of what N64Recomp-browser patches as submodules (pin_tree). retest.sh reads this list.
 own=" rush pd sm64 fzx mp1 mp2 mp3 ssb pm r2 ddgq dino "
@@ -403,6 +404,11 @@ build_rush2() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_1080() {
+    # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
+    # (build-web-prep/web-patched).
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
+}
+build_sssv() {
     # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
     # (build-web-prep/web-patched).
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
