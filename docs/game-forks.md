@@ -443,6 +443,25 @@ course of the career's level select), recorded by `tools/shader_plan.json` with 
 `--unlock-levels` (the plan's arguments), which knows the front end's screens by a word that moves with each one and a
 run by `gRunActive`. Its BUILDING.md (The web page) and the header of `host/tools/build_web.py` have the rest.
 
+`n64hub/SSSV_Recomp-web` is scottjco's SSSV_Recomp, Space Station Silicon Valley (USA 1.0), which has no license,
+itself a fork of Cellenseres's recomp. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at older commits
+than the web's, which the game's own `dependency-patches/` change (`manifest.json`), patched by the N64Recomp-browser
+tag its `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` applies the game's patches first, then `apply.cmake`
+project by project, but for the files where both change the same lines (`web/patches/files.txt`: 11 of rt64's, two of
+N64ModernRuntime's, RecompFrontend's RT64 render context), whose web change is its `web/patches/<project>.patch`,
+merged by hand, and what N64Recomp-browser has changed in them since is merged in by `apply.cmake --since`, as
+Snap64's and 1080's are, and CI's `sssv-patches` job runs its `tools/build_web.sh --patches` on each PR. Its rt64 is
+older than the web's in one way the page meets: its texture pack database is read by a json whose `parse` takes no
+bytes from Emscripten's libc++, so its `web/patches/rt64.patch` reads them as chars. The recompiled game calls the
+port's hooks undeclared, which a desktop build's C compiler lets by; the page forces their declarations
+(`include/sssv_hooks.h`) into every recompiled file. The page leaves out the launcher's 3D logo, which its launcher
+library draws through plume's Vulkan, D3D12 and Metal backends, and the HD text and textures, whose options show only
+where their pack is, and keeps every other option at the desktop's defaults. Its list is 149 shaders: the boot (the
+launcher, the opening and the title, 25) and 32 sections (Smashing Start, reached as a player does, and each level
+from 2 to 32), recorded by `web/shader_plan.json`, which reaches each level by `Module._sssv_web_warp`, the page's way
+into the test control the desktop build reads from an environment variable, and knows the level by `gGameState.level`
+in RDRAM. Its BUILDING.md and the header of `tools/build_web.sh` have the rest.
+
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
 the commits GoldenEye's are on (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`
