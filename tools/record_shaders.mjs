@@ -17,13 +17,16 @@
 //   {
 //     "page": "GoldenRecomp.html",                      the page in the build dir
 //     "header": ["what was recorded and how"],          comment lines for the list's top
+//     "arguments": ["--skip-intro"],                    for the program's command line, every load (optional)
 //     "load": [steps],                                  every load, first: e.g. wait for the launcher
 //     "setup": [steps],                                 then in the first load, if the profile is new: load the ROM
 //     "start": [steps],                                 then every load: e.g. press Start Game, wait for the title
 //     "sections": [{ "name": "dam", "steps": [steps] }] each one in its own load after those
 //   }
 //
-// and a step one of page_driver.mjs's (waits, clicks, keys, JavaScript, the ROM, a screenshot: its header lists them),
+// "arguments" go after the shell's own in Module.arguments, for a host whose options make every load the same (THPS2's
+// --skip-intro: its intro takes A or Start at moments a boot with a save moves) and that a player's page doesn't pass.
+// A step is one of page_driver.mjs's (waits, clicks, keys, JavaScript, the ROM, a screenshot: its header lists them),
 // or ["keep", false] and ["keep", true] (leave out the shaders printed in between: a section that passes through a
 // level on its way to a screen after it). What a load prints before its section's steps start (the
 // launcher, the game's boot, the "start" steps) is the list's section 0, built before the game starts; a section
@@ -65,7 +68,14 @@ let printed = [];
 let keep = true;
 const server = await serve(buildDir, port);
 const origin = `http://127.0.0.1:${server.address().port}`;
-const page = await open('chrome', { profile, port: portOption ? port + 1 : undefined, executable: chrome, rom, planDir: path.dirname(planFile), log,
+// The plan's arguments, added as the shell sets Module (its `var Module = {...}`).
+const preload = plan.arguments?.length ? `() => {
+  const extra = ${JSON.stringify(plan.arguments)};
+  let module;
+  Object.defineProperty(window, 'Module', { configurable: true, get: () => module,
+    set: (value) => { module = value; if (value && typeof value === 'object') value.arguments = (value.arguments ?? []).concat(extra); } });
+}` : '';
+const page = await open('chrome', { profile, port: portOption ? port + 1 : undefined, executable: chrome, rom, preload, planDir: path.dirname(planFile), log,
   onLine: (text) => {
     const shader = /rt64 shader: ((?:[0-9a-f]{8} ?){5})/.exec(text);
     if (shader) { if (keep) printed.push(shader[1].trim()); } else log(text);

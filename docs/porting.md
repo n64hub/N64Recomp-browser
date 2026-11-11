@@ -84,6 +84,14 @@ What a recomp's code needed for wasm, besides N64ModernRuntime-0003 and N64Recom
   corrupt them, so on the web each such read gets its value without the read, by a hook or a patch of the
   instruction (JetForceGemini-Recomp-web's `patches/web/jfg.us.web.toml`: with garbage from its cartridge check, a
   new game's story scenes never started).
+- A game whose code runs from TLB-mapped addresses below 0x80000000 (the Turok games link theirs at 0x00200400 and
+  map ROM regions at 0x00480000 and up) reads its strings, tables and constants through them. Natively they lie 2 GB
+  past rdram, in the range the runtime reserves; on wasm32 they wrap into the heap. Its recomp defines
+  `RECOMP_KUSEG_WINDOW` for every target (`add_compile_definitions` before the runtime's `add_subdirectory`), which
+  on the web puts KUSEG's first 16 MB in a window right after kseg0's 512 MB (N64Recomp-web's `recomp.h` says how),
+  and opens each range with `recomp::make_kuseg_accessible` before filling it (`do_rom_read` takes those addresses),
+  on every build: natively it commits the reserved pages, which `VirtualProtect` can't open on Windows. Without the
+  define the generated code is as before; with it every load and store on the web chooses between the two.
 - A game's main that declares `recomp::Configuration cfg;` without an initialiser and never sets `window_handle`
   (Zelda64Recomp's and the mains built on it) leaves that handle, a bare `SDL_Window*` on Emscripten as on Linux, as
   whatever was in that memory. `recomp::start` makes the window only when the handle equals `WindowHandle{}`, so a

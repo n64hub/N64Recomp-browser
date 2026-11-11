@@ -425,6 +425,125 @@ Training), recorded by `tools/shader_plan.json`, which knows where the game is b
 (`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the
 rest.
 
+`n64hub/THPS2-64Recomp-web` is THPS2 64: Recompiled, Tony Hawk's Pro Skater 2 (USA), GPL-3.0, and its shared host
+`decomp/common` is `n64hub/THPS64Host-web`, a fork of THPS64Recomp's THPS64Host (the host of their THPS1, 2 and 3
+recomps), where all of the web support is: a fork commit to the host moves the game fork's submodule, as rt64-web's
+plume does. The host fetches its own pins of N64ModernRuntime and RT64 (CBFD-Recompiled's, `host/tools/setup_runtime.py`)
+and patches them as the desktop build does, then `host/tools/build_web.py` applies N64Recomp-browser's patches over them
+with `apply.cmake` project by project, at the tag the game fork's `lib/N64Recomp-browser` pins, but for 3 files of rt64's
+the host's patches change too (`host/web/patches/files.txt`: the present queue and the RSP), whose web change is its
+`web/patches/rt64.patch`, merged by hand, with what N64Recomp-browser has changed in them since merged in by
+`apply.cmake --since`, as Snap64's and 1080's are, and CI's `thps2-patches` job runs its `tools/build_web.sh --patches`
+on each PR. The host's web changes, all behind `__EMSCRIPTEN__`: the Load ROM picker in place of the desktop's file
+dialog, the page's sound in place of SDL's, the swap chain in the format the canvas prefers, no crash handler, and the
+Frame Rate setting's 60 as Display, so the page interpolates the game's 30 to the display's rate; the rest is at the
+desktop's Enhanced preset (16:9, Full draw distance, MSAA 4, resolution Auto). Its list is 82 shaders: the boot (the
+launcher, the logos, the main menu and the career's menus to the level select, 14) and 10 sections (a run on each
+course of the career's level select), recorded by `tools/shader_plan.json` with the host's `--skip-intro` and
+`--unlock-levels` (the plan's arguments), which knows the front end's screens by a word that moves with each one and a
+run by `gRunActive`. Its BUILDING.md (The web page) and the header of `host/tools/build_web.py` have the rest.
+
+`n64hub/SSSV_Recomp-web` is scottjco's SSSV_Recomp, Space Station Silicon Valley (USA 1.0), which has no license,
+itself a fork of Cellenseres's recomp. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at older commits
+than the web's, which the game's own `dependency-patches/` change (`manifest.json`), patched by the N64Recomp-browser
+tag its `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` applies the game's patches first, then `apply.cmake`
+project by project, but for the files where both change the same lines (`web/patches/files.txt`: 11 of rt64's, two of
+N64ModernRuntime's, RecompFrontend's RT64 render context), whose web change is its `web/patches/<project>.patch`,
+merged by hand, and what N64Recomp-browser has changed in them since is merged in by `apply.cmake --since`, as
+Snap64's and 1080's are, and CI's `sssv-patches` job runs its `tools/build_web.sh --patches` on each PR. Its rt64 is
+older than the web's in one way the page meets: its texture pack database is read by a json whose `parse` takes no
+bytes from Emscripten's libc++, so its `web/patches/rt64.patch` reads them as chars. The recompiled game calls the
+port's hooks undeclared, which a desktop build's C compiler lets by; the page forces their declarations
+(`include/sssv_hooks.h`) into every recompiled file. Its launcher library draws the launcher's 3D logo in RT64's draw
+hook through plume, its shaders WGSL on the page; RT64's framebuffer there is plume's device thread's, which doesn't
+say what it draws into, so the logo draws into a target of its own and a pass copies it onto the launcher's. The page
+leaves out the HD text and textures, whose options show only where their pack is, and keeps every other option at the
+desktop's defaults, Aspect Ratio and HUD Placement at Expand. Its list is 150 shaders: the boot (the
+launcher, the opening and the title, 25) and 32 sections (Smashing Start, reached as a player does, and each level
+from 2 to 32), recorded by `web/shader_plan.json`, which reaches each level by `Module._sssv_web_warp`, the page's way
+into the test control the desktop build reads from an environment variable, and knows the level by `gGameState.level`
+in RDRAM. Its BUILDING.md and the header of `tools/build_web.sh` have the rest.
+
+`n64hub/RogueSquadron64Recomp-web` is MikeSemicolonD's Rogue Squadron 64 Recompiled, Star Wars: Rogue Squadron (USA
+1.0), GPL-3.0. It is on the game's own forks of rt64 and N64ModernRuntime (N64Recomp inside it), which draw Factor 5's
+microcode and add the port's renderer work (terrain, water, lights, ray tracing), patched by the N64Recomp-browser tag
+its `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` runs a Docker image of its own (`tools/docker/Dockerfile.web`),
+the patch step inside it too, and applies `apply.cmake` project by project, but for the files where the game's forks and
+the web change the same lines (`web/patches/files.txt`: 45 of rt64's, 5 of plume's, 11 of the runtime's, 2 of
+N64Recomp's), whose web change is its `web/patches/<project>.patch`, merged by hand, with what N64Recomp-browser has
+changed in them since merged in by `apply.cmake --since`, as Snap64's and 1080's are, and CI's `rogue-patches` job runs
+its `tools/build_web.sh --patches` on each PR. Two of the merge's choices: the texture packs' terrain pixel shader, a
+binding array of textures, is left out of a page's shaders (naga takes none; the page has no texture packs), and RT64's
+variable-rate interpolation, which the game's fork made to present a game frame over a number of display frames it
+works out, is given at least one display frame (a frame worked out at none divided by zero and trapped the page as the
+first frame drew). The page plays at RT64's Display rate and Auto resolution, where the desktop build holds its game's
+own 30 (its interpolation is off there, for flicker in pooled effects), starts in the game's widescreen (Expand) where
+the desktop build starts in 4:3, leaves out ray tracing, which needs ray queries
+WebGPU hasn't, the multiplayer mods (online play needs sockets) and the tow cable mod (its instruction patches
+need the live recompiler), and keeps every other option at the desktop's defaults. Its list is 111 shaders: the
+boot (the launcher, the intro, SELECT GAME, ENTER NAME and AVAILABLE CRAFT, 61) and 16 sections, a mission each,
+recorded on a 4:3 build and again on a widescreen one (widescreen needed no shader 4:3 didn't) by
+`tools/shader_plan.json`, which sets the mission at AVAILABLE CRAFT as the port's own `--boot-target
+level:N` does after a new pilot's name, and knows the menus by the screen word at 0x800CDAC4 and the mission by its
+objective byte. Its README (The web page) and the header of `tools/build_web.sh` have the rest.
+
+`n64hub/BeetleRecomp-web` is BeetleRecomp, Beetle Adventure Racing! (USA), AGPL-3.0, recompiled from the game's
+decompilation (`lib/bar-decomp`), which its build makes from the player's ROM and checks byte for byte before the
+recompiler reads its ELF. Its rt64, N64ModernRuntime, N64Recomp and RecompFrontend are its own (RecompFrontend a copy
+in its tree) with its own patches (`scripts/dependency-patches`), and its rt64 is older than the web's: its
+`tools/build_web.sh` first takes rt64 to the upstream commit the web's patches are made on
+(`web/patches/rt64-upstream.patch`, merged without a conflict, plume to the commit that one pins), then applies the
+game's patches but the Windows and macOS ones and the code-memory one (mods' `llvm.clear_cache`, which wasm doesn't
+have), then `apply.cmake` project by project, but for 8 files both change the same lines in (`web/patches/files.txt`:
+4 of rt64's, N64ModernRuntime's `events.cpp`, 3 of RecompFrontend's), whose web change is its
+`web/patches/<project>.patch`, merged by hand, with what N64Recomp-browser has changed in them since merged in by
+`apply.cmake --since`, as Snap64's and 1080's are, and CI's `beetle-patches` job runs its
+`tools/build_web.sh --patches` on each PR and compiles the input files it merges. All of the build runs in a Docker image of its own
+(`tools/docker/Dockerfile`, the decomp's tools beside Emscripten's), so `publish_pages.sh` runs it on the build host.
+The game's own code changes for the page are behind `__EMSCRIPTEN__`: its window and render context draw on the
+canvas, its sound goes through `audio_output.h` (an SDL stream from the game's rate to the page's), MSAA is off (RT64
+can't do it on WebGPU) and RT64's developer tools with it, and a page opens widescreen (Aspect Ratio at Expand to
+the window, the desktop build opening in the console's 4:3), which the game's own code supports: it widens the
+frustum the game culls to (`src/main/bar_frustum.cpp`) and anchors the racing HUD to the picture's edges (HUD ratio
+Expand, its default); the rest is at the desktop's defaults (resolution Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
+it at the speed a console does whatever it presents. Its list is 261 shaders: the boot (the launcher, the Controller
+Pak screen, the logos, the intro, the title and the menus to a Single Race, 138) and 2 sections (Coventry Cove 70,
+Mount Mayhem 53), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
+(`tools/game_state.js`) and reaches each track through the menus, since a game state written from them stops the
+page. A new save offers only those two of the single race's tracks. Its plans drive a race with the game's steer
+assist and the gas held, and back the car out in reverse (the Z trigger) where it stops against a fence or a rock,
+by its speed in RDRAM, which they know on Coventry Cove only. Where the car goes differs from play to play, so the
+plays' misses are added to the list by hand, and a Firefox play still finds one now and then on Coventry Cove, built
+in line in a few tenths of a second. Its BUILDING.md (The web page) and the header of
+`tools/build_web.sh` have the rest.
+
+`n64hub/PaxDino-web` is wootbeer's PaxDino, Turok: Rage Wars (USA), GPL-3.0, on upstream's rt64, N64ModernRuntime and
+RecompFrontend at the commits Conker's fork is on (`patches/pins.txt`), with the game's own patches to each and to
+N64Recomp in `lib-patches/` (its desktop build applies them at configure). Its `tools/build_web.sh` applies those
+first, then `apply.cmake` project by project, but for 11 files both change the same lines (`web/patches/files.txt`: 7 of
+rt64's, 3 of N64ModernRuntime's, and N64Recomp's `analysis.cpp`, which is the game's), whose web change is its
+`web/patches/<project>.patch`, merged by hand, with what N64Recomp-browser has changed in them since merged in by
+`apply.cmake --since`; CI's `paxdino-patches` job runs its `tools/build_web.sh --patches` on each PR. The game's code
+runs from TLB-mapped addresses, which the desktop build reaches through views of RDRAM about 2 GB past it
+(`src/game/tlb_views.cpp`): on the page RDRAM is a 512 MB allocation in the wasm heap, so the views and VM regions are
+backed by moving the heap's break past them, and the page's memory grows up to 4 GB. Its online Netplay is lockstep
+over UDP to another PC's address, which a page can't open, so the page's launcher and menus have no Netplay (nor Add to Steam or
+Exit), and local multiplayer, bots and trials stay. RT64's bloom pass, the game's own, writes `rgba16f` on WebGPU
+(`web/patches/rt64.patch`). The rest is behind `__EMSCRIPTEN__` as in the other ports: the canvas, the sound through
+`audio_output.h`, either preset at resolution Auto and the display's frame rate, no MSAA. Its list is 119 shaders: the
+boot (the launcher, the boot screens, the title and the menus to level select, 32, six of them missed in a match by
+the plays and moved there) and a section for each of the nine maps a new save offers (8-15 each), recorded by
+`tools/shader_plan.json`, which drives the menus by the keyboard and knows where the game is by its mode and the
+front end's screen (`tools/game_state.js`), and plays a one-bot Bloodlust match on each map as `tools/play_plan.json`
+does. A match presents at the display's rate (uncapped, 355 a second in Chrome), but the front end's menus present
+at the game's own 30, then 15, on the desktop too: PaxDino's own code (`src/game/widescreen.cpp`, upstream's since its
+first release) sets RT64's refresh rate to 0 outside a match with `gEXSetRefreshRate`, which turns interpolation off,
+because the frames RT64 made between two of level select's, whose map preview is a 3D picture drawn into the menu,
+came out without most of the menu. So `publish_pages.sh`'s 20 s boot from Pages, which stays in the menus, reads 15 a
+second with nothing wrong, and a page that interpolates them waits on that preview drawing whole in RT64's in-between
+frames. Its BUILDING.md (The web page) and the header of
+`tools/build_web.sh` have the rest.
+
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
 the commits GoldenEye's are on (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`

@@ -40,6 +40,11 @@ recomps, each with releases of its desktop build for Windows and Linux on its re
 | Pokémon Snap | [Snap64Recomp](https://github.com/JackandBeans/Snap64Recomp) by JackandBeans | [Snap64Recomp-web](https://github.com/n64hub/Snap64Recomp-web) | [play](https://n64hub.com/pokemon-snap/) |
 | Rush 2: Extreme Racing USA | [Rush 2 Recompiled](https://github.com/bryantmh/rush2recompiled) by bryantmh | [rush2recompiled-web](https://github.com/n64hub/rush2recompiled-web) | [play](https://n64hub.com/rush-2/) |
 | 1080° Snowboarding | [1080° Snowboarding: Recompiled](https://github.com/thebradshaw/1080-Snowboarding-decomp) by thebradshaw | [1080-Snowboarding-recomp-web](https://github.com/n64hub/1080-Snowboarding-recomp-web) | [play](https://n64hub.com/1080-snowboarding/) |
+| Space Station Silicon Valley | [SSSV_Recomp](https://github.com/scottjco/SSSV_Recomp) by scottjco | [SSSV_Recomp-web](https://github.com/n64hub/SSSV_Recomp-web) | [play](https://n64hub.com/space-station-silicon-valley/) |
+| Tony Hawk's Pro Skater 2 | [THPS2 64: Recompiled](https://github.com/THPS64Recomp/THPS2-64Recomp) by THPS64Recomp | [THPS2-64Recomp-web](https://github.com/n64hub/THPS2-64Recomp-web) | [play](https://n64hub.com/tony-hawks-pro-skater-2/) |
+| Star Wars: Rogue Squadron | [Rogue Squadron 64 Recompiled](https://github.com/MikeSemicolonD/RogueSquadron64Recomp) by MikeSemicolonD | [RogueSquadron64Recomp-web](https://github.com/n64hub/RogueSquadron64Recomp-web) | [play](https://n64hub.com/star-wars-rogue-squadron/) |
+| Beetle Adventure Racing! | [BeetleRecomp](https://github.com/bryankruman/BeetleRecomp) by bryankruman | [BeetleRecomp-web](https://github.com/n64hub/BeetleRecomp-web) | [play](https://n64hub.com/beetle-adventure-racing/) |
+| Turok: Rage Wars | [PaxDino: Rage Wars Modernized](https://github.com/wootbeer/PaxDino) by wootbeer | [PaxDino-web](https://github.com/n64hub/PaxDino-web) | [play](https://n64hub.com/turok-rage-wars/) |
 | Perfect Dark | this project's own recomp | [perfect-dark-recomp](https://github.com/n64hub/perfect-dark-recomp) | [play](https://n64hub.com/perfect-dark/) |
 | Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) |
 | F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) |
@@ -372,7 +377,10 @@ n64hub/N64Recomp-web                N64Recomp/N64Recomp      the FPU rounding mo
                                                                   recompiled to C ahead of time; functions a mod
                                                                   replaces or hooks, redirected at their entry;
                                                                   tail calls as wasm tail calls; a division by
-                                                                  zero gives the VR4300's results
+                                                                  zero gives the VR4300's results; with
+                                                                  RECOMP_KUSEG_WINDOW, an option a game turns
+                                                                  on, TLB-mapped addresses in a window of their
+                                                                  own
 n64hub/N64ModernRuntime-web         N64Recomp/N64ModernRuntime  Emscripten: no live recompiler, RDRAM
                                                                   without a guard region; built-in mods linked
                                                                   in, their replacements and hooks as redirects;
@@ -382,7 +390,8 @@ n64hub/N64ModernRuntime-web         N64Recomp/N64ModernRuntime  Emscripten: no l
                                                                   Windows); a ROM read in 4 MB pieces; no exit
                                                                   on a Status write, no thread put in a queue
                                                                   twice, a sound buffer's KSEG1 address read
-                                                                  through KSEG0's
+                                                                  through KSEG0's; TLB-mapped memory opened by
+                                                                  make_kuseg_accessible, in a window on the web
 n64hub/RecompFrontend-web           N64Recomp/RecompFrontend recompui on WebGPU, the canvas as the window,
                                                                   a file picker on a thread of its own, render
                                                                   to RAM as an option and its copy a display
