@@ -469,7 +469,7 @@ in RDRAM. Its BUILDING.md and the header of `tools/build_web.sh` have the rest.
 microcode and add the port's renderer work (terrain, water, lights, ray tracing), patched by the N64Recomp-browser tag
 its `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` runs a Docker image of its own (`tools/docker/Dockerfile.web`),
 the patch step inside it too, and applies `apply.cmake` project by project, but for the files where the game's forks and
-the web change the same lines (`web/patches/files.txt`: 44 of rt64's, 5 of plume's, 11 of the runtime's, 2 of
+the web change the same lines (`web/patches/files.txt`: 45 of rt64's, 5 of plume's, 11 of the runtime's, 2 of
 N64Recomp's), whose web change is its `web/patches/<project>.patch`, merged by hand, with what N64Recomp-browser has
 changed in them since merged in by `apply.cmake --since`, as Snap64's and 1080's are, and CI's `rogue-patches` job runs
 its `tools/build_web.sh --patches` on each PR. Two of the merge's choices: the texture packs' terrain pixel shader, a
