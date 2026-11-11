@@ -483,11 +483,13 @@ can't do it on WebGPU) and RT64's developer tools with it, and a page opens wide
 the window, the desktop build opening in the console's 4:3), which the game's own code supports: it widens the
 frustum the game culls to (`src/main/bar_frustum.cpp`) and anchors the racing HUD to the picture's edges (HUD ratio
 Expand, its default); the rest is at the desktop's defaults (resolution Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
-it at the speed a console does whatever it presents. Its list is 222 shaders: the boot (the launcher, the Controller
-Pak screen, the logos, the intro, the title and the menus to a Single Race, 134) and 2 sections (Coventry Cove 39,
-Mount Mayhem 49), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
+it at the speed a console does whatever it presents. Its list is 254 shaders: the boot (the launcher, the Controller
+Pak screen, the logos, the intro, the title and the menus to a Single Race, 137) and 2 sections (Coventry Cove 64,
+Mount Mayhem 53), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
 (`tools/game_state.js`) and reaches each track through the menus, since a game state written from them stops the
-page. A new save offers only those two of the single race's tracks. Its BUILDING.md (The web page) and the header of
+page. A new save offers only those two of the single race's tracks. Its plans drive a race with the game's steer
+assist and the gas held, and back the car out in reverse (the Z trigger) where it stops against a fence or a rock,
+by its speed in RDRAM, which they know on Coventry Cove only. Its BUILDING.md (The web page) and the header of
 `tools/build_web.sh` have the rest.
 
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
