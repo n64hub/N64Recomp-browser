@@ -136,6 +136,7 @@ dkr    n64hub/DKR-R-web                      DKR-R                build-web/bin/
 snap   n64hub/Snap64Recomp-web               Snap64Recomp         build-web pokemon-snap
 rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush-2
 1080   n64hub/1080-Snowboarding-recomp-web   1080SnowboardingRecompiled build-web 1080-snowboarding
+thps2  n64hub/THPS2-64Recomp-web            thps2_recomp         decomp/thps2/recomp-host/build/web tony-hawks-pro-skater-2
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
 fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-zero-x
@@ -405,6 +406,11 @@ build_rush2() {
 build_1080() {
     # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
     # (build-web-prep/web-patched).
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
+}
+# The shared host's tools/build_web.py makes its runtime again from clean whenever N64Recomp-browser, the host's
+# patches or its web/patches moved (decomp/thps2/recomp-host/build/web-work/runtime.stamp).
+build_thps2() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Runs on the host (on_host): both scripts start Docker images of their own. The decomp's build checks the ROM, and
