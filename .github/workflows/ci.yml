@@ -671,6 +671,33 @@ jobs:
           ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
           bash "$game/tools/build_web.sh" --patches
 
+  # The patches over Space Station Silicon Valley's web fork's own (SSSV_Recomp-web, its main), as 1080° Snowboarding's:
+  # its dependency-patches carry the game's own changes to rt64 (an older one, with S2DEX), plume, N64ModernRuntime,
+  # RecompFrontend and RmlUi, and its web/patches take over the files where those meet the web's. Red on a PR means a
+  # web change meets the game's own lines there: merge it into SSSV_Recomp-web's web/patches by hand.
+  sssv-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: SSSV_Recomp-web's apply over them
+        run: |
+          game="$RUNNER_TEMP/sssv"
+          git clone -q --depth 1 https://github.com/n64hub/SSSV_Recomp-web "$game"
+          git -C "$game" log -1 --format='SSSV_Recomp-web %h %s'
+          git -C "$game" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3 \
+            lib/rt64 lib/N64ModernRuntime lib/RecompFrontend
+          git -C "$game/lib/rt64" -c protocol.version=2 submodule update -q --init --depth 1 src/contrib/plume src/contrib/hlslpp
+          git -C "$game/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 N64Recomp
+          git -C "$game/lib/RecompFrontend" -c protocol.version=2 submodule update -q --init --depth 1 recompui/lib/RmlUi
+          rmdir "$game/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
+          bash "$game/tools/build_web.sh" --patches
+
   # The patches over Banjo-Tooie's web fork's own (BanjoTooieRecompiled-web, its main): its tools/build_web.sh applies
   # its patches/*.patch to rt64, N64ModernRuntime and N64Recomp first (tools/setup_deps.py), then these on top but for
   # the files it leaves to its own, so a change here to the lines its own patches touch stops its page building. Its
@@ -906,7 +933,7 @@ jobs:
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, racer-patches,
-      snap-patches, rush2-patches, snowboarding-patches, thps2-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
+      snap-patches, rush2-patches, snowboarding-patches, sssv-patches, thps2-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')

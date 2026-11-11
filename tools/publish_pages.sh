@@ -136,6 +136,7 @@ dkr    n64hub/DKR-R-web                      DKR-R                build-web/bin/
 snap   n64hub/Snap64Recomp-web               Snap64Recomp         build-web pokemon-snap
 rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush-2
 1080   n64hub/1080-Snowboarding-recomp-web   1080SnowboardingRecompiled build-web 1080-snowboarding
+sssv   n64hub/SSSV_Recomp-web                SSSVRecompiled       build-web space-station-silicon-valley
 thps2  n64hub/THPS2-64Recomp-web            thps2_recomp         decomp/thps2/recomp-host/build/web tony-hawks-pro-skater-2
 rogue  n64hub/RogueSquadron64Recomp-web      RogueSquadron64Recomp build-web star-wars-rogue-squadron
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
@@ -405,6 +406,11 @@ build_rush2() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 build_1080() {
+    # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
+    # (build-web-prep/web-patched).
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
+}
+build_sssv() {
     # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
     # (build-web-prep/web-patched).
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
