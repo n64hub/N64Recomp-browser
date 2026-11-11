@@ -561,6 +561,31 @@ jobs:
           done
           exit $status
 
+  # The patches over Tony Hawk's Pro Skater 2's web fork's own (THPS2-64Recomp-web, its main): its shared host
+  # (decomp/common, THPS64Host-web) clones rt64 and N64ModernRuntime at its own pins with its own patches
+  # (host/tools/setup_runtime.py), then these on top but for three rt64 files where the two meet, whose web change is
+  # the host's web/patches/rt64.patch, merged by hand, with what this repo changed in them since merged in by
+  # apply.cmake --since (host/web/patches/files.txt). Its --patches does that step without a ROM, with this checkout as
+  # its lib/N64Recomp-browser. Red on a PR means the same as bt-patches'.
+  thps2-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: THPS2-64Recomp-web's apply over them
+        run: |
+          game="$RUNNER_TEMP/thps2"
+          git clone -q --depth 1 https://github.com/n64hub/THPS2-64Recomp-web "$game"
+          git -C "$game" log -1 --format='THPS2-64Recomp-web %h %s'
+          git -C "$game" -c protocol.version=2 submodule update -q --init --depth 1 decomp/common
+          rmdir "$game/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
+          bash "$game/tools/build_web.sh" --patches
+
   # The patches over Space Station Silicon Valley's web fork's own (SSSV_Recomp-web, its main), as 1080° Snowboarding's:
   # its dependency-patches carry the game's own changes to rt64 (an older one, with S2DEX), plume, N64ModernRuntime,
   # RecompFrontend and RmlUi, and its web/patches take over the files where those meet the web's. Red on a PR means a
@@ -823,7 +848,7 @@ jobs:
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, racer-patches,
-      snap-patches, rush2-patches, snowboarding-patches, sssv-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
+      snap-patches, rush2-patches, snowboarding-patches, sssv-patches, thps2-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
