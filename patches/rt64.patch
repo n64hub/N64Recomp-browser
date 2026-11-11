@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web d49a6890eec630981f056c4d194fac7c589a30e7
+rt64: https://github.com/n64hub/rt64-web ce2e0d316379b1e2ad0a4bc955c8fdf0e36b56d1
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3954,7 +3954,7 @@ index 8858dac..a9417c7 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..3418aa5 100644
+index 2970e71..a542ded 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -4536,15 +4536,16 @@ index 2970e71..3418aa5 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1868,6 +2207,7 @@ namespace RT64 {
- 
-         const bool presentEarly = !ext.presentQueue->viewRDRAM && (ext.enhancementConfig->presentation.mode == EnhancementConfiguration::Presentation::Mode::PresentEarly);
-         const uint32_t screenFbAddress = newVI.fbAddress();
-+        const uint32_t shownFbAddress = shownFramebufferAddress(newVI);
-         const hlslpp::uint2 screenFbSize = newVI.fbSize();
+@@ -1872,6 +2211,8 @@ namespace RT64 {
          const uint8_t screenFbSiz = newVI.fbSiz();
          const bool viVisible = newVI.visible();
-@@ -1883,6 +2223,16 @@ namespace RT64 {
+         bool viDifferent = false;
++        // Taken here, not beside screenFbAddress, where Jet Force Gemini's page patches in lines of its own.
++        const uint32_t shownFbAddress = shownFramebufferAddress(newVI);
+         if (!fromEarlyPresent) {
+             // Keep last known screen VI updated.
+             viDifferent = (newVI != lastScreenVI);
+@@ -1883,6 +2224,16 @@ namespace RT64 {
                  viHistory.pushVI(newVI, screenFbSize.x);
                  viHistory.pushFactor(lastScreenFactorCounter + 1);
                  lastScreenFactorCounter = 0;
@@ -4561,7 +4562,7 @@ index 2970e71..3418aa5 100644
              }
              else if (viVisible) {
                  lastScreenFactorCounter++;
-@@ -1909,6 +2259,7 @@ namespace RT64 {
+@@ -1909,6 +2260,7 @@ namespace RT64 {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
@@ -4569,7 +4570,7 @@ index 2970e71..3418aa5 100644
                          {
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
-@@ -1952,7 +2303,16 @@ namespace RT64 {
+@@ -1952,7 +2304,16 @@ namespace RT64 {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
              advancePresent(present, false);
@@ -4586,7 +4587,7 @@ index 2970e71..3418aa5 100644
  
              // This presentation originates from screen changes being made manually by the CPU
              // or the game somehow not doing some form of buffering (instant input romhacks).
-@@ -1971,6 +2331,9 @@ namespace RT64 {
+@@ -1971,6 +2332,9 @@ namespace RT64 {
          renderTargetManager.destroyAll();
          renderTargetManager.setMultisampling(multisampling);
          dummyDepthTarget.reset();
@@ -4596,7 +4597,7 @@ index 2970e71..3418aa5 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,12 +3023,118 @@ namespace RT64 {
+@@ -2660,12 +3024,118 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -4715,7 +4716,7 @@ index 2970e71..3418aa5 100644
          present.debuggerFramebuffer.address = debuggerInspector.renderer.framebufferAddress;
          present.debuggerFramebuffer.view = (debuggerInspector.renderer.framebufferIndex >= 0);
      }
-@@ -2724,6 +3193,25 @@ namespace RT64 {
+@@ -2724,6 +3194,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  
