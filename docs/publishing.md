@@ -33,7 +33,9 @@ A run on a schedule that takes every change since the last one at once:
   sees that recomp's desktop build released as CLAUDE.md's Releasing says, after one of its releases in flight if there
   is one: a pin move is the desktop build's RT64 and runtime moving too. The pin's PR is the tree that was built, so
   it adds nothing to `releases/next.md`; the run says what the move brings in the release it cuts, and a release cut by
-  other work meanwhile carries it unnamed. A critical fix that plays every game takes it along the same way.
+  other work meanwhile carries it unnamed. A critical fix that plays every game takes it along the same way. One whose
+  main already has its pin at the tag (a critical fix moved it) gets no PR: that main is what was built, and it is
+  published as it is (`tools/retest.sh`).
 - A recomp of the project's own is not published until its game is released (none is held now): its line in
   `tools/publish_pages.sh`'s `unreleased` holds it, builds it only as a dry run and leaves it out of a run that names
   no game. The retest still moves its pin as it does the other recomps' (a PR on its repo that moves

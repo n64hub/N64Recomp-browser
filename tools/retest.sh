@@ -27,7 +27,9 @@
 #   pins), though a game publish_pages.sh holds as unreleased (none now) is left out of a run that names no
 #   game, since Pages serves no page of its own to play against: for each, the run pushes the pin commit, which also
 #   moves its submodules of upstream's to the commits the tag's patches/patches.txt names, as the build did
-#   (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there. Its merge is the run's by hand (Rush 2049's after its
+#   (publish_pages.sh's pin_tree), as branch n64recomp-browser-<tag> and opens that PR, and stops there; a main whose
+#   pin is already at the tag (a critical fix moved it) gets no commit and no PR, fork or own recomp, and is published
+#   from main as it is. Its merge is the run's by hand (Rush 2049's after its
 #   desktop build has run); started again with the same <dir>, the run publishes and plays each one whose main now has
 #   the tree that was built, as it does a fork's above, and the recomp's own release tool releases its desktop build
 #   from that main (CLAUDE.md, Releasing).
@@ -108,11 +110,15 @@ pin_commit() {
 }
 # move_pin <game>: a fork's main fast-forwarded to the pin commit; an own recomp's PR opened with it.
 move_pin() {
-    local g=$1 clone repo commit moved branch="n64recomp-browser-$tag"
+    local g=$1 clone repo was tree commit moved branch="n64recomp-browser-$tag"
     clone="$(clone_of "$g")" repo="$(awk -v g="$g" '$1 == g { print $2 }' <<< "$games")"
     git -C "$clone" fetch -q origin main
-    read -r was _ < "$run/keep/$g/built"
+    read -r was _ tree < "$run/keep/$g/built"
     [[ "$(git -C "$clone" rev-parse origin/main)" == "$was" ]] || { echo "$repo's main moved since the build"; return 1; }
+    # A main already pinned to the tag (a critical fix moved it) was built as it is: no commit, no PR, and the
+    # publish below finds main's own tree.
+    [[ "$(git -C "$clone" rev-parse "$was^{tree}")" != "$tree" ]] ||
+        { echo "$repo's main ${was:0:7} already has its pin at $tag: nothing to move"; return 0; }
     commit="$(pin_commit "$g")" || return 1
     if [[ $own != *" $g "* ]]; then
         git -C "$clone" push origin "$commit:refs/heads/main" && echo "pushed $repo main ${commit:0:7}"
