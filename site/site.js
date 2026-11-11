@@ -97,7 +97,7 @@ const ART = {
   'rush-2049-recomp': 'icon', 'perfect-dark-recomp': 'icon', 'super-mario-64-recomp': 'icon', 'f-zero-x-recomp': 'icon',
   'mario-party-recomp': 'icon', 'mario-party-2-recomp': 'icon', 'mario-party-3-recomp': 'icon',
   'super-smash-bros-recomp': 'icon', 'paper-mario-recomp': 'icon', 'rayman-2-recomp': 'icon',
-  'donald-duck-goin-quackers-recomp': 'icon', 'dinosaur-planet-recomp': 'icon', 'turok-2-recomp': 'icon',
+  'donald-duck-goin-quackers-recomp': 'icon', 'dinosaur-planet-recomp': 'icon', 'turok-recomp': 'icon', 'turok-2-recomp': 'icon',
   'GoldenEye64Recomp-web': 'icon', 'MarioKart64Recomp-web': 'icon', 'Starfox64Recomp-web': 'icon', 'Zelda64Recomp-web': 'icon',
 };
 
@@ -108,7 +108,7 @@ const ART = {
 const SCORES = {
   'oot-recompiled-web': [99, 14], 'super-mario-64-recomp': [96, 18], 'perfect-dark-recomp': [94, 11],
   'Zelda64Recomp-web': [93, 14], 'GoldenEye64Recomp-web': [91, 11], 'BanjoRecomp-web': [91, 22],
-  'wave-race-64-recomp-web': [91, 11], 'Starfox64Recomp-web': [89, 9], 'turok-2-recomp': [88, 12], 'f-zero-x-recomp': [87, 10],
+  'wave-race-64-recomp-web': [91, 11], 'Starfox64Recomp-web': [89, 9], 'f-zero-x-recomp': [87, 10],
   'paper-mario-recomp': [87, 16], 'CBFD-Recompiled-web': [86, 14], '1080-Snowboarding-recomp-web': [86, 13],
   'THPS2-64Recomp-web': [86, 6], 'BeetleRecomp-web': [86, 14], 'RogueSquadron64Recomp-web': [86, 6],
   'Donkey-Kong-64-Recompiled-web': [85, 12], 'pilotwings-64-recomp-web': [85, 15], 'rayman-2-recomp': [85, 6],
@@ -117,7 +117,7 @@ const SCORES = {
   'super-smash-bros-recomp': [77, 12], 'JetForceGemini-Recomp-web': [76, 11],
   'racer-web': [74, 7], 'rush2recompiled-web': [74, 12], 'PaxDino-web': [73, 14],
   'mario-party-recomp': [71, 13], 'mario-party-3-recomp': [71, 14],
-  'donald-duck-goin-quackers-recomp': [70, 4],
+  'donald-duck-goin-quackers-recomp': [70, 4], 'turok-recomp': [82, 13], 'turok-2-recomp': [88, 12],
 };
 
 // A floppy disk: blue, its metal shutter at the top and its white label below.
