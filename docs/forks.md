@@ -861,6 +861,11 @@ rt64 f81e9cb,          a framebuffer starts its read buffer history over before 
                        the web a copy of its bytes) at every check: Dinosaur Planet's page grew its heap 9 MB a second
                        until it aborted (Aborted(OOM)) about 140 s in, and its desktop build its video memory about
                        20 MB a second. Every build
+rt64 d49a689           RT64_GAME_FRAME_WORKLOADS: the framebuffer a VI shows is the one at its origin where none is a
+                       row before it (VI::fbAddress()'s estimate, libultra's modes' origin) and one of the VI's width
+                       and size is at the origin: Turok 3's own VI mode puts the origin at the framebuffer's start, no
+                       workload drew what the VI showed, and each game frame was held to its limit, four of the game's
+                       frames shown as one, 7.5 a second with all its shaders built (always on with Emscripten)
 N64Recomp d6441f7,     RECOMP_KUSEG_WINDOW, for a recomp whose code runs from TLB-mapped (KUSEG) addresses and
 N64ModernRuntime       reads its strings, tables and constants through them (the Turok games, from 0x00200400): on the
 007b675                web its loads and stores and TO_PTR map KUSEG's first 16 MB into a window librecomp allocates

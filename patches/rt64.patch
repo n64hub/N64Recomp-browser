@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 7edd8f31a1ec95a50a1d284042a60bc618af6b80
+rt64: https://github.com/n64hub/rt64-web d49a6890eec630981f056c4d194fac7c589a30e7
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3954,7 +3954,7 @@ index 8858dac..a9417c7 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..262c4f1 100644
+index 2970e71..3418aa5 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -4536,24 +4536,32 @@ index 2970e71..262c4f1 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1883,6 +2222,16 @@ namespace RT64 {
+@@ -1868,6 +2207,7 @@ namespace RT64 {
+ 
+         const bool presentEarly = !ext.presentQueue->viewRDRAM && (ext.enhancementConfig->presentation.mode == EnhancementConfiguration::Presentation::Mode::PresentEarly);
+         const uint32_t screenFbAddress = newVI.fbAddress();
++        const uint32_t shownFbAddress = shownFramebufferAddress(newVI);
+         const hlslpp::uint2 screenFbSize = newVI.fbSize();
+         const uint8_t screenFbSiz = newVI.fbSiz();
+         const bool viVisible = newVI.visible();
+@@ -1883,6 +2223,16 @@ namespace RT64 {
                  viHistory.pushVI(newVI, screenFbSize.x);
                  viHistory.pushFactor(lastScreenFactorCounter + 1);
                  lastScreenFactorCounter = 0;
 +
 +                bool shownBefore = false;
 +                for (const ShownFramebuffer &shown : shownFramebuffers) {
-+                    shownBefore = shownBefore || ((shown.address == screenFbAddress) && (shown.width == screenFbSize.x) && (shown.siz == screenFbSiz));
++                    shownBefore = shownBefore || ((shown.address == shownFbAddress) && (shown.width == screenFbSize.x) && (shown.siz == screenFbSiz));
 +                }
 +
 +                if (!shownBefore) {
-+                    shownFramebuffers[shownFramebufferCursor] = { screenFbAddress, screenFbSize.x, screenFbSiz };
++                    shownFramebuffers[shownFramebufferCursor] = { shownFbAddress, screenFbSize.x, screenFbSiz };
 +                    shownFramebufferCursor = (shownFramebufferCursor + 1) % shownFramebuffers.size();
 +                }
              }
              else if (viVisible) {
                  lastScreenFactorCounter++;
-@@ -1909,6 +2258,7 @@ namespace RT64 {
+@@ -1909,6 +2259,7 @@ namespace RT64 {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
@@ -4561,7 +4569,7 @@ index 2970e71..262c4f1 100644
                          {
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
-@@ -1952,7 +2302,16 @@ namespace RT64 {
+@@ -1952,7 +2303,16 @@ namespace RT64 {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
              advancePresent(present, false);
@@ -4572,13 +4580,13 @@ index 2970e71..262c4f1 100644
 +#       if RT64_GAME_FRAME_WORKLOADS
 +            ext.workloadQueue->presentAdvancing = false;
 +            if (newVI.visible()) {
-+                ext.workloadQueue->presentQueued(present.workloadId, screenFbAddress);
++                ext.workloadQueue->presentQueued(present.workloadId, shownFbAddress);
 +            }
 +#       endif
  
              // This presentation originates from screen changes being made manually by the CPU
              // or the game somehow not doing some form of buffering (instant input romhacks).
-@@ -1971,6 +2330,9 @@ namespace RT64 {
+@@ -1971,6 +2331,9 @@ namespace RT64 {
          renderTargetManager.destroyAll();
          renderTargetManager.setMultisampling(multisampling);
          dummyDepthTarget.reset();
@@ -4588,7 +4596,7 @@ index 2970e71..262c4f1 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,12 +3022,101 @@ namespace RT64 {
+@@ -2660,12 +3023,118 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -4665,6 +4673,23 @@ index 2970e71..262c4f1 100644
 +
 +            workload.offscreenOnly = viShowsAny && drawsAny && !workload.drawsShown;
 +        }
++    }
++
++    uint32_t State::shownFramebufferAddress(const VI &vi) const {
++        // VI::fbAddress() takes the origin to be a row or two into the framebuffer, as libultra's VI modes put it. A game
++        // with a VI mode of its own can put it at the framebuffer's start (Turok 3's), and then the address is a row before
++        // any framebuffer the game drew: no workload drew what the VI showed, and with RT64_GAME_FRAME_WORKLOADS no
++        // present ended a game frame, so each was held to its limit, four of the game's frames shown as one. The origin
++        // names the framebuffer then, where one of the VI's width and size is there and none is at the estimate.
++        const uint32_t estimate = vi.fbAddress();
++        if ((estimate != vi.origin) && (framebufferManager.find(estimate) == nullptr)) {
++            const Framebuffer *atOrigin = framebufferManager.find(vi.origin);
++            if ((atOrigin != nullptr) && (atOrigin->width == vi.fbSize().x) && (atOrigin->siz == vi.fbSiz())) {
++                return vi.origin;
++            }
++        }
++
++        return estimate;
      }
  
      void State::advancePresent(Present &present, bool paused) {
@@ -4678,7 +4703,7 @@ index 2970e71..262c4f1 100644
 +        // minigames do, had the present wait for that frame's workloads too, which ended it there at a wait in the
 +        // middle (WorkloadQueue::endedGameFrame()), its rest drawn as a frame of its own, or held it and the game with
 +        // it. A framebuffer no workload has drawn since the VI first showed it waits for the newest, as before.
-+        const uint32_t screenFbAddress = present.screenVI.fbAddress();
++        const uint32_t screenFbAddress = shownFramebufferAddress(present.screenVI);
 +        const uint32_t screenFbWidth = present.screenVI.fbSize().x;
 +        const uint8_t screenFbSiz = present.screenVI.fbSiz();
 +        for (const ShownFramebuffer &shown : shownFramebuffers) {
@@ -4690,7 +4715,7 @@ index 2970e71..262c4f1 100644
          present.debuggerFramebuffer.address = debuggerInspector.renderer.framebufferAddress;
          present.debuggerFramebuffer.view = (debuggerInspector.renderer.framebufferIndex >= 0);
      }
-@@ -2724,6 +3175,25 @@ namespace RT64 {
+@@ -2724,6 +3193,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  
@@ -4717,7 +4742,7 @@ index 2970e71..262c4f1 100644
          extended.ditherNoiseStrength = noiseStrength;
      }
 diff --git a/src/hle/rt64_state.h b/src/hle/rt64_state.h
-index 7a8c13b..7cbc85a 100644
+index 7a8c13b..5b010ae 100644
 --- a/src/hle/rt64_state.h
 +++ b/src/hle/rt64_state.h
 @@ -4,6 +4,8 @@
@@ -4827,7 +4852,15 @@ index 7a8c13b..7cbc85a 100644
          void fullSync();
          void fullSyncFramebufferPairTiles(Workload &workload, FramebufferPair &fbPair, uint32_t &loadOpCursor, uint32_t &rdpTileCursor);
          void listProcessBegin();
-@@ -162,6 +220,7 @@ namespace RT64 {
+@@ -152,6 +210,7 @@ namespace RT64 {
+         void updateMultisampling();
+         void inspect();
+         void advanceWorkload(Workload &workload, bool paused);
++        uint32_t shownFramebufferAddress(const VI &vi) const;
+         void advancePresent(Present &present, bool paused);
+         void dpInterrupt();
+         void spInterrupt();
+@@ -162,6 +221,7 @@ namespace RT64 {
          DisplayList *popReturnAddress();
          void setRefreshRate(uint16_t refreshRate);
          void setRenderToRAM(uint8_t renderToRAM);
