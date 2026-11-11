@@ -954,6 +954,133 @@ jobs:
           ln -s "$GITHUB_WORKSPACE" "$rush/lib/N64Recomp-browser"
           bash "$rush/tools/apply_runtime_patches.sh"
 
+  # The patches under WWF No Mercy's web fork's own (WWFNoMercyRecomp-web, its main), on its port's own rt64,
+  # N64ModernRuntime and RecompFrontend (their wcw branches), as Snap64Recomp-web's: its tools/build_web.sh leaves out
+  # the files where the port's lines and the web's meet (web/patches/files.txt: 18 of rt64's, 7 of plume's, 12 of the
+  # runtime's, 3 of N64Recomp's, 5 of RecompFrontend's), applies its web/patches/<project>.patch to them, and merges in
+  # the web's change to them since with apply.cmake --since. Red on a PR means the same as snap-patches', merged into
+  # WWFNoMercyRecomp-web's web/patches by hand. Then those files are compiled (below), as snap-patches' are.
+  wwf-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: WWFNoMercyRecomp-web's apply over them
+        run: |
+          wwf="$RUNNER_TEMP/wwf"
+          git clone -q --depth 1 https://github.com/n64hub/WWFNoMercyRecomp-web "$wwf"
+          git -C "$wwf" log -1 --format='WWFNoMercyRecomp-web %h %s'
+          git -C "$wwf" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3             lib/rt64 lib/N64ModernRuntime lib/RecompFrontend
+          git -C "$wwf/lib/rt64" -c protocol.version=2 submodule update -q --init --depth 1 src/contrib/plume src/contrib/hlslpp
+          git -C "$wwf/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 N64Recomp
+          rmdir "$wwf/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$wwf/lib/N64Recomp-browser"
+          bash "$wwf/tools/build_web.sh" --patches
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: emsdk-cache
+      # emdawnwebgpu's download, retried (jfg-patches says why).
+      - name: emdawnwebgpu
+        run: |
+          touch "$RUNNER_TEMP/empty.cpp"
+          for wait in 15 30 60 120 0; do
+            em++ --use-port=emdawnwebgpu -fsyntax-only "$RUNNER_TEMP/empty.cpp" && exit 0
+            sleep "$wait"
+          done
+          exit 1
+      # Each C++ file of web/patches/files.txt but the ones left to the port, as the step above left it, compiled as a
+      # page compiles it, with its project's options as they are with Emscripten, syntax only: rt64's without
+      # RT64_GAME_FRAME_WORKLOADS, which the port's frame pairing refuses. The generated shader headers are stand-ins
+      # declaring their blobs, as snap-patches' are.
+      - name: WWFNoMercyRecomp-web's merged files compile
+        run: |
+          wwf="$RUNNER_TEMP/wwf" stubs="$RUNNER_TEMP/wwf-stubs"
+          rt64="$wwf/lib/rt64" runtime="$wwf/lib/N64ModernRuntime" frontend="$wwf/lib/RecompFrontend"
+          git -C "$rt64" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 4 src/contrib/imgui \
+            src/contrib/im3d src/contrib/implot src/contrib/ddspp src/contrib/stb src/contrib/mupen64plus-core src/contrib/xxHash src/contrib/zstd \
+            src/contrib/re-spirv
+          # The Vulkan headers the CRT filter (rt64_crt_filter.cpp) includes, though a page leaves its Vulkan chain out.
+          git -C "$rt64/src/contrib/plume" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3 \
+            contrib/volk contrib/Vulkan-Headers contrib/VulkanMemoryAllocator
+          git -C "$runtime" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3 thirdparty/miniz \
+            thirdparty/xxHash thirdparty/o1heap
+          git -C "$runtime/N64Recomp" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 2 lib/fmt \
+            lib/rabbitizer
+          git -C "$frontend" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 2 recompui/lib/RmlUi \
+            recompui/lib/lunasvg
+          common=(-pthread -fwasm-exceptions -msimd128 -fsyntax-only "-DXXH_HAS_INCLUDE(x)=0" -DHLSL_CPU "-I$stubs")
+          rt64_flags=(-std=c++17 -sUSE_SDL=2 --use-port=emdawnwebgpu -DFFX_GCC -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES
+            -DRT64_FREE_DISCARDED_TARGETS=1 -DRT64_INTERPOLATE_CAMERA_EYE=1 -DRT64_PACKED_RSP_INPUTS=1
+            -DRT64_PARTIAL_SCREEN_PAIRS=1 -DRT64_SCISSOR_INSIDE_FRAMEBUFFER=1 -DRT64_SKIP_COLLAPSED_MATCHES=1
+            -DRT64_STRETCH_SCREEN_COVERS=1 -DRT64_UNEVEN_FRAME_RATES=1 -DRT64_WGSL=1)
+          for dir in src src/contrib src/contrib/plume src/contrib/imgui src/contrib/hlslpp/include \
+            src/contrib/mupen64plus-core/src/api src/contrib/nativefiledialog-extended/src/include src/contrib/zstd/lib \
+            src/contrib/re-spirv/external/SPIRV-Headers/include src/contrib/plume/contrib/volk \
+            src/contrib/plume/contrib/Vulkan-Headers/include src/contrib/plume/contrib/VulkanMemoryAllocator/include; do
+            rt64_flags+=("-I$rt64/$dir")
+          done
+          plume_flags=(-std=c++17 --use-port=emdawnwebgpu "-I$rt64/src/contrib/plume")
+          runtime_flags=(-std=c++20 -DMINIZ_STATIC_DEFINE -DULTRAMODERN_HOLD_BLOCKED_MESSAGES=1
+            -DULTRAMODERN_LIBULTRA_THREAD_STOP=1 -DULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS=1
+            -DULTRAMODERN_RSP_TASKS_COPIED=1 -DULTRAMODERN_SCREEN_UPDATE_AFTER_VI=1 -DULTRAMODERN_VIS_WAIT_FOR_RENDERER=1)
+          for dir in ultramodern/include librecomp/include librecomp/include/librecomp librecomp/src thirdparty \
+            thirdparty/concurrentqueue thirdparty/miniz thirdparty/o1heap thirdparty/sse2neon N64Recomp/include \
+            N64Recomp/lib/fmt/include N64Recomp/lib/rabbitizer/include N64Recomp/lib/rabbitizer/cplusplus/include; do
+            runtime_flags+=("-I$runtime/$dir")
+          done
+          recomp_flags=(-std=c++20)
+          for dir in include lib/fmt/include lib/rabbitizer/include lib/rabbitizer/cplusplus/include; do
+            recomp_flags+=("-I$runtime/N64Recomp/$dir")
+          done
+          input_flags=(-std=c++20 -sUSE_SDL=2 -DRECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED=1)
+          ui_flags=(-std=c++20 -sUSE_SDL=2 -sUSE_FREETYPE=1 -DLUNASVG_BUILD_STATIC -DMINIZ_STATIC_DEFINE
+            -DRMLUI_SDL_VERSION_MAJOR=2 -DRMLUI_STATIC_LIB -DRT64_WGSL=1)
+          for dir in recompinput/include recompinput/include/recompinput recompinput/src lib/GamepadMotionHelpers \
+            lib/SlotMap recompui/include recompui/include/recompui recompui/src recompui/src/api recompui/src/base \
+            recompui/src/composites recompui/src/config recompui/src/core recompui/src/data recompui/src/elements \
+            recompui/src/renderer recompui/src/rml_elements recompui/src/rml_hacks recompui/src/util \
+            recompui/lib/RmlUi/Include recompui/lib/RmlUi/Backends recompui/lib/lunasvg/include; do
+            input_flags+=("-I$frontend/$dir") ui_flags+=("-I$frontend/$dir")
+          done
+          for dir in librecomp/include N64Recomp/include ultramodern/include thirdparty thirdparty/concurrentqueue \
+            thirdparty/miniz thirdparty/sse2neon texnames/include; do
+            input_flags+=("-I$runtime/$dir") ui_flags+=("-I$runtime/$dir")
+          done
+          for dir in src src/contrib src/contrib/hlslpp/include src/rhi src/render src/contrib/plume; do
+            ui_flags+=("-I$rt64/$dir")
+          done
+          mkdir -p "$stubs/shaders"
+          echo '#define MINIZ_EXPORT' > "$stubs/miniz_export.h"
+          stub() {
+            printf '#pragma once\n#include <stddef.h>\nextern "C" const char %s[1];\nextern "C" const size_t %s_size;\n' "$2" "$2" > "$1"
+          }
+          grep -rhoE --exclude-dir=contrib '#\s*include "shaders/[^"]+\.(wgsl|rw)\.h"' "$rt64/src" | sed 's/.*"shaders\///; s/"$//' |
+            sort -u | while read -r header; do
+              case "$header" in *.wgsl.h) blob="${header%%.*}BlobWGSL" ;; *) blob="${header%%.*}Text" ;; esac
+              stub "$stubs/shaders/$header" "$blob"
+            done
+          for shader in InterfaceVS InterfacePS; do stub "$stubs/$shader.hlsl.wgsl.h" "${shader}BlobWGSL"; done
+          status=0
+          while read -r project file; do
+            case "$project:$file" in
+              rt64:*) checkout="$rt64" flags=("${rt64_flags[@]}") ;;
+              plume:*) checkout="$rt64/src/contrib/plume" flags=("${plume_flags[@]}") ;;
+              N64ModernRuntime:*) checkout="$runtime" flags=("${runtime_flags[@]}") ;;
+              N64Recomp:*) checkout="$runtime/N64Recomp" flags=("${recomp_flags[@]}") ;;
+              RecompFrontend:recompinput/*) checkout="$frontend" flags=("${input_flags[@]}") ;;
+              RecompFrontend:recompui/*) checkout="$frontend" flags=("${ui_flags[@]}") ;;
+              *) echo "::error::no flags for $project's $file here"; status=1; continue ;;
+            esac
+            echo "$project $file"
+            em++ "${common[@]}" "${flags[@]}" "$checkout/$file" || status=1
+          done < <(awk '!/^#/ && $2 ~ /\.cpp$/ && $3 != "own" { print $1, $2 }' "$wwf/web/patches/files.txt" | tr -d '\r')
+          exit $status
+
   # Every library a page is made of, built with Emscripten (tests/build/CMakeLists.txt): from the forks, and from
   # Banjo-Kazooie's own upstream commits with the patches in.
   emscripten:
@@ -1045,7 +1172,8 @@ jobs:
   tag:
     needs: [changes, plume-device-thread, hlslpp-wasm, kuseg-window, wgsl, patches, dkr-patches, cbfd-patches,
       jfg-patches, racer-patches, snap-patches, rush2-patches, snowboarding-patches, sssv-patches, thps2-patches,
-      beetle-patches, paxdino-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
+      beetle-patches, paxdino-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, wwf-patches,
+      emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')

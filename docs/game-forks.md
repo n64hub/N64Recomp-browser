@@ -544,6 +544,28 @@ second with nothing wrong, and a page that interpolates them waits on that previ
 frames. Its BUILDING.md (The web page) and the header of
 `tools/build_web.sh` have the rest.
 
+`n64hub/WWFNoMercyRecomp-web` is jessetbh's WWFNoMercyRecomp, WWF No Mercy (USA, Rev 1), GPL-3.0, on jessetbh's own
+forks of rt64, N64ModernRuntime and RecompFrontend (their `wcw` branches, shared with the AKI wrestling games' other
+recomps), far from the commits `patches/` is made on. Its `tools/build_web.sh` applies `apply.cmake` project by
+project, but for the files both change on the same lines (`web/patches/files.txt`, whose header says what each merge
+kept), whose web change is its `web/patches/<project>.patch`, merged by hand, with what N64Recomp-browser has changed
+in them since merged in by `apply.cmake --since`; CI's `wwf-patches` job runs its `tools/build_web.sh --patches` on
+each PR and compiles the merged files. The game is recompiled with N64Recomp-browser's N64Recomp at the commit its
+BUILDING.md names, then put through the recomp's post-regen pipeline (`fix_stumps.py`, `fix_switches.py`,
+`fix_backbranches.py`, `readd_hand_edits.py`), again only when the ROM, its configs or the recompiler changed. Left
+out of the page: its bundled mods (a page has no live recompiler), the CRT filter, ray tracing and HDR,
+RetroAchievements, and the launcher's Mods and Exit, which the game builds itself (`src/main/main.cpp`). The rest is
+behind `__EMSCRIPTEN__` as in the other ports: the canvas, the sound through `audio_output.h`, resolution Auto and the
+display's frame rate through the port's own frame pairing. Its list is 37 shaders: the boot (the launcher, the
+intro, the title and the menus, 13) and one section for a match (24, one of them a play's miss), recorded by
+`web/shader_plan.json` with a load in each of the eight arenas, whose matches draw the same shaders but one. The plan
+deletes the game's save each load, so that the menus' cursors are where a new one has them (the game keeps them in
+its save), knows the menus from the rest by which code overlay the game has loaded (`web/game_state.js`), and plays a
+single match of 1P against the CPU in each arena, as `web/play_plan.json` does in RAW is WAR's for 75 s. Its
+launcher isn't laid out by the viewport's height about its centre as recompui's is, so the plans press Enter for its
+Load ROM and Start Game, the focused buttons, rather than click. Its `docs/web.md` and the header of
+`tools/build_web.sh` have the rest.
+
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
 the commits GoldenEye's are on (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`

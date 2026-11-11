@@ -141,6 +141,7 @@ thps2  n64hub/THPS2-64Recomp-web            thps2_recomp         decomp/thps2/re
 rogue  n64hub/RogueSquadron64Recomp-web      RogueSquadron64Recomp build-web star-wars-rogue-squadron
 bar    n64hub/BeetleRecomp-web               BeetleRecomp         build-web beetle-adventure-racing
 rw     n64hub/PaxDino-web                    PaxDino              build-web turok-rage-wars
+wwf    n64hub/WWFNoMercyRecomp-web           NoMercyRecompiled    build-web wwf-no-mercy
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
 fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-zero-x
@@ -440,6 +441,12 @@ build_bar() {
 build_rw() {
     # Applies the game's own lib-patches/ and the web's from clean whenever they, N64Recomp-browser or web/patches
     # moved (build-web-prep/web-patched), and recompiles only when the ROM, its configs or the recompilers changed.
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
+}
+build_wwf() {
+    # Patches its submodules from clean whenever N64Recomp-browser, a submodule or web/patches moved
+    # (build-web-prep/web-patched), and recompiles the game, the whole post-regen pipeline, only when what it reads
+    # changed (build-web-prep/recompiled-stamp).
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Runs on the host (on_host): both scripts start Docker images of their own. The decomp's build checks the ROM, and
