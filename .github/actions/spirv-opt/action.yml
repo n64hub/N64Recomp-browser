@@ -1,0 +1,31 @@
+# spirv-opt (SPIRV-Tools), which rt64 runs on a page's prebuilt shaders before naga (rt64's RT64_SPIRV_OPT_EXECUTABLE,
+# found on PATH), built from Khronos' own source and cached by its tag, as naga is by its version. No apt: a runner that
+# couldn't resolve Ubuntu's mirrors failed every job that installed spirv-tools from them, run after run, for over an
+# hour. The tag and the SPIRV-Headers commit its DEPS file names (spirv_headers_revision) move together. Needs CMake and
+# Ninja on PATH (lukka/get-cmake) first.
+name: spirv-opt
+description: spirv-opt on PATH, built from SPIRV-Tools' source and cached
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v4
+      id: cache
+      with:
+        path: ~/spirv-opt
+        key: spirv-opt-v2026.4-${{ runner.os }}
+    - name: Build spirv-opt
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        src="$RUNNER_TEMP/spirv-tools"
+        git clone -q --depth 1 --branch v2026.4 https://github.com/KhronosGroup/SPIRV-Tools "$src"
+        git clone -q --filter=blob:none --no-checkout https://github.com/KhronosGroup/SPIRV-Headers "$src/external/spirv-headers"
+        git -C "$src/external/spirv-headers" checkout -q 496543121ce6419f23d6fa5d7194ba66c36212d2
+        cmake -S "$src" -B "$src/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DSPIRV_SKIP_TESTS=ON -DSPIRV_WERROR=OFF
+        ninja -C "$src/build" spirv-opt
+        mkdir -p ~/spirv-opt
+        cp "$src/build/tools/spirv-opt" ~/spirv-opt/
+    - shell: bash
+      run: |
+        echo "$HOME/spirv-opt" >> "$GITHUB_PATH"
+        "$HOME/spirv-opt/spirv-opt" --version

@@ -80,7 +80,10 @@ jobs:
           fi
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
-  # plume's device thread (tests/plume_device_thread_test.cpp) against a mock backend, natively.
+  # plume's device thread (tests/plume_device_thread_test.cpp) against a mock backend, natively. No apt (the wgsl job
+  # says why, and a runner that couldn't resolve Ubuntu's mirrors failed this job's libx11-dev for over an hour): plume's
+  # RenderWindow is the one thing it takes from X11 on Linux, a Display* and a Window, so a stand-in Xlib.h declares
+  # those two. Nothing is linked against X11.
   plume-device-thread:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -95,8 +98,11 @@ jobs:
           git -C lib/rt64 submodule update --init --depth 1 src/contrib/plume
       - name: Test
         run: |
-          dpkg -s libx11-dev > /dev/null 2>&1 || { sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libx11-dev; }
-          g++ -std=c++20 -O2 -Wall -pthread -Ilib/rt64/src/contrib/plume tests/plume_device_thread_test.cpp \
+          mkdir -p "$RUNNER_TEMP/x11/X11"
+          printf 'typedef struct _XDisplay Display;
+typedef unsigned long Window;
+' > "$RUNNER_TEMP/x11/X11/Xlib.h"
+          g++ -std=c++20 -O2 -Wall -pthread -I"$RUNNER_TEMP/x11" -Ilib/rt64/src/contrib/plume tests/plume_device_thread_test.cpp \
             lib/rt64/src/contrib/plume/plume_device_thread.cpp -o device_thread_test
           ./device_thread_test
 
@@ -265,8 +271,7 @@ jobs:
         with:
           version: ${{ env.EMSDK_VERSION }}
           actions-cache-folder: emsdk-cache
-      - name: SPIRV-Tools
-        run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends spirv-tools
+      - uses: ./.github/actions/spirv-opt
       - name: They apply over DKR-R-web's
         run: |
           git clone -q --depth 1 https://github.com/n64hub/DKR-R-web "$RUNNER_TEMP/dkr"
@@ -932,10 +937,8 @@ jobs:
         with:
           version: ${{ env.EMSDK_VERSION }}
           actions-cache-folder: emsdk-cache
-      # spirv-opt, which rt64 runs on the prebuilt shaders (tests/build/shaders.txt) before naga. The update first: a runner
-      # image can come without package lists, and the install then finds no spirv-tools.
-      - name: SPIRV-Tools
-        run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends spirv-tools
+      # spirv-opt, which rt64 runs on the prebuilt shaders (tests/build/shaders.txt) before naga.
+      - uses: ./.github/actions/spirv-opt
       # Emscripten's cache, where embuilder puts its ports, is in emsdk's folder, cached before they are built. One a leg:
       # a leg's compiles all missed ccache against the other leg's (577 of 578), and hit against its own.
       - id: em-cache
