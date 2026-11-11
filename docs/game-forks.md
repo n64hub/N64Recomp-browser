@@ -460,8 +460,11 @@ The game's own code changes for the page are behind `__EMSCRIPTEN__`: its window
 canvas, its sound goes through `audio_output.h` (an SDL stream from the game's rate to the page's), MSAA is off (RT64
 can't do it on WebGPU) and RT64's developer tools with it; the rest is at the desktop's defaults (4:3, resolution
 Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
-it at the speed a console does whatever it presents. Its list is SHADERS, recorded by `tools/shader_plan.json`, which
-knows where the game is by `gGameSettings` (`tools/game_state.js`). Its BUILDING.md (The web page) and the header of
+it at the speed a console does whatever it presents. Its list is 222 shaders: the boot (the launcher, the Controller
+Pak screen, the logos, the intro, the title and the menus to a Single Race, 134) and 2 sections (Coventry Cove 39,
+Mount Mayhem 49), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
+(`tools/game_state.js`) and reaches each track through the menus, since a game state written from them stops the
+page. A new save offers only those two of the single race's tracks. Its BUILDING.md (The web page) and the header of
 `tools/build_web.sh` have the rest.
 
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
