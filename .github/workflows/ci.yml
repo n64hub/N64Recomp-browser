@@ -127,6 +127,34 @@ jobs:
           em++ -O2 -std=c++17 -msimd128 -Ilib/rt64/src/contrib/hlslpp/include tests/hlslpp_wasm_test.cpp -o hlslpp_wasm_test.js
           node hlslpp_wasm_test.js
 
+  # Memory for TLB-mapped (KUSEG) addresses (tests/kuseg_window_test.cpp): N64Recomp's loads and stores, the runtime's
+  # TO_PTR and librecomp's make_kuseg_accessible, natively and in node with RECOMP_KUSEG_WINDOW and without it.
+  kuseg-window:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: N64ModernRuntime
+        run: |
+          bash tools/fetch_forks.sh lib --no-submodules N64ModernRuntime
+          git -C lib/N64ModernRuntime submodule update --init --depth 1 N64Recomp
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: emsdk-cache
+      - name: Test
+        run: |
+          rt=lib/N64ModernRuntime
+          inc="-I$rt/N64Recomp/include -I$rt/ultramodern/include -I$rt/librecomp/include"
+          src="tests/kuseg_window_test.cpp $rt/librecomp/src/kuseg.cpp"
+          g++ -std=c++20 -O2 $inc $src -o kuseg_native && ./kuseg_native
+          wasm="-std=c++20 -O2 -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB"
+          em++ $wasm -DRECOMP_KUSEG_WINDOW $inc $src -o kuseg_window.js && node kuseg_window.js
+          em++ $wasm $inc $src -o kuseg_plain.js && node kuseg_plain.js
+
   # RT64's shaders as WebGPU gets them: rt64 configured natively with RT64_WGSL builds each one with dxc and naga, and
   # tests/wgsl_check.mjs checks every one against a core WebGPU device in headless Chrome. The runner has no GPU, so
   # Chrome's WebGPU runs on SwiftShader (Vulkan on the CPU), which has no dual-source blending: the checker skips the
@@ -987,9 +1015,9 @@ jobs:
   # covered by that one's, and the changes job builds a docs-only push's whenever this would tag. A tag pushed with
   # GITHUB_TOKEN starts no workflow: this run, on the same commit, is its CI.
   tag:
-    needs: [changes, plume-device-thread, hlslpp-wasm, wgsl, patches, dkr-patches, cbfd-patches, jfg-patches, racer-patches,
-      snap-patches, rush2-patches, snowboarding-patches, sssv-patches, thps2-patches, beetle-patches, bt-patches, wr-patches,
-      sm64-patches, fzx-patches, rush2049-patches, emscripten]
+    needs: [changes, plume-device-thread, hlslpp-wasm, kuseg-window, wgsl, patches, dkr-patches, cbfd-patches,
+      jfg-patches, racer-patches, snap-patches, rush2-patches, snowboarding-patches, sssv-patches, thps2-patches,
+      beetle-patches, bt-patches, wr-patches, sm64-patches, fzx-patches, rush2049-patches, emscripten]
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
