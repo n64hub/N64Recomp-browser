@@ -377,7 +377,10 @@ n64hub/N64Recomp-web                N64Recomp/N64Recomp      the FPU rounding mo
                                                                   recompiled to C ahead of time; functions a mod
                                                                   replaces or hooks, redirected at their entry;
                                                                   tail calls as wasm tail calls; a division by
-                                                                  zero gives the VR4300's results
+                                                                  zero gives the VR4300's results; with
+                                                                  RECOMP_KUSEG_WINDOW, an option a game turns
+                                                                  on, TLB-mapped addresses in a window of their
+                                                                  own
 n64hub/N64ModernRuntime-web         N64Recomp/N64ModernRuntime  Emscripten: no live recompiler, RDRAM
                                                                   without a guard region; built-in mods linked
                                                                   in, their replacements and hooks as redirects;
@@ -387,7 +390,8 @@ n64hub/N64ModernRuntime-web         N64Recomp/N64ModernRuntime  Emscripten: no l
                                                                   Windows); a ROM read in 4 MB pieces; no exit
                                                                   on a Status write, no thread put in a queue
                                                                   twice, a sound buffer's KSEG1 address read
-                                                                  through KSEG0's
+                                                                  through KSEG0's; TLB-mapped memory opened by
+                                                                  make_kuseg_accessible, in a window on the web
 n64hub/RecompFrontend-web           N64Recomp/RecompFrontend recompui on WebGPU, the canvas as the window,
                                                                   a file picker on a thread of its own, render
                                                                   to RAM as an option and its copy a display

@@ -861,4 +861,11 @@ rt64 f81e9cb,          a framebuffer starts its read buffer history over before 
                        the web a copy of its bytes) at every check: Dinosaur Planet's page grew its heap 9 MB a second
                        until it aborted (Aborted(OOM)) about 140 s in, and its desktop build its video memory about
                        20 MB a second. Every build
+N64Recomp d6441f7,     RECOMP_KUSEG_WINDOW, for a recomp whose code runs from TLB-mapped (KUSEG) addresses and
+N64ModernRuntime       reads its strings, tables and constants through them (the Turok games, from 0x00200400): on the
+007b675                web its loads and stores and TO_PTR map KUSEG's first 16 MB into a window librecomp allocates
+                       right after kseg0's 512 MB, where wasm32's pointers wrapped them into the heap, a KUSEG address
+                       past it wrapped inside it. recomp::make_kuseg_accessible opens a range, natively by committing
+                       or mprotect-ing the reserved pages 2 GB past rdram. Without the define a page compiles to the
+                       same code (docs/porting.md, Building with Emscripten)
 ```
