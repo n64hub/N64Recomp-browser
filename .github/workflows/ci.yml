@@ -561,6 +561,91 @@ jobs:
           done
           exit $status
 
+  # The patches under Star Wars: Rogue Squadron's web fork's own (RogueSquadron64Recomp-web, its main), as
+  # Snap64Recomp-web's: its rt64, plume and N64ModernRuntime (with its N64Recomp in the same repository) are the game's
+  # own forks, far from the patches' upstream commits, so its web/patches take over the files where the two meet. Red on
+  # a PR means the same as snap-patches', merged into RogueSquadron64Recomp-web's web/patches by hand (its files.txt says
+  # how). Then those files are compiled (below), as Snap64Recomp-web's are.
+  rogue-patches:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: RogueSquadron64Recomp-web's apply over them
+        run: |
+          game="$RUNNER_TEMP/rogue"
+          git clone -q --depth 1 https://github.com/n64hub/RogueSquadron64Recomp-web "$game"
+          git -C "$game" log -1 --format='RogueSquadron64Recomp-web %h %s'
+          git -C "$game" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 2 lib/rt64 lib/N64ModernRuntime
+          git -C "$game/lib/rt64" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 4 src/contrib/plume \
+            src/contrib/hlslpp src/contrib/imgui src/contrib/im3d src/contrib/implot src/contrib/re-spirv \
+            src/contrib/xxHash src/contrib/zstd src/contrib/stb src/contrib/ddspp
+          git -C "$game/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3 \
+            thirdparty/miniz thirdparty/o1heap N64Recomp/lib/rabbitizer
+          rmdir "$game/lib/N64Recomp-browser"
+          ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
+          bash "$game/tools/build_web.sh" --patches
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: emsdk-cache
+      # emdawnwebgpu's download, retried (jfg-patches says why).
+      - name: emdawnwebgpu
+        run: |
+          touch "$RUNNER_TEMP/empty.cpp"
+          for wait in 15 30 60 120 0; do
+            em++ --use-port=emdawnwebgpu -fsyntax-only "$RUNNER_TEMP/empty.cpp" && exit 0
+            sleep "$wait"
+          done
+          exit 1
+      # Each rt64 and N64ModernRuntime C++ file of web/patches/files.txt, as the step above left it, compiled as
+      # snap-patches compiles Snap64Recomp-web's.
+      - name: RogueSquadron64Recomp-web's merged files compile
+        run: |
+          game="$RUNNER_TEMP/rogue" stubs="$RUNNER_TEMP/rogue-stubs"
+          rt64="$game/lib/rt64" runtime="$game/lib/N64ModernRuntime"
+          common=(-pthread -fwasm-exceptions -msimd128 -sUSE_SDL=2 -fsyntax-only "-DXXH_HAS_INCLUDE(x)=0" "-I$stubs")
+          rt64_flags=(-std=c++17 --use-port=emdawnwebgpu -DFFX_GCC -DHLSL_CPU -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES
+            -DRT64_FREE_DISCARDED_TARGETS=1 -DRT64_GAME_FRAME_WORKLOADS=1 -DRT64_INTERPOLATE_CAMERA_EYE=1
+            -DRT64_PACKED_RSP_INPUTS=1 -DRT64_PARTIAL_SCREEN_PAIRS=1 -DRT64_PER_DRAW_TEXTURES=1
+            -DRT64_PREBUILT_SHADERS -DRT64_SCISSOR_INSIDE_FRAMEBUFFER=1 -DRT64_SKIP_COLLAPSED_MATCHES=1
+            -DRT64_STRETCH_SCREEN_COVERS=1 -DRT64_UNEVEN_FRAME_RATES=1 -DRT64_WGSL=1)
+          for dir in src src/contrib src/contrib/plume src/contrib/imgui src/contrib/hlslpp/include src/contrib/stb \
+            src/contrib/ddspp src/contrib/mupen64plus-core/src/api src/contrib/nativefiledialog-extended/src/include \
+            src/contrib/zstd/lib; do
+            rt64_flags+=("-I$rt64/$dir")
+          done
+          runtime_flags=(-std=c++20 -DULTRAMODERN_HOLD_BLOCKED_MESSAGES=1 -DULTRAMODERN_LIBULTRA_THREAD_STOP=1
+            -DULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS=1 -DULTRAMODERN_RSP_TASKS_COPIED=1
+            -DULTRAMODERN_SCREEN_UPDATE_AFTER_VI=1 -DULTRAMODERN_VIS_WAIT_FOR_RENDERER=1)
+          for dir in ultramodern/include librecomp/include librecomp/include/librecomp librecomp/src thirdparty \
+            thirdparty/concurrentqueue thirdparty/miniz thirdparty/o1heap N64Recomp/include \
+            N64Recomp/lib/rabbitizer/include N64Recomp/lib/rabbitizer/cplusplus/include; do
+            runtime_flags+=("-I$runtime/$dir")
+          done
+          mkdir -p "$stubs/shaders"
+          echo '#define MINIZ_EXPORT' > "$stubs/miniz_export.h"
+          grep -rhoE --exclude-dir=contrib '#\s*include "shaders/[^"]+\.(wgsl|rw)\.h"' "$rt64/src" | sed 's/.*"shaders\///; s/"$//' |
+            sort -u | while read -r header; do
+              case "$header" in *.wgsl.h) blob="${header%%.*}BlobWGSL" ;; *) blob="${header%%.*}Text" ;; esac
+              printf '#pragma once\n#include <stddef.h>\nextern "C" const char %s[1];\nextern "C" const size_t %s_size;\n' \
+                "$blob" "$blob" > "$stubs/shaders/$header"
+            done
+          status=0
+          while read -r project file; do
+            case "$project" in
+              rt64) checkout="$rt64" flags=("${rt64_flags[@]}") ;;
+              N64ModernRuntime) checkout="$runtime" flags=("${runtime_flags[@]}") ;;
+            esac
+            echo "$project $file"
+            em++ "${common[@]}" "${flags[@]}" "$checkout/$file" || status=1
+          done < <(awk '!/^#/ && ($1 == "rt64" || $1 == "N64ModernRuntime") && $2 ~ /\.cpp$/' "$game/web/patches/files.txt")
+          exit $status
+
   # The patches over Banjo-Tooie's web fork's own (BanjoTooieRecompiled-web, its main): its tools/build_web.sh applies
   # its patches/*.patch to rt64, N64ModernRuntime and N64Recomp first (tools/setup_deps.py), then these on top but for
   # the files it leaves to its own, so a change here to the lines its own patches touch stops its page building. Its
