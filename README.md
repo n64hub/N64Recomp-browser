@@ -40,6 +40,7 @@ recomps, each with releases of its desktop build for Windows and Linux on its re
 | Pokémon Snap | [Snap64Recomp](https://github.com/JackandBeans/Snap64Recomp) by JackandBeans | [Snap64Recomp-web](https://github.com/n64hub/Snap64Recomp-web) | [play](https://n64hub.com/pokemon-snap/) |
 | Rush 2: Extreme Racing USA | [Rush 2 Recompiled](https://github.com/bryantmh/rush2recompiled) by bryantmh | [rush2recompiled-web](https://github.com/n64hub/rush2recompiled-web) | [play](https://n64hub.com/rush-2/) |
 | 1080° Snowboarding | [1080° Snowboarding: Recompiled](https://github.com/thebradshaw/1080-Snowboarding-decomp) by thebradshaw | [1080-Snowboarding-recomp-web](https://github.com/n64hub/1080-Snowboarding-recomp-web) | [play](https://n64hub.com/1080-snowboarding/) |
+| Space Station Silicon Valley | [SSSV_Recomp](https://github.com/scottjco/SSSV_Recomp) by scottjco | [SSSV_Recomp-web](https://github.com/n64hub/SSSV_Recomp-web) | [play](https://n64hub.com/space-station-silicon-valley/) |
 | Perfect Dark | this project's own recomp | [perfect-dark-recomp](https://github.com/n64hub/perfect-dark-recomp) | [play](https://n64hub.com/perfect-dark/) |
 | Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) |
 | F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) |
