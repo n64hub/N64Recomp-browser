@@ -536,8 +536,12 @@ the plays and moved there) and a section for each of the nine maps a new save of
 `tools/shader_plan.json`, which drives the menus by the keyboard and knows where the game is by its mode and the
 front end's screen (`tools/game_state.js`), and plays a one-bot Bloodlust match on each map as `tools/play_plan.json`
 does. A match presents at the display's rate (uncapped, 355 a second in Chrome), but the front end's menus present
-at the game's own 30, then 15, which RT64 doesn't interpolate, so `publish_pages.sh`'s 20 s boot from Pages, which
-stays in them, reads 15 a second with nothing wrong. Its BUILDING.md (The web page) and the header of
+at the game's own 30, then 15, on the desktop too: PaxDino's own code (`src/game/widescreen.cpp`, upstream's since its
+first release) sets RT64's refresh rate to 0 outside a match with `gEXSetRefreshRate`, which turns interpolation off,
+because the frames RT64 made between two of level select's, whose map preview is a 3D picture drawn into the menu,
+came out without most of the menu. So `publish_pages.sh`'s 20 s boot from Pages, which stays in the menus, reads 15 a
+second with nothing wrong, and a page that interpolates them waits on that preview drawing whole in RT64's in-between
+frames. Its BUILDING.md (The web page) and the header of
 `tools/build_web.sh` have the rest.
 
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
