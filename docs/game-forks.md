@@ -790,6 +790,15 @@ sections, the boot, the title and a new game's opening first and then an area a 
 `tools/shader_plan.json` from story points (`docs/story-points.md`) without anyone playing. Its README, CLAUDE.md and
 docs/web.md have the rest.
 
+`n64hub/turok-recomp` is Turok: Dinosaur Hunter (USA 1.0), not a fork but this project's own recomp (GPL-3.0), with
+RecompFrontend's launcher and menus, released for Windows and Linux and in the browser. What the Turok recomps share
+is `n64hub/turok-engine`, its `lib/turok-engine`: the function finder that writes its symbols from the ROM with no
+decompilation, the Controller Pak and libultra the runtime lacks. Its main program is packed (RNC), so the build
+unpacks it from the player's ROM before N64Recomp reads it, and all of its code runs in kseg0: unlike the later Turok
+games it needs no window for TLB-mapped addresses. Its list is 84 shaders, the boot, the intro and the title menu
+first and then the first level, recorded by `tools/shader_plan.json`, which `tools/survey.js` takes through the menus
+by the main loop's state. Its README, CLAUDE.md and docs/web.md have the rest.
+
 ## The games' own frame rates
 
 A page presents at the display's rate whatever its game runs at (CLAUDE.md, Rules). The game's own rate, set by the
