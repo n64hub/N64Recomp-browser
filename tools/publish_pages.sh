@@ -138,6 +138,7 @@ rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush
 1080   n64hub/1080-Snowboarding-recomp-web   1080SnowboardingRecompiled build-web 1080-snowboarding
 sssv   n64hub/SSSV_Recomp-web                SSSVRecompiled       build-web space-station-silicon-valley
 thps2  n64hub/THPS2-64Recomp-web            thps2_recomp         decomp/thps2/recomp-host/build/web tony-hawks-pro-skater-2
+rogue  n64hub/RogueSquadron64Recomp-web      RogueSquadron64Recomp build-web star-wars-rogue-squadron
 bar    n64hub/BeetleRecomp-web               BeetleRecomp         build-web beetle-adventure-racing
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
@@ -420,6 +421,12 @@ build_sssv() {
 build_thps2() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
+# Runs on the host (on_host): its tools/build_web.sh starts an image of its own, the shared one's layers and MIPS GCC
+# (patches/src and the code mods), and patches its submodules from clean whenever N64Recomp-browser or web/patches
+# moved (build-web-prep/web-patched). The decompilation it makes the game's ELF with is cloned beside the repo.
+build_rogue() {
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
+}
 # Runs on the host (on_host): its tools/build_web.sh builds the decomp and the page in a Docker image of its own,
 # patching its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
 # (build-web-prep/web-patched).
@@ -495,7 +502,7 @@ build_dino() {
     cmp -s ../rom.z64 roms/dinoplanet.z64 || cp ../rom.z64 roms/dinoplanet.z64
     bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
-on_host=" pd sm64 fzx mp1 mp2 mp3 ssb pm r2 ddgq dino bar "
+on_host=" rogue pd sm64 fzx mp1 mp2 mp3 ssb pm r2 ddgq dino bar "
 
 # --- Here ---
 

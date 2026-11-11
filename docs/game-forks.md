@@ -464,6 +464,29 @@ from 2 to 32), recorded by `web/shader_plan.json`, which reaches each level by `
 into the test control the desktop build reads from an environment variable, and knows the level by `gGameState.level`
 in RDRAM. Its BUILDING.md and the header of `tools/build_web.sh` have the rest.
 
+`n64hub/RogueSquadron64Recomp-web` is MikeSemicolonD's Rogue Squadron 64 Recompiled, Star Wars: Rogue Squadron (USA
+1.0), GPL-3.0. It is on the game's own forks of rt64 and N64ModernRuntime (N64Recomp inside it), which draw Factor 5's
+microcode and add the port's renderer work (terrain, water, lights, ray tracing), patched by the N64Recomp-browser tag
+its `lib/N64Recomp-browser` pins. Its `tools/build_web.sh` runs a Docker image of its own (`tools/docker/Dockerfile.web`),
+the patch step inside it too, and applies `apply.cmake` project by project, but for the files where the game's forks and
+the web change the same lines (`web/patches/files.txt`: 44 of rt64's, 5 of plume's, 11 of the runtime's, 2 of
+N64Recomp's), whose web change is its `web/patches/<project>.patch`, merged by hand, with what N64Recomp-browser has
+changed in them since merged in by `apply.cmake --since`, as Snap64's and 1080's are, and CI's `rogue-patches` job runs
+its `tools/build_web.sh --patches` on each PR. Two of the merge's choices: the texture packs' terrain pixel shader, a
+binding array of textures, is left out of a page's shaders (naga takes none; the page has no texture packs), and RT64's
+variable-rate interpolation, which the game's fork made to present a game frame over a number of display frames it
+works out, is given at least one display frame (a frame worked out at none divided by zero and trapped the page as the
+first frame drew). The page plays at RT64's Display rate and Auto resolution, where the desktop build holds its game's
+own 30 (its interpolation is off there, for flicker in pooled effects), starts in the game's widescreen (Expand) where
+the desktop build starts in 4:3, leaves out ray tracing, which needs ray queries
+WebGPU hasn't, the multiplayer mods (online play needs sockets) and the tow cable mod (its instruction patches
+need the live recompiler), and keeps every other option at the desktop's defaults. Its list is 111 shaders: the
+boot (the launcher, the intro, SELECT GAME, ENTER NAME and AVAILABLE CRAFT, 61) and 16 sections, a mission each,
+recorded on a 4:3 build and again on a widescreen one (widescreen needed no shader 4:3 didn't) by
+`tools/shader_plan.json`, which sets the mission at AVAILABLE CRAFT as the port's own `--boot-target
+level:N` does after a new pilot's name, and knows the menus by the screen word at 0x800CDAC4 and the mission by its
+objective byte. Its README (The web page) and the header of `tools/build_web.sh` have the rest.
+
 `n64hub/BeetleRecomp-web` is BeetleRecomp, Beetle Adventure Racing! (USA), AGPL-3.0, recompiled from the game's
 decompilation (`lib/bar-decomp`), which its build makes from the player's ROM and checks byte for byte before the
 recompiler reads its ELF. Its rt64, N64ModernRuntime, N64Recomp and RecompFrontend are its own (RecompFrontend a copy
