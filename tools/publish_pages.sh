@@ -136,6 +136,7 @@ dkr    n64hub/DKR-R-web                      DKR-R                build-web/bin/
 snap   n64hub/Snap64Recomp-web               Snap64Recomp         build-web pokemon-snap
 rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush-2
 1080   n64hub/1080-Snowboarding-recomp-web   1080SnowboardingRecompiled build-web 1080-snowboarding
+wwf    n64hub/WWFNoMercyRecomp-web           NoMercyRecompiled    build-web wwf-no-mercy
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
 fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-zero-x
@@ -405,6 +406,12 @@ build_rush2() {
 build_1080() {
     # Patches its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
     # (build-web-prep/web-patched).
+    bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
+}
+build_wwf() {
+    # Patches its submodules from clean whenever N64Recomp-browser, a submodule or web/patches moved
+    # (build-web-prep/web-patched), and recompiles the game, the whole post-regen pipeline, only when what it reads
+    # changed (build-web-prep/recompiled-stamp).
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
 # Runs on the host (on_host): both scripts start Docker images of their own. The decomp's build checks the ROM, and
