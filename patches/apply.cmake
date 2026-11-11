@@ -55,11 +55,14 @@ function(_n64recomp_browser_fetch_base name top out)
     message(STATUS "N64Recomp-browser: fetching ${name}'s upstream ${base} from ${fork}")
     # --refetch brings the commit's files even where the checkout has the commit already: a partial clone
     # (--filter=blob:none, as DKR-R's bootstrap makes) holds upstream's commits without their files, and git apply
-    # fetches none of them for the merge ("repository lacks the necessary blob"). Older gits have no --refetch.
-    execute_process(COMMAND git fetch -q --depth 1 --refetch "${fork}" "${base}" WORKING_DIRECTORY "${top}"
-        RESULT_VARIABLE result ERROR_QUIET)
+    # fetches none of them for the merge ("repository lacks the necessary blob"). Older gits have no --refetch. It
+    # fetches into no submodule: a project kept in a game's own tree fetches into the game's repository, whose
+    # lib/N64Recomp-browser can be a symbolic link (CI's), which a newer git's fetch refuses to recurse into.
+    execute_process(COMMAND git fetch -q --no-recurse-submodules --depth 1 --refetch "${fork}" "${base}"
+        WORKING_DIRECTORY "${top}" RESULT_VARIABLE result ERROR_QUIET)
     if (NOT result EQUAL 0)
-        execute_process(COMMAND git fetch -q --depth 1 "${fork}" "${base}" WORKING_DIRECTORY "${top}" RESULT_VARIABLE result)
+        execute_process(COMMAND git fetch -q --no-recurse-submodules --depth 1 "${fork}" "${base}"
+            WORKING_DIRECTORY "${top}" RESULT_VARIABLE result)
     endif()
     if (result EQUAL 0)
         set(${out} ${base} PARENT_SCOPE)
