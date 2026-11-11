@@ -456,7 +456,7 @@ bytes from Emscripten's libc++, so its `web/patches/rt64.patch` reads them as ch
 port's hooks undeclared, which a desktop build's C compiler lets by; the page forces their declarations
 (`include/sssv_hooks.h`) into every recompiled file. The page leaves out the launcher's 3D logo, which its launcher
 library draws through plume's Vulkan, D3D12 and Metal backends, and the HD text and textures, whose options show only
-where their pack is, and keeps every other option at the desktop's defaults. Its list is 149 shaders: the boot (the
+where their pack is, and keeps every other option at the desktop's defaults. Its list is 150 shaders: the boot (the
 launcher, the opening and the title, 25) and 32 sections (Smashing Start, reached as a player does, and each level
 from 2 to 32), recorded by `web/shader_plan.json`, which reaches each level by `Module._sssv_web_warp`, the page's way
 into the test control the desktop build reads from an environment variable, and knows the level by `gGameState.level`
