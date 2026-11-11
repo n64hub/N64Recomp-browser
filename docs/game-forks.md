@@ -517,6 +517,29 @@ plays' misses are added to the list by hand, and a Firefox play still finds one 
 in line in a few tenths of a second. Its BUILDING.md (The web page) and the header of
 `tools/build_web.sh` have the rest.
 
+`n64hub/PaxDino-web` is wootbeer's PaxDino, Turok: Rage Wars (USA), GPL-3.0, on upstream's rt64, N64ModernRuntime and
+RecompFrontend at the commits Conker's fork is on (`patches/pins.txt`), with the game's own patches to each and to
+N64Recomp in `lib-patches/` (its desktop build applies them at configure). Its `tools/build_web.sh` applies those
+first, then `apply.cmake` project by project, but for 11 files both change the same lines (`web/patches/files.txt`: 7 of
+rt64's, 3 of N64ModernRuntime's, and N64Recomp's `analysis.cpp`, which is the game's), whose web change is its
+`web/patches/<project>.patch`, merged by hand, with what N64Recomp-browser has changed in them since merged in by
+`apply.cmake --since`; CI's `paxdino-patches` job runs its `tools/build_web.sh --patches` on each PR. The game's code
+runs from TLB-mapped addresses, which the desktop build reaches through views of RDRAM about 2 GB past it
+(`src/game/tlb_views.cpp`): on the page RDRAM is a 512 MB allocation in the wasm heap, so the views and VM regions are
+backed by moving the heap's break past them, and the page's memory grows up to 4 GB. Its online Netplay is lockstep
+over UDP to another PC's address, which a page can't open, so the page's launcher and menus have no Netplay (nor Add to Steam or
+Exit), and local multiplayer, bots and trials stay. RT64's bloom pass, the game's own, writes `rgba16f` on WebGPU
+(`web/patches/rt64.patch`). The rest is behind `__EMSCRIPTEN__` as in the other ports: the canvas, the sound through
+`audio_output.h`, either preset at resolution Auto and the display's frame rate, no MSAA. Its list is 119 shaders: the
+boot (the launcher, the boot screens, the title and the menus to level select, 32, six of them missed in a match by
+the plays and moved there) and a section for each of the nine maps a new save offers (8-15 each), recorded by
+`tools/shader_plan.json`, which drives the menus by the keyboard and knows where the game is by its mode and the
+front end's screen (`tools/game_state.js`), and plays a one-bot Bloodlust match on each map as `tools/play_plan.json`
+does. A match presents at the display's rate (uncapped, 355 a second in Chrome), but the front end's menus present
+at the game's own 30, then 15, which RT64 doesn't interpolate, so `publish_pages.sh`'s 20 s boot from Pages, which
+stays in them, reads 15 a second with nothing wrong. Its BUILDING.md (The web page) and the header of
+`tools/build_web.sh` have the rest.
+
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
 the commits GoldenEye's are on (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`

@@ -93,7 +93,7 @@ const ART = {
   'pilotwings-64-recomp-web': 'cover unnamed', 'wave-race-64-recomp-web': 'cover unnamed',
   'JetForceGemini-Recomp-web': 'logo', 'Snap64Recomp-web': 'logo', 'rush2recompiled-web': 'logo',
   '1080-Snowboarding-recomp-web': 'icon', 'SSSV_Recomp-web': 'icon', 'THPS2-64Recomp-web': 'icon', 'RogueSquadron64Recomp-web': 'icon',
-  'BeetleRecomp-web': 'icon',
+  'BeetleRecomp-web': 'icon', 'PaxDino-web': 'icon',
   'rush-2049-recomp': 'icon', 'perfect-dark-recomp': 'icon', 'super-mario-64-recomp': 'icon', 'f-zero-x-recomp': 'icon',
   'mario-party-recomp': 'icon', 'mario-party-2-recomp': 'icon', 'mario-party-3-recomp': 'icon',
   'super-smash-bros-recomp': 'icon', 'paper-mario-recomp': 'icon', 'rayman-2-recomp': 'icon',
@@ -115,7 +115,8 @@ const SCORES = {
   'BanjoTooieRecompiled-web': [84, 11], 'SSSV_Recomp-web': [84, 10], 'rush-2049-recomp': [84, 7], 'MarioKart64Recomp-web': [83, 18],
   'DKR-R-web': [83, 10], 'Snap64Recomp-web': [79, 9], 'mario-party-2-recomp': [77, 18],
   'super-smash-bros-recomp': [77, 12], 'JetForceGemini-Recomp-web': [76, 11],
-  'racer-web': [74, 7], 'rush2recompiled-web': [74, 12], 'mario-party-recomp': [71, 13], 'mario-party-3-recomp': [71, 14],
+  'racer-web': [74, 7], 'rush2recompiled-web': [74, 12], 'PaxDino-web': [73, 14],
+  'mario-party-recomp': [71, 13], 'mario-party-3-recomp': [71, 14],
   'donald-duck-goin-quackers-recomp': [70, 4],
 };
 
