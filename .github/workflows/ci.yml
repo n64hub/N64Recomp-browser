@@ -956,7 +956,7 @@ jobs:
 
   # The patches under WWF No Mercy's web fork's own (WWFNoMercyRecomp-web, its main), on its port's own rt64,
   # N64ModernRuntime and RecompFrontend (their wcw branches), as Snap64Recomp-web's: its tools/build_web.sh leaves out
-  # the files where the port's lines and the web's meet (web/patches/files.txt: 17 of rt64's, 7 of plume's, 12 of the
+  # the files where the port's lines and the web's meet (web/patches/files.txt: 18 of rt64's, 7 of plume's, 12 of the
   # runtime's, 3 of N64Recomp's, 5 of RecompFrontend's), applies its web/patches/<project>.patch to them, and merges in
   # the web's change to them since with apply.cmake --since. Red on a PR means the same as snap-patches', merged into
   # WWFNoMercyRecomp-web's web/patches by hand. Then those files are compiled (below), as snap-patches' are.
@@ -1004,6 +1004,9 @@ jobs:
           git -C "$rt64" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 4 src/contrib/imgui \
             src/contrib/im3d src/contrib/implot src/contrib/ddspp src/contrib/stb src/contrib/mupen64plus-core src/contrib/xxHash src/contrib/zstd \
             src/contrib/re-spirv
+          # The Vulkan headers the CRT filter (rt64_crt_filter.cpp) includes, though a page leaves its Vulkan chain out.
+          git -C "$rt64/src/contrib/plume" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3 \
+            contrib/volk contrib/Vulkan-Headers contrib/VulkanMemoryAllocator
           git -C "$runtime" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3 thirdparty/miniz \
             thirdparty/xxHash thirdparty/o1heap
           git -C "$runtime/N64Recomp" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 2 lib/fmt \
@@ -1017,7 +1020,8 @@ jobs:
             -DRT64_STRETCH_SCREEN_COVERS=1 -DRT64_UNEVEN_FRAME_RATES=1 -DRT64_WGSL=1)
           for dir in src src/contrib src/contrib/plume src/contrib/imgui src/contrib/hlslpp/include \
             src/contrib/mupen64plus-core/src/api src/contrib/nativefiledialog-extended/src/include src/contrib/zstd/lib \
-            src/contrib/re-spirv/external/SPIRV-Headers/include; do
+            src/contrib/re-spirv/external/SPIRV-Headers/include src/contrib/plume/contrib/volk \
+            src/contrib/plume/contrib/Vulkan-Headers/include src/contrib/plume/contrib/VulkanMemoryAllocator/include; do
             rt64_flags+=("-I$rt64/$dir")
           done
           plume_flags=(-std=c++17 --use-port=emdawnwebgpu "-I$rt64/src/contrib/plume")
