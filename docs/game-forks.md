@@ -835,6 +835,17 @@ without anyone playing: `tools/survey.js` reads the game's mode and whether a ci
 through the menus and waits out the cinematics, about 2 minutes 10 s that Start doesn't skip, until the player has
 control. Its README, CLAUDE.md and docs/web.md have the rest.
 
+`n64hub/turok-3-recomp` is Turok 3: Shadow of Oblivion (USA), this project's own recomp too (GPL-3.0), with
+RecompFrontend's launcher and menus, released for Windows and Linux and in the browser. It runs Turok 2's engine, and
+`n64hub/turok-engine` writes its symbols from the ROM (with a names file for the game's own functions a signature
+names wrongly), maps the code it runs through the TLB (at 0x00200400 and 0x00400000, below 0x01000000, so on the page
+in the runtime's KUSEG window), and runs its VM server's ROM regions and its own PI DMA, as Turok 2's. Its own VI mode
+puts the origin at the framebuffer's start, which RT64 takes as the framebuffer shown since rt64-web d49a689
+(docs/forks.md); before, the page presented 7.5 frames a second. Widescreen and smooth motion aren't on yet. Its list
+is 55 shaders: the boot (27, the menus, the opening scene, the character choice and the pause menu among them) and the
+Breach, its first level, recorded by `tools/shader_plan.json` with Start held through the menus on the browser's
+clock, since nothing yet reads where the game is. Its README, CLAUDE.md and docs/web.md have the rest.
+
 ## The games' own frame rates
 
 A page presents at the display's rate whatever its game runs at (CLAUDE.md, Rules). The game's own rate, set by the
