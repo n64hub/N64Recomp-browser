@@ -25,7 +25,7 @@ A run on a schedule that takes every change since the last one at once:
   worse stays on Pages as it was, its fork on its last tag, and has work filed. So a fork's `main` is what its page was
   built from, and `git log <played>..<built>` here lists what a page took since it was last played.
 - Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party 1, 2 and 3, Super Smash Bros., Paper Mario,
-  Rayman 2, Donald Duck: Goin' Quackers, Dinosaur Planet and Turok: Dinosaur Hunter, this project's own recomps, are retested in the same work, built, played and recorded the same way, never filed for later; only
+  Rayman 2, Donald Duck: Goin' Quackers, Dinosaur Planet, Turok: Dinosaur Hunter and Turok 2, this project's own recomps, are retested in the same work, built, played and recorded the same way, never filed for later; only
   their pins move differently, by a PR on each one's repo that moves `lib/N64Recomp-browser` to the tag, and its submodules of upstream's (`lib/rt64`,
   `lib/N64ModernRuntime`, `lib/RecompFrontend`) to the commits the tag's `patches/patches.txt` names, as its CI
   checks, and builds the same bytes, which the retest merges before it publishes the page. Rush 2049's PR also runs the desktop game, and its pin moves even to a tag that
