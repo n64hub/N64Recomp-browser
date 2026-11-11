@@ -92,7 +92,7 @@ const ART = {
   'CBFD-Recompiled-web': 'cover', 'DKR-R-web': 'cover',
   'pilotwings-64-recomp-web': 'cover unnamed', 'wave-race-64-recomp-web': 'cover unnamed',
   'JetForceGemini-Recomp-web': 'logo', 'Snap64Recomp-web': 'logo', 'rush2recompiled-web': 'logo',
-  '1080-Snowboarding-recomp-web': 'icon', 'THPS2-64Recomp-web': 'icon',
+  '1080-Snowboarding-recomp-web': 'icon', 'THPS2-64Recomp-web': 'icon', 'BeetleRecomp-web': 'icon',
   'rush-2049-recomp': 'icon', 'perfect-dark-recomp': 'icon', 'super-mario-64-recomp': 'icon', 'f-zero-x-recomp': 'icon',
   'mario-party-recomp': 'icon', 'mario-party-2-recomp': 'icon', 'mario-party-3-recomp': 'icon',
   'super-smash-bros-recomp': 'icon', 'paper-mario-recomp': 'icon', 'rayman-2-recomp': 'icon',
