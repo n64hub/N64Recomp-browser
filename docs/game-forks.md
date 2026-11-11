@@ -425,6 +425,24 @@ Training), recorded by `tools/shader_plan.json`, which knows where the game is b
 (`tools/game_state.js`). Its BUILDING.md and the headers of `tools/build_web.sh` and `web/rt64_shaders.txt` have the
 rest.
 
+`n64hub/THPS2-64Recomp-web` is THPS2 64: Recompiled, Tony Hawk's Pro Skater 2 (USA), GPL-3.0, and its shared host
+`decomp/common` is `n64hub/THPS64Host-web`, a fork of THPS64Recomp's THPS64Host (the host of their THPS1, 2 and 3
+recomps), where all of the web support is: a fork commit to the host moves the game fork's submodule, as rt64-web's
+plume does. The host fetches its own pins of N64ModernRuntime and RT64 (CBFD-Recompiled's, `host/tools/setup_runtime.py`)
+and patches them as the desktop build does, then `host/tools/build_web.py` applies N64Recomp-browser's patches over them
+with `apply.cmake` project by project, at the tag the game fork's `lib/N64Recomp-browser` pins, but for 3 files of rt64's
+the host's patches change too (`host/web/patches/files.txt`: the present queue and the RSP), whose web change is its
+`web/patches/rt64.patch`, merged by hand, with what N64Recomp-browser has changed in them since merged in by
+`apply.cmake --since`, as Snap64's and 1080's are, and CI's `thps2-patches` job runs its `tools/build_web.sh --patches`
+on each PR. The host's web changes, all behind `__EMSCRIPTEN__`: the Load ROM picker in place of the desktop's file
+dialog, the page's sound in place of SDL's, the swap chain in the format the canvas prefers, no crash handler, and the
+Frame Rate setting's 60 as Display, so the page interpolates the game's 30 to the display's rate; the rest is at the
+desktop's Enhanced preset (16:9, Full draw distance, MSAA 4, resolution Auto). Its list is 82 shaders: the boot (the
+launcher, the logos, the main menu and the career's menus to the level select, 14) and 10 sections (a run on each
+course of the career's level select), recorded by `tools/shader_plan.json` with the host's `--skip-intro` and
+`--unlock-levels` (the plan's arguments), which knows the front end's screens by a word that moves with each one and a
+run by `gRunActive`. Its BUILDING.md (The web page) and the header of `host/tools/build_web.py` have the rest.
+
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
 the commits GoldenEye's are on (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`
