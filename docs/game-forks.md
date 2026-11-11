@@ -480,9 +480,10 @@ first frame drew). The page plays at RT64's Display rate and Auto resolution, wh
 own 30 (its interpolation is off there, for flicker in pooled effects), starts in the game's widescreen (Expand) where
 the desktop build starts in 4:3, leaves out ray tracing, which needs ray queries
 WebGPU hasn't, the multiplayer mods (online play needs sockets) and the tow cable mod (its instruction patches
-need the live recompiler), and keeps every other option at the desktop's defaults. Its list is LISTCOUNT shaders: the
-boot (the launcher, the intro, SELECT GAME, ENTER NAME and AVAILABLE CRAFT, BOOTCOUNT) and 16 sections, a mission each,
-recorded by `tools/shader_plan.json`, which sets the mission at AVAILABLE CRAFT as the port's own `--boot-target
+need the live recompiler), and keeps every other option at the desktop's defaults. Its list is 111 shaders: the
+boot (the launcher, the intro, SELECT GAME, ENTER NAME and AVAILABLE CRAFT, 61) and 16 sections, a mission each,
+recorded on a 4:3 build and again on a widescreen one (widescreen needed no shader 4:3 didn't) by
+`tools/shader_plan.json`, which sets the mission at AVAILABLE CRAFT as the port's own `--boot-target
 level:N` does after a new pilot's name, and knows the menus by the screen word at 0x800CDAC4 and the mission by its
 objective byte. Its README (The web page) and the header of `tools/build_web.sh` have the rest.
 
