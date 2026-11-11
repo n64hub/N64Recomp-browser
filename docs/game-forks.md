@@ -790,6 +790,20 @@ sections, the boot, the title and a new game's opening first and then an area a 
 `tools/shader_plan.json` from story points (`docs/story-points.md`) without anyone playing. Its README, CLAUDE.md and
 docs/web.md have the rest.
 
+`n64hub/turok-2-recomp` is Turok 2: Seeds of Evil (USA 1.0), not a fork but this project's own recomp (GPL-3.0), with
+RecompFrontend's launcher and menus, released for Windows and Linux and in the browser. No decompilation of it exists:
+its symbols are written from the ROM by `n64hub/turok-engine`, the code the Turok recomps share, which also maps the
+code the game runs through the TLB (at 0x00200400 and 0x00400000; on the page through the runtime's KUSEG window,
+docs/porting.md), runs its VM server's ROM regions and its own PI DMA, and paces its audio thread. Widescreen is the
+engine's too: the frame's border rectangles at the 4:3 edges taken out, the HUD's rectangles anchored to the window's
+sides or, half the screen wide or more (the fades, the cinematics' black bars), stretched across it by an RT64 patch
+of the engine's (`runtime-patches/rt64-3-auto-anchor-hud.patch`), and the camera's culling widened to 21:9 through
+the float view-projection matrix it tests against. Its list is SHADERS shaders: the boot, the menus and a new game's
+two opening cinematics (SECTION0, the pause menu's and the map's among them) and the Port of Adia, recorded by
+`tools/shader_plan.json` without anyone playing: `tools/survey.js` reads the game's mode and whether a cinematic
+plays, so a plan presses through the menus and waits out the cinematics, about 2 minutes 10 s that Start doesn't
+skip, until the player has control. Its README, CLAUDE.md and docs/web.md have the rest.
+
 ## The games' own frame rates
 
 A page presents at the display's rate whatever its game runs at (CLAUDE.md, Rules). The game's own rate, set by the
