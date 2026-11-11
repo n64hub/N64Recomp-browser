@@ -128,7 +128,7 @@ function(n64recomp_browser_apply_patch name dir)
     if (base)
         # --3way merges against the index, so it works in an index of its own holding the checkout's files as they
         # are (its own changes included), and the checkout's index stays as it was. The files its own patches add are
-        # in it too (-A): Beetle Adventure Racing's adds librecomp's config.cpp, which the web's patch changes.
+        # in it too (-A): a game's own patches can add one the web's patch changes (librecomp's config.cpp).
         set(index "${stamp}.index")
         set(env ${CMAKE_COMMAND} -E env "GIT_INDEX_FILE=${index}")
         execute_process(COMMAND ${env} git read-tree HEAD WORKING_DIRECTORY "${top}")
