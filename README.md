@@ -6,7 +6,7 @@ and [RT64](https://github.com/rt64/rt64): the game, its menus and RT64 built wit
 through WebGPU. It is game-agnostic. A recomp keeps its own submodules at the commits it pins and adds this repo
 beside them, and its web build patches their checkouts (Using it in a recomp). It was written for San Francisco Rush
 2049: Recompiled, this project's own recomp as Perfect Dark's, Super Mario 64's, F-Zero X's, Mario Party 1's, 2's
-and 3's, Super Smash Bros.', Paper Mario's, Rayman 2's, Donald Duck: Goin' Quackers' and Dinosaur Planet's are, and
+and 3's, Super Smash Bros.', Paper Mario's, Rayman 2's, Donald Duck: Goin' Quackers', Dinosaur Planet's and Turok 2's are, and
 sixteen more recomps build a page with it (Games).
 
 > Written almost entirely by AI (Claude), like the recomp it came from.
@@ -17,7 +17,7 @@ Each game's repo builds its page with this repo; a page holds no ROM, the player
 recomps aside, the games are here to build out and test the web support on more than one
 game: what one of them or one browser turns up is fixed in this repo or the forks unless it really is that game's own,
 so every game and both browsers get it. Rush 2049, Perfect Dark, Super Mario 64, F-Zero X, Mario Party 1, 2 and 3,
-Super Smash Bros., Paper Mario, Rayman 2, Donald Duck: Goin' Quackers and Dinosaur Planet are this project's own
+Super Smash Bros., Paper Mario, Rayman 2, Donald Duck: Goin' Quackers, Dinosaur Planet and Turok 2 are this project's own
 recomps, each with releases of its desktop build for Windows and Linux on its repo's Releases page.
 
 | Game | Recomp | Repo | Page |
@@ -56,6 +56,7 @@ recomps, each with releases of its desktop build for Windows and Linux on its re
 | Rayman 2 | this project's own recomp | [rayman-2-recomp](https://github.com/n64hub/rayman-2-recomp) | [play](https://n64hub.com/rayman-2/) |
 | Donald Duck: Goin' Quackers | this project's own recomp | [donald-duck-goin-quackers-recomp](https://github.com/n64hub/donald-duck-goin-quackers-recomp) | [play](https://n64hub.com/goin-quackers/) |
 | Dinosaur Planet | this project's own recomp | [dinosaur-planet-recomp](https://github.com/n64hub/dinosaur-planet-recomp) | [play](https://n64hub.com/dinosaur-planet/) |
+| Turok 2: Seeds of Evil | this project's own recomp | [turok-2-recomp](https://github.com/n64hub/turok-2-recomp) | [play](https://n64hub.com/turok-2/) |
 
 ## Using it in a recomp
 
