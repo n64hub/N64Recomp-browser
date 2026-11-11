@@ -486,6 +486,34 @@ recorded by `tools/shader_plan.json`, which sets the mission at AVAILABLE CRAFT 
 level:N` does after a new pilot's name, and knows the menus by the screen word at 0x800CDAC4 and the mission by its
 objective byte. Its README (The web page) and the header of `tools/build_web.sh` have the rest.
 
+`n64hub/BeetleRecomp-web` is BeetleRecomp, Beetle Adventure Racing! (USA), AGPL-3.0, recompiled from the game's
+decompilation (`lib/bar-decomp`), which its build makes from the player's ROM and checks byte for byte before the
+recompiler reads its ELF. Its rt64, N64ModernRuntime, N64Recomp and RecompFrontend are its own (RecompFrontend a copy
+in its tree) with its own patches (`scripts/dependency-patches`), and its rt64 is older than the web's: its
+`tools/build_web.sh` first takes rt64 to the upstream commit the web's patches are made on
+(`web/patches/rt64-upstream.patch`, merged without a conflict, plume to the commit that one pins), then applies the
+game's patches but the Windows and macOS ones and the code-memory one (mods' `llvm.clear_cache`, which wasm doesn't
+have), then `apply.cmake` project by project, but for 8 files both change the same lines in (`web/patches/files.txt`:
+4 of rt64's, N64ModernRuntime's `events.cpp`, 3 of RecompFrontend's), whose web change is its
+`web/patches/<project>.patch`, merged by hand, with what N64Recomp-browser has changed in them since merged in by
+`apply.cmake --since`, as Snap64's and 1080's are, and CI's `beetle-patches` job runs its
+`tools/build_web.sh --patches` on each PR and compiles the input files it merges. All of the build runs in a Docker image of its own
+(`tools/docker/Dockerfile`, the decomp's tools beside Emscripten's), so `publish_pages.sh` runs it on the build host.
+The game's own code changes for the page are behind `__EMSCRIPTEN__`: its window and render context draw on the
+canvas, its sound goes through `audio_output.h` (an SDL stream from the game's rate to the page's), MSAA is off (RT64
+can't do it on WebGPU) and RT64's developer tools with it, and a page opens widescreen (Aspect Ratio at Expand to
+the window, the desktop build opening in the console's 4:3), which the game's own code supports: it widens the
+frustum the game culls to (`src/main/bar_frustum.cpp`) and anchors the racing HUD to the picture's edges (HUD ratio
+Expand, its default); the rest is at the desktop's defaults (resolution Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
+it at the speed a console does whatever it presents. Its list is 254 shaders: the boot (the launcher, the Controller
+Pak screen, the logos, the intro, the title and the menus to a Single Race, 137) and 2 sections (Coventry Cove 64,
+Mount Mayhem 53), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
+(`tools/game_state.js`) and reaches each track through the menus, since a game state written from them stops the
+page. A new save offers only those two of the single race's tracks. Its plans drive a race with the game's steer
+assist and the gas held, and back the car out in reverse (the Z trigger) where it stops against a fence or a rock,
+by its speed in RDRAM, which they know on Coventry Cove only. Its BUILDING.md (The web page) and the header of
+`tools/build_web.sh` have the rest.
+
 `n64hub/perfect-dark-recomp` is Perfect Dark (USA rev 1), not a fork but this project's own recomp, as Rush 2049's
 is (GPL-3.0), made from the game's MIT decompilation. It is on upstream's rt64, N64ModernRuntime and RecompFrontend at
 the commits GoldenEye's are on (`patches/pins.txt`), patched by the N64Recomp-browser tag its `lib/N64Recomp-browser`

@@ -139,6 +139,7 @@ rush2  n64hub/rush2recompiled-web            Rush2Recompiled      build-web rush
 sssv   n64hub/SSSV_Recomp-web                SSSVRecompiled       build-web space-station-silicon-valley
 thps2  n64hub/THPS2-64Recomp-web            thps2_recomp         decomp/thps2/recomp-host/build/web tony-hawks-pro-skater-2
 rogue  n64hub/RogueSquadron64Recomp-web      RogueSquadron64Recomp build-web star-wars-rogue-squadron
+bar    n64hub/BeetleRecomp-web               BeetleRecomp         build-web beetle-adventure-racing
 pd     n64hub/perfect-dark-recomp            PerfectDarkRecompiled build/web perfect-dark
 sm64   n64hub/super-mario-64-recomp          SuperMario64Recompiled build/web super-mario-64
 fzx    n64hub/f-zero-x-recomp                FZeroXRecompiled     build/web f-zero-x
@@ -426,6 +427,12 @@ build_thps2() {
 build_rogue() {
     bash tools/build_web.sh ../rom.z64 > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
+# Runs on the host (on_host): its tools/build_web.sh builds the decomp and the page in a Docker image of its own,
+# patching its submodules from clean whenever its own patches, N64Recomp-browser or web/patches moved
+# (build-web-prep/web-patched).
+build_bar() {
+    bash tools/build_web.sh ../rom.z64 "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
+}
 # Runs on the host (on_host): both scripts start Docker images of their own. The decomp's build checks the ROM, and
 # makes the relink and syms/ the recompilation is made from (incremental after the first run).
 build_pd() {
@@ -495,7 +502,7 @@ build_dino() {
     cmp -s ../rom.z64 roms/dinoplanet.z64 || cp ../rom.z64 roms/dinoplanet.z64
     bash tools/build_web.sh "$BUILD_CPUS" > ../build.log 2>&1 || { failed_log ../build.log; exit 1; }
 }
-on_host=" rogue pd sm64 fzx mp1 mp2 mp3 ssb pm r2 ddgq dino "
+on_host=" rogue pd sm64 fzx mp1 mp2 mp3 ssb pm r2 ddgq dino bar "
 
 # --- Here ---
 
@@ -662,7 +669,7 @@ for g in "${selected[@]}"; do
         echo "$from ${browser_sha:--} ${tree:-$(git -C "$clone" rev-parse "$from^{tree}")}" > "$keep/$g/built"
     fi
     $dry_run && continue
-    newer="$(gh api "repos/$hub/commits/gh-pages" --jq .commit.message | sed -n "s|^$folder/: built from main \([0-9a-f]*\).*||p" || true)"
+    newer="$(gh api "repos/$hub/commits/gh-pages" --jq .commit.message | sed -n "s|^$folder/: built from main \([0-9a-f]*\).*|\1|p" || true)"
     if [[ -n $newer && "$(git -C "$clone" rev-parse -q --verify "$newer^{commit}")" != "$(git -C "$clone" rev-parse "$from")" ]] &&
         git -C "$clone" merge-base --is-ancestor "$from" "$newer" 2> /dev/null; then
         echo "   the hub serves main $newer, which has main $sha: left as it is"; continue
