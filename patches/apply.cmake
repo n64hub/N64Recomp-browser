@@ -127,11 +127,12 @@ function(n64recomp_browser_apply_patch name dir)
     _n64recomp_browser_fetch_base(${name} "${top}" base)
     if (base)
         # --3way merges against the index, so it works in an index of its own holding the checkout's files as they
-        # are (its own changes included), and the checkout's index stays as it was.
+        # are (its own changes included), and the checkout's index stays as it was. The files its own patches add are
+        # in it too (-A): Beetle Adventure Racing's adds librecomp's config.cpp, which the web's patch changes.
         set(index "${stamp}.index")
         set(env ${CMAKE_COMMAND} -E env "GIT_INDEX_FILE=${index}")
         execute_process(COMMAND ${env} git read-tree HEAD WORKING_DIRECTORY "${top}")
-        execute_process(COMMAND ${env} git add -u -- "./${sub}" WORKING_DIRECTORY "${top}")
+        execute_process(COMMAND ${env} git add -A -- "./${sub}" WORKING_DIRECTORY "${top}")
         execute_process(COMMAND ${env} ${apply} --3way "${patch}" WORKING_DIRECTORY "${top}"
             RESULT_VARIABLE result ERROR_VARIABLE merged)
         file(REMOVE "${index}")
