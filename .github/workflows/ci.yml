@@ -584,8 +584,8 @@ jobs:
           git -C "$game/lib/rt64" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 4 src/contrib/plume \
             src/contrib/hlslpp src/contrib/imgui src/contrib/im3d src/contrib/implot src/contrib/re-spirv \
             src/contrib/xxHash src/contrib/zstd src/contrib/stb src/contrib/ddspp
-          git -C "$game/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 3 \
-            thirdparty/miniz thirdparty/o1heap N64Recomp/lib/rabbitizer
+          git -C "$game/lib/N64ModernRuntime" -c protocol.version=2 submodule update -q --init --depth 1 --jobs 4 \
+            thirdparty/miniz thirdparty/o1heap thirdparty/xxHash N64Recomp/lib/rabbitizer
           rmdir "$game/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
           bash "$game/tools/build_web.sh" --patches
