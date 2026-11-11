@@ -44,6 +44,7 @@ recomps, each with releases of its desktop build for Windows and Linux on its re
 | Tony Hawk's Pro Skater 2 | [THPS2 64: Recompiled](https://github.com/THPS64Recomp/THPS2-64Recomp) by THPS64Recomp | [THPS2-64Recomp-web](https://github.com/n64hub/THPS2-64Recomp-web) | [play](https://n64hub.com/tony-hawks-pro-skater-2/) |
 | Star Wars: Rogue Squadron | [Rogue Squadron 64 Recompiled](https://github.com/MikeSemicolonD/RogueSquadron64Recomp) by MikeSemicolonD | [RogueSquadron64Recomp-web](https://github.com/n64hub/RogueSquadron64Recomp-web) | [play](https://n64hub.com/star-wars-rogue-squadron/) |
 | Beetle Adventure Racing! | [BeetleRecomp](https://github.com/bryankruman/BeetleRecomp) by bryankruman | [BeetleRecomp-web](https://github.com/n64hub/BeetleRecomp-web) | [play](https://n64hub.com/beetle-adventure-racing/) |
+| Turok: Rage Wars | [PaxDino: Rage Wars Modernized](https://github.com/wootbeer/PaxDino) by wootbeer | [PaxDino-web](https://github.com/n64hub/PaxDino-web) | [play](https://n64hub.com/turok-rage-wars/) |
 | Perfect Dark | this project's own recomp | [perfect-dark-recomp](https://github.com/n64hub/perfect-dark-recomp) | [play](https://n64hub.com/perfect-dark/) |
 | Super Mario 64 | this project's own recomp | [super-mario-64-recomp](https://github.com/n64hub/super-mario-64-recomp) | [play](https://n64hub.com/super-mario-64/) |
 | F-Zero X | this project's own recomp | [f-zero-x-recomp](https://github.com/n64hub/f-zero-x-recomp) | [play](https://n64hub.com/f-zero-x/) |
