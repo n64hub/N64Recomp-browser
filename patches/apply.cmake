@@ -55,11 +55,14 @@ function(_n64recomp_browser_fetch_base name top out)
     message(STATUS "N64Recomp-browser: fetching ${name}'s upstream ${base} from ${fork}")
     # --refetch brings the commit's files even where the checkout has the commit already: a partial clone
     # (--filter=blob:none, as DKR-R's bootstrap makes) holds upstream's commits without their files, and git apply
-    # fetches none of them for the merge ("repository lacks the necessary blob"). Older gits have no --refetch.
-    execute_process(COMMAND git fetch -q --depth 1 --refetch "${fork}" "${base}" WORKING_DIRECTORY "${top}"
-        RESULT_VARIABLE result ERROR_QUIET)
+    # fetches none of them for the merge ("repository lacks the necessary blob"). Older gits have no --refetch. It
+    # fetches into no submodule: a project kept in a game's own tree fetches into the game's repository, whose
+    # lib/N64Recomp-browser can be a symbolic link (CI's), which a newer git's fetch refuses to recurse into.
+    execute_process(COMMAND git fetch -q --no-recurse-submodules --depth 1 --refetch "${fork}" "${base}"
+        WORKING_DIRECTORY "${top}" RESULT_VARIABLE result ERROR_QUIET)
     if (NOT result EQUAL 0)
-        execute_process(COMMAND git fetch -q --depth 1 "${fork}" "${base}" WORKING_DIRECTORY "${top}" RESULT_VARIABLE result)
+        execute_process(COMMAND git fetch -q --no-recurse-submodules --depth 1 "${fork}" "${base}"
+            WORKING_DIRECTORY "${top}" RESULT_VARIABLE result)
     endif()
     if (result EQUAL 0)
         set(${out} ${base} PARENT_SCOPE)
@@ -127,11 +130,12 @@ function(n64recomp_browser_apply_patch name dir)
     _n64recomp_browser_fetch_base(${name} "${top}" base)
     if (base)
         # --3way merges against the index, so it works in an index of its own holding the checkout's files as they
-        # are (its own changes included), and the checkout's index stays as it was.
+        # are (its own changes included), and the checkout's index stays as it was. The files its own patches add are
+        # in it too (-A): a game's own patches can add one the web's patch changes (librecomp's config.cpp).
         set(index "${stamp}.index")
         set(env ${CMAKE_COMMAND} -E env "GIT_INDEX_FILE=${index}")
         execute_process(COMMAND ${env} git read-tree HEAD WORKING_DIRECTORY "${top}")
-        execute_process(COMMAND ${env} git add -u -- "./${sub}" WORKING_DIRECTORY "${top}")
+        execute_process(COMMAND ${env} git add -A -- "./${sub}" WORKING_DIRECTORY "${top}")
         execute_process(COMMAND ${env} ${apply} --3way "${patch}" WORKING_DIRECTORY "${top}"
             RESULT_VARIABLE result ERROR_VARIABLE merged)
         file(REMOVE "${index}")
