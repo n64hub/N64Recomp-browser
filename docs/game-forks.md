@@ -477,8 +477,10 @@ have), then `apply.cmake` project by project, but for 8 files both change the sa
 (`tools/docker/Dockerfile`, the decomp's tools beside Emscripten's), so `publish_pages.sh` runs it on the build host.
 The game's own code changes for the page are behind `__EMSCRIPTEN__`: its window and render context draw on the
 canvas, its sound goes through `audio_output.h` (an SDL stream from the game's rate to the page's), MSAA is off (RT64
-can't do it on WebGPU) and RT64's developer tools with it; the rest is at the desktop's defaults (4:3, resolution
-Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
+can't do it on WebGPU) and RT64's developer tools with it, and a page opens widescreen (Aspect Ratio at Expand to
+the window, the desktop build opening in the console's 4:3), which the game's own code supports: it widens the
+frustum the game culls to (`src/main/bar_frustum.cpp`) and anchors the racing HUD to the picture's edges (HUD ratio
+Expand, its default); the rest is at the desktop's defaults (resolution Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
 it at the speed a console does whatever it presents. Its list is 222 shaders: the boot (the launcher, the Controller
 Pak screen, the logos, the intro, the title and the menus to a Single Race, 134) and 2 sections (Coventry Cove 39,
 Mount Mayhem 49), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
