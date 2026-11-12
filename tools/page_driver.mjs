@@ -761,8 +761,11 @@ const contextMs = 60000;
 
 const openFirefox = async ({ profile, port, width, height, executable, rom, preload, onScreen, uncapped, scale, firefoxPrefs, affinity, line }) => {
   // No first-run pages or crash restore, scale device pixels a CSS pixel (but on screen), sound allowed to start without a click
-  // but silent.
+  // but silent. The first tab stays on about:blank: Firefox 160 opened a fresh profile on about:home whatever its command
+  // line asked, a privileged page BiDi's setViewport refuses ("does not support browsing contexts in privileged
+  // scope"), so every page played at the window's size, not the one asked for.
   const prefs = { 'browser.shell.checkDefaultBrowser': false, 'datareporting.policy.dataSubmissionEnabled': false,
+    'browser.startup.page': 0, 'browser.startup.homepage': 'about:blank', 'browser.startup.homepage_override.mstone': 'ignore',
     'browser.aboutwelcome.enabled': false, 'app.update.auto': false, 'browser.sessionstore.resume_from_crash': false,
     'dom.webgpu.enabled': true, 'media.volume_scale': '0.0', ...(onScreen ? {} : { 'layout.css.devPixelsPerPx': scale.toFixed(1) }),
     'media.autoplay.default': 0, 'media.autoplay.blocking_policy': 0, 'layout.frame_rate': uncapped ? firefoxUncappedRate : -1, ...firefoxPrefs };
@@ -803,7 +806,10 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
   }
   if (process.platform === 'win32' && !await moveWindow('firefox.exe', profile, onScreen ? 0 : width, height)) line('page_driver: Firefox window not moved');
   if (!onScreen) {
-    const viewport = await send('browsingContext.setViewport', { context, viewport: { width, height }, devicePixelRatio: scale });
+    // At most 10 s: Firefox 160 sizes the viewport at once but has left the call unanswered in a window it doesn't
+    // paint, and play_page.mjs reads the viewport the page got anyway.
+    const viewport = await send('browsingContext.setViewport', { context, viewport: { width, height }, devicePixelRatio: scale }, undefined, 10000)
+      .catch((e) => ({ error: e.message }));
     if (viewport.error) line(`page_driver: viewport not set: ${viewport.message ?? viewport.error}`);
   }
   if (preload) await send('script.addPreloadScript', { functionDeclaration: preload });
