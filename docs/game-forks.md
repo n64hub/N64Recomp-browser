@@ -461,7 +461,10 @@ port's hooks undeclared, which a desktop build's C compiler lets by; the page fo
 hook through plume, its shaders WGSL on the page; RT64's framebuffer there is plume's device thread's, which doesn't
 say what it draws into, so the logo draws into a target of its own and a pass copies it onto the launcher's. The page
 leaves out the HD text and textures, whose options show only where their pack is, and keeps every other option at the
-desktop's defaults, Aspect Ratio and HUD Placement at Expand. Its list is 150 shaders: the boot (the
+desktop's defaults, Aspect Ratio and HUD Placement at Expand. Render to RAM keeps the exact copy: the game's CPU reads
+its frames (the pause preview, the title's tile wipe, the mission brief's and reset's still backgrounds) and its level
+loads decompress into the framebuffers, where a copy landing a list late could overwrite the loader's data, and the
+late copy, played clean through the title and the first level's brief, measured no faster in Chrome. Its list is 150 shaders: the boot (the
 launcher, the opening and the title, 25) and 32 sections (Smashing Start, reached as a player does, and each level
 from 2 to 32), recorded by `web/shader_plan.json`, which reaches each level by `Module._sssv_web_warp`, the page's way
 into the test control the desktop build reads from an environment variable, and knows the level by `gGameState.level`
@@ -513,10 +516,11 @@ can't do it on WebGPU) and RT64's developer tools with it, and a page opens wide
 the window, the desktop build opening in the console's 4:3), which the game's own code supports: it widens the
 frustum the game culls to (`src/main/bar_frustum.cpp`) and anchors the racing HUD to the picture's edges (HUD ratio
 Expand, its default); the rest is at the desktop's defaults (resolution Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
-it at the speed a console does whatever it presents. Render to RAM's copy lands a display list late: the game's CPU
-reads its frames in three places, each of which takes one a list old (the sun glare's depth samples, of the list before
-the one just sent; the car's reflection, from a frame about two lists old; the menus' film-roll transitions, which copy
-the frame just drawn into the other framebuffer), and its depth fog's read of the Z-buffer is the RDP's. Its list is 261 shaders: the boot (the launcher, the Controller
+it at the speed a console does whatever it presents. Render to RAM keeps the exact copy: the game's CPU reads its
+frames in three places (the sun glare's depth samples, of the list before the one just sent; the car's reflection,
+from a frame about two lists old; the menus' film-roll transitions, which copy the frame just drawn into the other
+framebuffer), each of which could take one a list old, but with the copy a list late the page never got from the menus
+into a race, and Chrome's ran out of memory there. Its depth fog's read of the Z-buffer is the RDP's. Its list is 261 shaders: the boot (the launcher, the Controller
 Pak screen, the logos, the intro, the title and the menus to a Single Race, 138) and 2 sections (Coventry Cove 70,
 Mount Mayhem 53), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
 (`tools/game_state.js`) and reaches each track through the menus, since a game state written from them stops the
