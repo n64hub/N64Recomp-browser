@@ -92,7 +92,10 @@
 // page as reload does: a player's next visit. Both compare the game's save files (HOME/.config/<program id>/saves/,
 // those frontend/save_sync.js syncs) as they were 2.5 s before (persistent_home.js writes HOME back every 2 s) with what
 // the page holds at its launcher after: savesKept is true where each is there with the same bytes, false where one
-// isn't, and null where the plan wrote none. For each it prints and records (in "faults") the presents a second before it (the last
+// isn't, and null where there were none. Since a plan of 2-3 minutes seldom saves, the first of them first plants
+// saves/backcheck.bin (64 random bytes) in each program's folder in HOME/.config, which the same write back keeps, so
+// the check always has a file: savesKept then says the storage kept it, and a save of the game's own beside it says the
+// game's. For each it prints and records (in "faults") the presents a second before it (the last
 // 3 samples), during and after, the WebGPU errors, exceptions and sound frames short after, the console's first 10
 // lines from it on, what the page's status line says once it has run 30 s more ("notice", null where it says nothing:
 // what frontend/shell.html tells the player, a lost device included), the canvas's size, the visibility, the AudioContext's state,
@@ -841,6 +844,7 @@ const hostAfter = hostTimes();
 // --fault, once the play is over (in its level): each fault in turn, then 30 s of the game running by itself.
 const playErrors = errors.slice(), playExceptions = exceptions;
 const faultResults = [];
+let planted = null;
 for (const [i, name] of (failure ? [] : faultList).entries()) {
   const faultResult = { name, at: Math.round(seconds()),
     presentsBefore: median(samples.filter((s) => i ? s.fault === `${i - 1} after` : s.playing).slice(-3).map((s) => s.presents)) };
@@ -870,6 +874,19 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
       await page.run([['wait', 10000]]);
       await page.evaluate(`${audioContext}?.resume()`);
     } else if (name === 'reload' || name === 'reopen') {
+      if (!planted) {
+        planted = await page.evaluate(`(() => {
+          const config = '/home/web_user/.config', planted = [];
+          for (const id of FS.readdir(config).filter((n) => n !== '.' && n !== '..')) {
+            if (!FS.isDir(FS.stat(config + '/' + id).mode)) continue;
+            FS.mkdirTree(config + '/' + id + '/saves');
+            FS.writeFile(config + '/' + id + '/saves/backcheck.bin', crypto.getRandomValues(new Uint8Array(64)));
+            planted.push(id);
+          }
+          return planted;
+        })()`).catch((error) => `none: ${error.message}`);
+        log(`planted saves/backcheck.bin in ${JSON.stringify(planted)}`);
+      }
       await sleep(2500);
       faultResult.savesBefore = await savesNow();
       if (name === 'reopen') {
@@ -951,18 +968,20 @@ if (backcheck) {
       : ['fails', why(`Load ROM took ${romPresses} presses to open the picker at ${scale}x`)];
   }
   const hidden = fault('hidden');
+  // W5 is the sound's: whether the page came through the hidden tab otherwise is the fault's own line.
   verdicts.W5 = soundFrom === null ? ['fails', why('no sound played')]
     : !hidden ? ['not played', why(`the hidden tab never came; ${bootShort} frames short in the boot`)]
-    : bootShort === 0 && hidden.audioShortAfter === 0 && hidden.recovered ? ['pass', "no sound frame short in the boot's first 10 s nor after the hidden tab"]
+    : bootShort === 0 && hidden.audioShortAfter === 0 ? ['pass', "no sound frame short in the boot's first 10 s nor after the hidden tab"]
     : ['fails', `${bootShort} frames short in the boot's first 10 s${ms(bootShort)}, ${hidden.audioShortAfter} in the 30 s after the hidden tab` +
-      `${ms(hidden.audioShortAfter)}${hidden.recovered ? '' : ', and the page did not come through it'}`];
+      `${ms(hidden.audioShortAfter)}`];
   if (browser === 'chrome') {
     const kept = ['reload', 'reopen'].map(fault);
     verdicts.W6 = kept.some((f) => !f) ? ['not played', why('the reload or the reopen never came')]
       : kept.some((f) => f.savesKept === false) ? ['fails', kept.filter((f) => f.savesKept === false).map((f) => `the ${f.name} lost ` +
         Object.keys(f.savesBefore).filter((k) => f.savesAfter?.[k] !== f.savesBefore[k]).join(', ')).join('; ')]
-      : kept.every((f) => f.savesKept === null) ? ['not played', 'the plan wrote no save']
-      : ['pass', `${Object.keys(kept[1].savesBefore).join(', ')} kept through the reload and the reopen`];
+      : kept.every((f) => f.savesKept === null) ? ['not played', 'no save file, not even the planted one']
+      : ['pass', `${Object.keys(kept[1].savesBefore).map((k) => k.replace(/^\/home\/web_user\/\.config\//, '')).join(', ')} kept through the reload and the reopen` +
+        (Object.keys(kept[1].savesBefore).every((k) => k.endsWith('/backcheck.bin')) ? " (the planted file only: the plan wrote no save of the game's)" : '')];
     verdicts.W7 = failure ? ['fails', why('the pad drove the plan')]
       : padUse.keyboard.size ? ['fails', `keys with no pad button: ${[...padUse.keyboard].join(' ')}`]
       : ['pass', `${padUse.presses} presses on the pad drove the launcher (${padUse.launcher}) and the plan; rumble ${padUse.rumble}`];
