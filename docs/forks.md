@@ -906,4 +906,10 @@ rt64 dea05ba           a coordinate with an extended origin on the right half (a
                        its own edge, as one on the left half snaps down: snapped down, the window's right edge fell 1-2
                        pixels short where the width isn't on that grid (1280x720: 1278), and Turok 3's cutscene bars let
                        the scene through the window's last two columns. Every build
+rt64 428fb6d           the RAM of the framebuffer a VI shows changed to what render to RAM copied into it is no present
+                       and no frame of its own (VIHistory::pushFactor), as with render to RAM off: Turok 2's second list
+                       a frame draws into the framebuffer already shown, and its exact copy, landing a VI after the
+                       swap, made each game frame two, the second of one VI, so RT64 timed its levels at 30 as 60 and
+                       drew nothing between them (docs/findings.md, A game at 30, uncapped). Each framebuffer says
+                       whether its RAM hash is render to RAM's or the CPU's (Framebuffer::RAMHashCopied)
 ```

@@ -1610,6 +1610,21 @@ RT64 timed them at 60 ("the game reports 60"), so it drew too few frames between
 `t2-r2r-display`), and at 240 about 113 against 211. Uncapped at 360 the copy still read higher (281-282 against
 226-255) for the reason above. Without the copy RT64 times them at 30, as it does Turok: Dinosaur Hunter's either way.
 
+The copy was counted as a frame of its own. Turok 2 draws each frame in two lists, the second into the framebuffer the
+VI already shows, and that list's exact copy lands in its RAM a VI after the swap. RT64 takes a change to the shown
+framebuffer's RAM with no swap for a frame the CPU drew: it queued a second present of it (`?frame-log`: two `PQ` lines
+a game frame, the old framebuffer's and the new one's) and counted the VIs since the swap as a frame of one
+(`pushFactor`), so every game frame read as two of one VI and logicalRateFromFactors() said 60. rt64 428fb6d leaves a
+change to what render to RAM wrote out of both, as with the copy off: Turok 2 at d8f0446 (the exact copy) then read 30
+in its levels, one present a game frame, 53-56 frames drawn a second against 30.2 (set `r2r-screen-copy`). Played from
+Pages at the display's rate with `?present-stats` (set `r2r-rate-survey`), the other pages that keep the exact copy
+time their games right: Dinosaur Planet, Space Station Silicon Valley, Mario Kart 64 and Pokémon Snap at 30 with 45-56
+frames drawn, Jet Force Gemini at 30-38 timed at 30, Paper Mario at 27-30 with 46-56, Majora's Mask at 20 with 54-56,
+Ocarina of Time at 20, 30 and 60 by its scene, Rayman 2, Goin' Quackers and Super Smash Bros. at their 60, Beetle
+Adventure Racing's race at 50-60. Only Beetle's screens before
+its race read 30 timed as 60, 30 drawn, for 10-20 s; a game at 60 held up by a load reads it for one 5 s sample too,
+its frames drawn its game frames, which is no frame lost.
+
 ## A frame drawn in many workloads
 
 Mario Party 2's Tile Driver (minigame 0x46, its overlay 0x37) draws each game frame in 16 workloads, and
