@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 007b67573d7191762b43b43c44ef69e5cb2c4795
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 684377ced533b98ddafb8b05147edde30b0aab42
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -921,7 +921,7 @@ index 850689d..a4e775f 100644
              VirtualFree(rdram, 0, MEM_RELEASE);
          }
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..97d8e7e 100644
+index ae0f44f..b5f452b 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
 @@ -14,6 +14,8 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
@@ -933,7 +933,7 @@ index ae0f44f..97d8e7e 100644
      } else if (task->t.type == M_AUDTASK) {
          //printf("[sp] Audio task: %08X\n", (uint32_t)ctx->r4);
      }
-@@ -33,6 +35,8 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -33,11 +35,15 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
          dump_file.write(ram_unswapped.get(), ram_size);
          dump_frame = false;
      }
@@ -942,11 +942,18 @@ index ae0f44f..97d8e7e 100644
      ultramodern::submit_rsp_task(rdram, ctx->r4);
  }
  
+ extern "C" void osSpTaskYield_recomp(uint8_t* rdram, recomp_context* ctx) {
+     // Ignore yield requests (acts as if the task completed before it received the yield request)
++    // A graphics task still waiting for the renderer gets its RSP done now (ultramodern's events.cpp, rsp_yield_asked).
++    ultramodern::rsp_yield_asked();
+ }
+ 
+ extern "C" void osSpTaskYielded_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/ultramodern/CMakeLists.txt b/ultramodern/CMakeLists.txt
-index 5593172..e1b969c 100644
+index 5593172..d67cc65 100644
 --- a/ultramodern/CMakeLists.txt
 +++ b/ultramodern/CMakeLists.txt
-@@ -39,3 +39,45 @@ target_compile_options(ultramodern PRIVATE
+@@ -39,3 +39,52 @@ target_compile_options(ultramodern PRIVATE
  if (WIN32)
      add_compile_definitions(NOMINMAX)
  endif()
@@ -984,6 +991,13 @@ index 5593172..e1b969c 100644
 +option(ULTRAMODERN_SCREEN_UPDATE_AFTER_VI "A VI's screen update queued after its framebuffer swap (always on with Emscripten)" OFF)
 +if (ULTRAMODERN_SCREEN_UPDATE_AFTER_VI OR EMSCRIPTEN)
 +    target_compile_definitions(ultramodern PRIVATE ULTRAMODERN_SCREEN_UPDATE_AFTER_VI=1)
++endif()
++
++# A yield the game asks of a graphics task the renderer hasn't started sends the task's RSP done at once, as the console's
++# RSP would answer it (src/events.cpp, rsp_yield_asked).
++option(ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS "A yield asked of a graphics task not yet started sends its RSP done at once (always on with Emscripten)" OFF)
++if (ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS OR EMSCRIPTEN)
++    target_compile_definitions(ultramodern PRIVATE ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS=1)
 +endif()
 +
 +# No VI comes while the graphics thread has spent over 100 ms on one action, so a game can't step its logic past a list
@@ -1109,7 +1123,7 @@ index 31eb106..05ea2ad 100644
      int32_t sp;
  } OSThread;
 diff --git a/ultramodern/include/ultramodern/ultramodern.hpp b/ultramodern/include/ultramodern/ultramodern.hpp
-index 46aea61..da24a61 100644
+index 46aea61..1485a0b 100644
 --- a/ultramodern/include/ultramodern/ultramodern.hpp
 +++ b/ultramodern/include/ultramodern/ultramodern.hpp
 @@ -2,6 +2,7 @@
@@ -1120,6 +1134,16 @@ index 46aea61..da24a61 100644
  #include <cassert>
  #include <stdexcept>
  #include <span>
+@@ -100,6 +101,9 @@ void set_entrypoint_thread();
+ bool is_entrypoint_thread();
+ bool is_game_thread();
+ void submit_rsp_task(RDRAM_ARG PTR(OSTask) task);
++// The game asked the RSP's task to yield (osSpTaskYield). With ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS (on with
++// Emscripten), a graphics task the renderer hasn't started gets its RSP done now (events.cpp); otherwise nothing.
++void rsp_yield_asked();
+ void send_si_message();
+ uint32_t get_speed_multiplier();
+ 
 diff --git a/ultramodern/src/audio.cpp b/ultramodern/src/audio.cpp
 index 3198be0..212234e 100644
 --- a/ultramodern/src/audio.cpp
@@ -1250,7 +1274,7 @@ index 0000000..be6c588
 +
 +#endif
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 17d7a47..ac038d7 100644
+index 17d7a47..637883c 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -54,6 +54,24 @@ struct ViState {
@@ -1523,7 +1547,51 @@ index 17d7a47..ac038d7 100644
  
          // If the game has started, handle sending VI and AI events.
          if (ultramodern::is_game_started()) {
-@@ -267,6 +490,11 @@ void sp_complete() {
+@@ -260,13 +483,55 @@ void vi_thread_func() {
+     }
+ }
+ 
++#if ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS
++// The graphics thread tells the game its RSP task is done as it takes the task (gfx_thread_func), and ignores a yield,
++// so a task queued behind the renderer's other actions answers no yield until the renderer gets to it. A console's RSP
++// answers one within a few ms, and a game's scheduler may take a yield left unanswered at its next VI for a hung RSP:
++// Beetle Adventure Racing's asks one of the graphics task whenever an audio task comes, and at the next VI sends itself
++// the RSP's and RDP's done. Those end the queued task before the renderer has read it, and the real ones then end the
++// next, so the game took lists for done and reused what they point at: the renderer ran from a list into what the game
++// had put there since, loading vertices until the page ran out of memory, or the scheduler's thread queues broke. On a
++// page with render to RAM's late copy, which tells the game a list is done before the renderer submits it, the next
++// list waits queued that long often enough that the game never got from its menus into a race.
++// So a yield asked while a graphics task waits sends that task's RSP done at once, as if the RSP had finished before
++// the request (what osSpTaskYielded already answers), and the graphics thread sends none as it takes the task. The
++// RDP's done still comes once the renderer has read the list, and a game waits for both before it reuses a list.
++namespace {
++    // Graphics tasks sent whose RSP done hasn't gone yet.
++    std::atomic<uint32_t> graphics_sp_owed{ 0 };
++
++    bool take_graphics_sp_owed() {
++        uint32_t owed = graphics_sp_owed.load();
++        while (owed > 0) {
++            if (graphics_sp_owed.compare_exchange_weak(owed, owed - 1)) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++}
++#endif
++
+ void sp_complete() {
++#if ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS
++    // A graphics task's RSP done went already if a yield was asked of it while it waited (rsp_yield_asked).
++    if ((std::this_thread::get_id() == events_context.sp.gfx_thread.get_id()) && !take_graphics_sp_owed()) {
++        return;
++    }
++#endif
++
+     uint8_t* rdram = events_context.rdram;
+     std::lock_guard lock{ events_context.message_mutex };
+     ultramodern::enqueue_external_message_src(events_context.sp.mq, events_context.sp.msg, false, ultramodern::EventMessageSource::Sp);
  }
  
  void dp_complete() {
@@ -1535,7 +1603,7 @@ index 17d7a47..ac038d7 100644
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
-@@ -361,6 +589,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -361,6 +626,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
      while (!exited) {
          // Try to pull an action from the queue
          Action action;
@@ -1545,6 +1613,31 @@ index 17d7a47..ac038d7 100644
          if (events_context.action_queue.wait_dequeue_timed(action, 1ms)) {
              // Determine the action type and act on it
              if (const auto* task_action = std::get_if<SpTaskAction>(&action)) {
+@@ -567,6 +835,9 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
+ 
+     // Send gfx tasks to the graphics action queue
+     if (task->t.type == M_GFXTASK) {
++#if ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS
++        graphics_sp_owed++;
++#endif
+         events_context.action_queue.enqueue(SpTaskAction{ *task });
+     }
+     // Set all other tasks as the RSP task
+@@ -575,6 +846,14 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
+     }
+ }
+ 
++void ultramodern::rsp_yield_asked() {
++#if ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS
++    if (take_graphics_sp_owed()) {
++        sp_complete();
++    }
++#endif
++}
++
+ void ultramodern::send_si_message() {
+     ultramodern::enqueue_external_message_src(events_context.si.mq, events_context.si.msg, false, ultramodern::EventMessageSource::Si);
+ }
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
 index 9944a02..b7a1a2a 100644
 --- a/ultramodern/src/mesgqueue.cpp
