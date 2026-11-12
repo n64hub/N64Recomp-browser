@@ -528,7 +528,9 @@ page. A new save offers only those two of the single race's tracks. Its plans dr
 assist and the gas held, and back the car out in reverse (the Z trigger) where it stops against a fence or a rock,
 by its speed in RDRAM, which they know on Coventry Cove only. Where the car goes differs from play to play, so the
 plays' misses are added to the list by hand, and a Firefox play still finds one now and then on Coventry Cove, built
-in line in a few tenths of a second. Its BUILDING.md (The web page) and the header of
+in line in a few tenths of a second. The audio manager's teardown waits until the scheduler has retired its last audio
+task, which a page retires later than a console does (docs/findings.md, A late audio task). Its BUILDING.md (The web
+page) and the header of
 `tools/build_web.sh` have the rest.
 
 `n64hub/PaxDino-web` is wootbeer's PaxDino, Turok: Rage Wars (USA), GPL-3.0, on upstream's rt64, N64ModernRuntime and
