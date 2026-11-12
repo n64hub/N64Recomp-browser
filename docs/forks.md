@@ -558,7 +558,8 @@ rt64 46f182f,          picture by a third of a pixel, and D3D12 drew no row past
 rt64 7d5de03           Chrome's WebGPU and natively, so a canvas's or a desktop window's last row stayed black (Turok
                        2's at 1920x1000 under Expand); 83d4be7 rounds in fromHDtoWindow and 46f182f with roundf and no
                        include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change, and 7d5de03 on
-                       every build, where 997f61f did it with Emscripten only
+                       every build, where 997f61f did it with Emscripten only (7d5de03 has b1d62e4's message by
+                       mistake: its own is the empty fedf39f's, after it)
 rt64 d64a926           RT64_GAME_FRAME_WORKLOADS's frames drawn whole: a workload that draws nothing isn't an offscreen
                        pass, a shown framebuffer is any of the VI's last eight different ones (not viHistory's last
                        three VIs, which miss a third framebuffer shown now and then) and the queue holds 32, so a frame
