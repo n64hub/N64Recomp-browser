@@ -1831,7 +1831,9 @@ The measurements behind rules CLAUDE.md and the other docs state without them.
   plan's click missed it at 1920x945 and 1920x889. Its plan presses Enter on the launcher's focused Load ROM instead (a
   `rom` step with a key, `page_driver.mjs`). And a click while Chrome builds the shader list behind the launcher, a
   laptop's Intel UHD at 99% on screen, was not taken (Wave Race 64's 100, done at 11.1 s), nor on an RTX 5080
-  headless (Pilotwings 64's, the game never started): their plans wait for `RT64: all <n> prebuilt shaders built`.
+  headless (Pilotwings 64's, the game never started), nor three presses 10 s apart on a busy host (F-Zero X's boot
+  from Pages, its shader plan pressing 3 s after the device came): `page_driver.mjs`'s rom step waits for `RT64: all <n>
+  prebuilt shaders built` before it presses.
   Firefox builds none there, so its misses on screen there have another cause, not yet seen.
 - A debugging port shared by two browsers: the second Chrome took `[::1]` and the tool drove the first one's page, which
   is why `page_driver.mjs` refuses a port another browser holds.

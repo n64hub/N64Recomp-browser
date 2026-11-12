@@ -68,6 +68,12 @@
 // Chrome holds an open picker's input only weakly, and a page whose picker held it no better (one built before
 // RecompFrontend-web's and frontend/file_picker.cpp's fix) lost it to a GC within seconds now and then: the file went
 // nowhere, no copy came, and the run failed a minute later at 'RDRAM not found'. In Chrome the step says so and fails.
+// And Chrome builds a page's prebuilt shader list behind its launcher (rt64's "RT64: <n> prebuilt shaders, <m> pipelines,
+// ... built behind the game once it draws", then "RT64: all <m> prebuilt shaders built"), where a click on Load ROM can
+// be lost (docs/findings.md, Behind CLAUDE.md's rules): F-Zero X's boot from Pages, whose plan pressed 3 s after the
+// device came, pressed three times into a build on a busy host, opened no picker and failed. So a rom step presses only
+// once a list building behind the launcher is built, waiting up to listBuiltMs and saying how long, whatever the plan
+// waits for. Firefox builds none there and says nothing that waits.
 //
 // page.stop(reason) ends a run where it is: the step it is in is left (a clock wait included, which on a game that has
 // stopped waits out its whole 5 times and 30 s), no step after it starts, and run() throws reason, as a step that failed
@@ -256,6 +262,9 @@ const evaluateMs = 30000;
 const stepMs = 600000;
 // How long a rom step waits for the launcher to store the ROM.
 const romStoredMs = 30000;
+// How long a rom step waits for the prebuilt shader list Chrome builds behind the launcher before it presses Load ROM
+// anyway (the header says why).
+const listBuiltMs = 120000;
 // The path of a file of size bytes in the page's file system, outside /tmp, /dev and /proc, or null; false with no FS.
 const storedFile = (size) => `(() => {
   if (typeof FS === 'undefined') return false;
@@ -430,7 +439,15 @@ export const open = async (browser, { profile, port, size = [1256, 645], executa
   profile = path.resolve(profile);
   const [width, height] = size;
   const waiters = new Set();
-  const line = (text) => { onLine(text); for (const waiter of waiters) waiter(text); };
+  // Resolved once no prebuilt shader list is building behind the launcher (the header says why a rom step waits for it).
+  let listBuilt = Promise.resolve(), listDone = () => {};
+  const line = (text) => {
+    const list = /RT64: \d+ prebuilt shaders, (\d+) pipelines, .*built behind the game/.exec(text);
+    if (list && Number(list[1]) > 0) listBuilt = new Promise((resolve) => { listDone = resolve; });
+    if (/RT64: all \d+ prebuilt shaders built/.test(text)) listDone();
+    onLine(text);
+    for (const waiter of waiters) waiter(text);
+  };
   let page;
   if (cpuThrottle && browser !== 'chrome') throw new Error('cpuThrottle is Chrome\'s only');
   // A debugging port another browser holds is refused, not shared: the browser started here would take the other
@@ -516,6 +533,14 @@ export const open = async (browser, { profile, port, size = [1256, 645], executa
         if (op === 'need' && (failed || value === false || value === null)) throw new Error(`${a[0]} gave ${JSON.stringify(value)}`);
       }
       else if (op === 'rom') {
+        const from = Date.now();
+        let timer;
+        const built = await Promise.race([listBuilt.then(() => true),
+          new Promise((resolve) => { timer = setTimeout(() => resolve(false), listBuiltMs); })]);
+        clearTimeout(timer);
+        const waited = ((Date.now() - from) / 1000).toFixed(1);
+        if (!built) log(`the prebuilt shader list was still building behind the launcher after ${waited} s: pressing Load ROM anyway`);
+        else if (waited !== '0.0') log(`Load ROM waited ${waited} s for the prebuilt shader list building behind the launcher`);
         await page.rom(typeof a[0] === 'string' ? async () => { await page.key('down', a); await page.key('up', a); }
           : async () => page.click(...await place(a[0], a[1])));
         const given = Date.now(), size = (fs.statSync(rom).size + 3) & ~3;
