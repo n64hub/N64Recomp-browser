@@ -1315,9 +1315,9 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   build, an interleaved pair, an RTX 2070): WWF No Mercy, whose frames are drawn in several tasks each, went from 226
   presents a second to 268, Rogue Squadron (its fork's write-back off, with the late copy) from 273 to 301, and THPS2
   from 330 to 335, within the noise. Space Station Silicon Valley's late copy measured no faster (148 against 167, with
-  Pages' own two plays at 178 and 157), so it keeps the exact copy. Beetle Adventure Racing's went from 217 to 238
-  once a yield its scheduler asks of a queued graphics task was answered: unanswered, its page never got from the menus
-  into a race with the late copy (docs/game-forks.md). Through the device thread, the main thread checks a
+  Pages' own two plays at 178 and 157), so it keeps the exact copy. Beetle Adventure Racing's went from 217 to 238,
+  and its races from about 30 frames a second to 50-60, once a yield its scheduler asks of a queued graphics task was
+  answered: unanswered, its page never got from the menus into a race with the late copy (docs/game-forks.md). Through the device thread, the main thread checks a
   READBACK buffer at each replay and present once a copy into it is replayed, maps it when the browser has delivered
   the data, and publishes the answer, which `isMapReady()` reads and `map()` waits for without waiting behind the
   main thread's queue; a build without threads would need `-sJSPI` (or ASYNCIFY) to wait in place. A call that waits
