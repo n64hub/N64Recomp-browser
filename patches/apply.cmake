@@ -29,7 +29,9 @@
 # A patch goes in with git apply, and where the recomp's commit differs too much around a change for that, with a
 # three-way merge against the upstream commit the patch was made on, fetched into the checkout from the fork. A
 # checkout with changes of its own (a recomp's own patches) is patched on top of them. A patch that applies neither
-# way stops with the files that conflict; undo a checkout's patch with git apply --reverse <patch>.
+# way stops with the files that conflict. What each patch changed is kept in the checkout's git dir, and taken out first
+# when the patch has changed since (a newer N64Recomp-browser); undo it by hand, from the top of the checkout's
+# repository, with git apply --reverse "$(git rev-parse --git-path n64recomp-browser-<name>.patch)".
 
 set(N64RECOMP_BROWSER_PATCHES_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
@@ -100,54 +102,83 @@ function(n64recomp_browser_apply_patch name dir)
         list(APPEND apply "--exclude=${file}")
     endforeach()
 
-    # Patched already: the patch comes out again, or the checkout's changes are what they were when it went in (a
-    # three-way merge, which the reverse can't take out), kept in the checkout's git dir.
+    # What the patch changed in the checkout is kept in the checkout's git dir as a patch of its own (<stamp>.patch,
+    # paths from the top of the repository), with a hash of the patch and the files left out that made it (<stamp>.from).
+    # Patched already: that copy comes out again and this patch made it. A copy another version of the patch made (this
+    # repository moved on and edited it) is taken out first: the new patch neither comes out of a checkout holding the
+    # old one nor goes onto it, where the edit touched the old one's lines, and a hunk the edit dropped would stay in.
+    # The copy is what went in, three-way merged or not, so it comes out where the patch itself can't.
+    execute_process(COMMAND git rev-parse --path-format=absolute --git-path "n64recomp-browser-${name}"
+        WORKING_DIRECTORY "${top}" OUTPUT_VARIABLE stamp OUTPUT_STRIP_TRAILING_WHITESPACE)
+    file(SHA1 "${patch}" patch_hash)
+    string(SHA1 patch_hash "${patch_hash} ${ARGN}")
+    set(unapply git apply --whitespace=nowarn --reverse)
+    if (EXISTS "${stamp}.patch")
+        execute_process(COMMAND ${unapply} --check "${stamp}.patch" WORKING_DIRECTORY "${top}"
+            RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
+        if (result EQUAL 0)
+            file(READ "${stamp}.from" from)
+            if (from STREQUAL patch_hash)
+                return()
+            endif()
+            execute_process(COMMAND ${unapply} "${stamp}.patch" WORKING_DIRECTORY "${top}" RESULT_VARIABLE result)
+            if (NOT result EQUAL 0)
+                message(FATAL_ERROR "N64Recomp-browser: can't take the older ${name}.patch out of ${dir}")
+            endif()
+            file(REMOVE "${stamp}.patch" "${stamp}.from")
+            message(STATUS "N64Recomp-browser: took the older ${name}.patch out of ${dir}")
+        endif()
+    endif()
+    # Patched already without a copy (by hand, or by an apply.cmake that kept none): the patch comes out again, or the
+    # checkout's changes are what they were when a three-way merge put it in (<stamp>: the patch's hash and theirs).
     execute_process(COMMAND ${apply} --reverse --check "${patch}" WORKING_DIRECTORY "${top}"
         RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
     if (result EQUAL 0)
         return()
     endif()
-    execute_process(COMMAND git rev-parse --path-format=absolute --git-path "n64recomp-browser-${name}"
-        WORKING_DIRECTORY "${top}" OUTPUT_VARIABLE stamp OUTPUT_STRIP_TRAILING_WHITESPACE)
-    file(SHA1 "${patch}" patch_hash)
-    string(SHA1 patch_hash "${patch_hash} ${ARGN}")
-    _n64recomp_browser_changes("${top}" "${sub}" changes)
     if (EXISTS "${stamp}")
+        _n64recomp_browser_changes("${top}" "${sub}" changes)
         file(READ "${stamp}" stamped)
         if (stamped STREQUAL "${patch_hash} ${changes}")
             return()
         endif()
     endif()
 
-    execute_process(COMMAND ${apply} "${patch}" WORKING_DIRECTORY "${top}" RESULT_VARIABLE result ERROR_VARIABLE plain)
-    if (result EQUAL 0)
-        message(STATUS "N64Recomp-browser: patched ${name} (${dir})")
-        return()
-    endif()
-
-    # The three-way merge needs the upstream files the patch was made from.
-    message(STATUS "N64Recomp-browser: ${name} needs a three-way merge")
-    _n64recomp_browser_fetch_base(${name} "${top}" base)
-    if (base)
-        # --3way merges against the index, so it works in an index of its own holding the checkout's files as they
-        # are (its own changes included), and the checkout's index stays as it was. The files its own patches add are
-        # in it too (-A): a game's own patches can add one the web's patch changes (librecomp's config.cpp).
-        set(index "${stamp}.index")
-        set(env ${CMAKE_COMMAND} -E env "GIT_INDEX_FILE=${index}")
-        execute_process(COMMAND ${env} git read-tree HEAD WORKING_DIRECTORY "${top}")
-        execute_process(COMMAND ${env} git add -A -- "./${sub}" WORKING_DIRECTORY "${top}")
-        execute_process(COMMAND ${env} ${apply} --3way "${patch}" WORKING_DIRECTORY "${top}"
-            RESULT_VARIABLE result ERROR_VARIABLE merged)
-        file(REMOVE "${index}")
-        if (result EQUAL 0)
-            _n64recomp_browser_changes("${top}" "${sub}" changes)
-            file(WRITE "${stamp}" "${patch_hash} ${changes}")
-            message(STATUS "N64Recomp-browser: patched ${name} (${dir}) with a three-way merge")
-            return()
+    # The patch goes in through an index of its own holding the checkout's files as they are (its own changes
+    # included), so the checkout's index stays as it was and what went in is that index's change: --3way merges
+    # against the index, and the copy is its diff. The files the checkout's own patches add are in it too (-A): a
+    # game's own patches can add one the web's patch changes (librecomp's config.cpp).
+    set(index "${stamp}.index")
+    set(env ${CMAKE_COMMAND} -E env "GIT_INDEX_FILE=${index}")
+    execute_process(COMMAND ${env} git read-tree HEAD WORKING_DIRECTORY "${top}")
+    execute_process(COMMAND ${env} git add -A -- "./${sub}" WORKING_DIRECTORY "${top}")
+    execute_process(COMMAND ${env} git write-tree WORKING_DIRECTORY "${top}"
+        OUTPUT_VARIABLE before OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(how "")
+    execute_process(COMMAND ${env} ${apply} --index "${patch}" WORKING_DIRECTORY "${top}"
+        RESULT_VARIABLE result ERROR_VARIABLE plain)
+    if (NOT result EQUAL 0)
+        # The three-way merge needs the upstream files the patch was made from.
+        message(STATUS "N64Recomp-browser: ${name} needs a three-way merge")
+        _n64recomp_browser_fetch_base(${name} "${top}" base)
+        if (base)
+            execute_process(COMMAND ${env} ${apply} --3way "${patch}" WORKING_DIRECTORY "${top}"
+                RESULT_VARIABLE result ERROR_VARIABLE merged)
+            set(plain "${merged}")
+            set(how " with a three-way merge")
         endif()
-        set(plain "${merged}")
     endif()
-    message(FATAL_ERROR "N64Recomp-browser: ${name}.patch doesn't apply to ${dir}:\n${plain}")
+    if (result EQUAL 0)
+        execute_process(COMMAND ${env} git diff-index --cached -p --binary "${before}" -- "./${sub}"
+            WORKING_DIRECTORY "${top}" OUTPUT_FILE "${stamp}.patch")
+        file(WRITE "${stamp}.from" "${patch_hash}")
+        file(REMOVE "${stamp}")
+    endif()
+    file(REMOVE "${index}")
+    if (NOT result EQUAL 0)
+        message(FATAL_ERROR "N64Recomp-browser: ${name}.patch doesn't apply to ${dir}:\n${plain}")
+    endif()
+    message(STATUS "N64Recomp-browser: patched ${name} (${dir})${how}")
 endfunction()
 
 # A recomp that leaves files out of <name>.patch where its own changes meet the web's (n64recomp_browser_apply_patch's
