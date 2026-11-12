@@ -66,7 +66,8 @@ and Turok 3 are this project's own recomps, each with releases of its desktop bu
 This is for a recomp built on RecompFrontend that already builds for the desktop. Its dependencies stay as they are:
 `rt64`, `N64ModernRuntime` and `RecompFrontend` remain its own submodules at the commits it pins, this repo is added
 beside them, and the web build patches their checkouts with `patches/`. The patches change nothing in a desktop build
-but fixes to bugs it has too (The forks), and the changes stay in the checkouts, uncommitted.
+but fixes to bugs it has too (The forks), and the changes stay in the checkouts, uncommitted. What a page is played
+and checked for before a port is called done is docs/new-recomp.md's web port list.
 
 ### 1. Add this repo
 
