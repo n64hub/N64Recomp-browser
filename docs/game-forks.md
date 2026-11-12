@@ -516,11 +516,17 @@ can't do it on WebGPU) and RT64's developer tools with it, and a page opens wide
 the window, the desktop build opening in the console's 4:3), which the game's own code supports: it widens the
 frustum the game culls to (`src/main/bar_frustum.cpp`) and anchors the racing HUD to the picture's edges (HUD ratio
 Expand, its default); the rest is at the desktop's defaults (resolution Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
-it at the speed a console does whatever it presents. Render to RAM keeps the exact copy: the game's CPU reads its
+it at the speed a console does whatever it presents. Render to RAM copies a list late: the game's CPU reads its
 frames in three places (the sun glare's depth samples, of the list before the one just sent; the car's reflection,
 from a frame about two lists old; the menus' film-roll transitions, which copy the frame just drawn into the other
-framebuffer), each of which could take one a list old, but with the copy a list late the page never got from the menus
-into a race, and Chrome's ran out of memory there. Its depth fog's read of the Z-buffer is the RDP's. Its list is 261 shaders: the boot (the launcher, the Controller
+framebuffer), each of which takes one a list old. Its depth fog's read of the Z-buffer is the RDP's. Its scheduler
+asks a graphics task to yield to an audio task, and at the next VI takes one still unanswered for a hung RSP and sends
+itself the RSP's and RDP's done (`_uvScDlistRecover`): with the copy a list late a list waits for RT64 longer, so the
+page never got from the menus into a race and Chrome's ran out of memory, until the runtime answered a yield asked of
+a queued graphics task (`ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`, docs/forks.md). The copy's wait held the game:
+against the exact copy, in Chrome at 3840x2000 (an RTX 2070), its races ran at 50-60 frames a second where they had
+run at about 30 (`?uncapped=240&present-stats`, 231 presents a second against 217), and uncapped it presented 238
+against 217. Its list is 261 shaders: the boot (the launcher, the Controller
 Pak screen, the logos, the intro, the title and the menus to a Single Race, 138) and 2 sections (Coventry Cove 70,
 Mount Mayhem 53), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
 (`tools/game_state.js`) and reaches each track through the menus, since a game state written from them stops the
@@ -872,10 +878,10 @@ once a VI; its controller reads held it to 30 on a fast CPU, which its `patches/
 Racing 30 (DKR-R's Accurate profile, the desktop's default, holds RT64 at Original; the page plays Modern), Jet Force
 Gemini 30 dropping to 20 when a frame runs long, or 60 (its Game Frame Rate, 60 on a page: 54-59 at the display's 60
 and 18-30 uncapped at 3840x2000, against 29 and 17-19 at the game's own pacing), and the
-cartridge's for the other fifteen: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 30, Mario Party 2 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
+cartridge's for the other sixteen: F-Zero X 60 in a one-player race, Super Mario 64 30, Mario Party 30, Mario Party 2 30, Mario Party 3 30, Rush 2 30, Majora's Mask 20, Banjo-Kazooie 20-30, Donkey Kong 64 30, Banjo-Tooie 30
 (Terrydactyland 12, Hailfire Peaks 10), Wave Race 64 20 in races, Star Fox 64 30 (20 where a scene sets 3 VIs a
-frame), GoldenEye's, Conker's and Star Wars Episode I: Racer's variable (Racer 30-43 in a race, uncapped at
-3840x2000). None of the fifteen has an option to run faster.
+frame), GoldenEye's, Conker's, Star Wars Episode I: Racer's and Beetle Adventure Racing's variable (Racer 30-43 in
+a race, uncapped at 3840x2000; Beetle 50-60 in a race at `?uncapped=240` there). None of the sixteen has an option to run faster.
 
 A game fork may take a change that runs its game faster when that makes the page play better. Weigh it: logic at 60
 gives lower input lag, motion the game computes rather than RT64 interpolates, and what interpolation misses (some

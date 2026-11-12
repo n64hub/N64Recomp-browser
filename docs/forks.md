@@ -8,7 +8,7 @@ moves `forks.txt` onto it.
 
 ## Options off on a desktop build
 
-Sixteen options are off on a desktop build, on with Emscripten, and settable natively, each by the commit that adds it:
+Seventeen options are off on a desktop build, on with Emscripten, and settable natively, each by the commit that adds it:
 `RT64_FLIPPED_RECT_HIGH_RES` (rt64 fe91344), `RT64_UNEVEN_FRAME_RATES` (rt64 179adb8), `RT64_GAME_FRAME_WORKLOADS` (rt64
 bce5e11), `RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA_EYE` (rt64 2c4230e),
 `RT64_SCISSOR_INSIDE_FRAMEBUFFER` (rt64 cad03e4), `RT64_SKIP_COLLAPSED_MATCHES` (rt64 f6a01be),
@@ -16,7 +16,8 @@ bce5e11), `RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA
 `ULTRAMODERN_LIBULTRA_THREAD_STOP` (N64ModernRuntime 0df8334), `ULTRAMODERN_HOLD_BLOCKED_MESSAGES` (N64ModernRuntime
 66539ab), `ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS` (N64ModernRuntime bf96a62), `ULTRAMODERN_RSP_TASKS_COPIED`
 (N64ModernRuntime 0ec6c51), `ULTRAMODERN_SCREEN_UPDATE_AFTER_VI` (N64ModernRuntime c700131),
-`ULTRAMODERN_VIS_WAIT_FOR_RENDERER` (N64ModernRuntime 05d95be) and `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED`
+`ULTRAMODERN_VIS_WAIT_FOR_RENDERER` (N64ModernRuntime 05d95be), `ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`
+(N64ModernRuntime 684377c) and `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED`
 (RecompFrontend bf01590).
 
 ## Every commit
@@ -913,4 +914,11 @@ rt64 dea05ba           a coordinate with an extended origin on the right half (a
                        its own edge, as one on the left half snaps down: snapped down, the window's right edge fell 1-2
                        pixels short where the width isn't on that grid (1280x720: 1278), and Turok 3's cutscene bars let
                        the scene through the window's last two columns. Every build
+N64ModernRuntime       ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS: a yield the game asks of a graphics task still queued
+684377c 82f39c1        for the renderer sends the task's RSP done at once, and the graphics thread sends none as it
+2fe2d6e 6264916        takes the task. Ignored, a yield went unanswered until the renderer got to the task, and Beetle
+                       Adventure Racing's scheduler took one unanswered at the next VI for a hung RSP and sent itself
+                       the RSP's and RDP's done: lists counted done before RT64 read them, RT64 ran from one into data
+                       loaded since until the page ran out of memory, or the scheduler's thread queues broke. With
+                       render to RAM's late copy it came 33 times in a play, and the page never reached a race
 ```

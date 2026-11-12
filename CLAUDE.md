@@ -147,7 +147,7 @@ hlslpp-web; N64ModernRuntime-web's `N64Recomp` is N64Recomp-web. Notes name a ch
 `rt64-0010`) or by fork and commit (`rt64 c89ced0`): `docs/forks.md` has every one, a line each, and a change pushed to
 a fork gets its row there in the PR that moves `forks.txt` onto it.
 
-Sixteen options are off on a desktop build, on with Emscripten, and settable natively: docs/forks.md lists them
+Seventeen options are off on a desktop build, on with Emscripten, and settable natively: docs/forks.md lists them
 (Options off on a desktop build).
 
 ## Changing it
