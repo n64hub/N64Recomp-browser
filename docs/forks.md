@@ -901,4 +901,9 @@ N64ModernRuntime       reads its strings, tables and constants through them (the
                        past it wrapped inside it. recomp::make_kuseg_accessible opens a range, natively by committing
                        or mprotect-ing the reserved pages 2 GB past rdram. Without the define a page compiles to the
                        same code (docs/porting.md, Building with Emscripten)
+rt64 dea05ba           a coordinate with an extended origin on the right half (a gEXSetRectAlign rect's edge, a
+                       G_EX_ORIGIN_RIGHT scissor's) snaps up to the centered picture's grid of whole N64 pixels, toward
+                       its own edge, as one on the left half snaps down: snapped down, the window's right edge fell 1-2
+                       pixels short where the width isn't on that grid (1280x720: 1278), and Turok 3's cutscene bars let
+                       the scene through the window's last two columns. Every build
 ```

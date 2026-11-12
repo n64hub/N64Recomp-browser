@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 9a263fba22fd6b1ccd2d2a3da567ac5bb08b03d5
+rt64: https://github.com/n64hub/rt64-web dea05ba3907ad8df7a07fa553d86cd8412021cd5
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -6506,10 +6506,46 @@ index 69a82ac..1dd31f7 100644
              dstNorm = builder.addReadWriteStructuredBuffer(9);
              dstVel = builder.addReadWriteStructuredBuffer(10);
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index 9fae0d4..fe10ef3 100644
+index 9fae0d4..151439f 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
-@@ -151,6 +151,7 @@ namespace RT64 {
+@@ -63,9 +63,19 @@ namespace RT64 {
+                 }
+             };
+ 
++            // A coordinate with an extended origin is snapped to the grid of whole N64 pixels the centered picture
++            // is on, toward its origin's edge: down on the left half, up on the right half, so a coordinate at the
++            // window's right edge isn't left short of it when the width isn't a multiple of the scale (Turok 3's
++            // cutscene bars at 1280x720 ended at 1278). Past the target it is clipped, as the left's is.
+             auto correctMisalignment = [=](int32_t coord, uint16_t origin) {
+                 if (origin < G_EX_ORIGIN_NONE) {
+-                    return int32_t(coord - (coord % std::lround(resScale[1]))) - horizontalMisalignment;
++                    const int32_t alignment = int32_t(std::lround(resScale[1]));
++                    if (origin > G_EX_ORIGIN_CENTER) {
++                        const int32_t remainder = -(coord + horizontalMisalignment) % alignment;
++                        return coord + ((remainder < 0) ? (remainder + alignment) : remainder);
++                    }
++
++                    return int32_t(coord - (coord % alignment)) - horizontalMisalignment;
+                 }
+                 else {
+                     return coord;
+@@ -95,8 +105,14 @@ namespace RT64 {
+             }
+         };
+         
++        // As convertFixedRect's: toward the origin's edge, up on the right half.
+         auto correctMisalignment = [=](float coord, uint16_t origin) {
+             if (origin < G_EX_ORIGIN_NONE) {
++                if (origin > G_EX_ORIGIN_CENTER) {
++                    const float remainder = std::fmod(-(coord + horizontalMisalignment), resScale[1]);
++                    return coord + ((remainder < 0.0f) ? (remainder + resScale[1]) : remainder);
++                }
++
+                 return (coord - std::fmod(coord, resScale[1])) - horizontalMisalignment;
+             }
+             else {
+@@ -151,6 +167,7 @@ namespace RT64 {
  
          shaderUploader = std::make_unique<BufferUploader>(worker->device);
          descCommonSet = std::make_unique<FramebufferRendererDescriptorCommonSet>(shaderLibrary->samplerLibrary, worker->device->getCapabilities().raytracing, worker->device);
@@ -6517,7 +6553,7 @@ index 9fae0d4..fe10ef3 100644
  
  #   if RT_ENABLED
          if (rtSupport) {
-@@ -161,6 +162,8 @@ namespace RT64 {
+@@ -161,6 +178,8 @@ namespace RT64 {
      }
  
      FramebufferRenderer::~FramebufferRenderer() {
@@ -6526,7 +6562,7 @@ index 9fae0d4..fe10ef3 100644
          dummyColorTargetView.reset();
          dummyDepthTargetView.reset();
          dummyColorTarget.reset();
-@@ -187,7 +190,7 @@ namespace RT64 {
+@@ -187,7 +206,7 @@ namespace RT64 {
  
          // Create dummy depth target if it hasn't been created yet.
          if (dummyDepthTarget == nullptr) {
@@ -6535,7 +6571,7 @@ index 9fae0d4..fe10ef3 100644
              dummyDepthTarget = worker->device->createTexture(dummyDepthDesc);
              dummyDepthTarget->setName("Framebuffer Renderer Depth Dummy");
              dummyDepthTargetView = dummyDepthTarget->createTextureView(RenderTextureViewDesc::Texture2D(dummyDepthDesc.format));
-@@ -310,12 +313,12 @@ namespace RT64 {
+@@ -310,12 +329,12 @@ namespace RT64 {
          assert(worker != nullptr);
          assert(drawBuffers != nullptr);
          
@@ -6550,7 +6586,7 @@ index 9fae0d4..fe10ef3 100644
              descriptorTextureVersions.clear();
              descriptorTextureGlobalVersion = 0;
              descriptorTextureReplacementMapEnabled = textureCacheReplacementMapEnabled;
-@@ -373,10 +376,36 @@ namespace RT64 {
+@@ -373,10 +392,36 @@ namespace RT64 {
  
          descCommonSet->setBuffer(descCommonSet->FrParams, frameParamsBuffer.get(), sizeof(interop::FrameParams));
          descCommonSet->setBuffer(descCommonSet->instanceRenderIndices, renderIndicesBuffer.get(), RenderBufferStructuredView(sizeof(interop::RenderIndices)));
@@ -6587,7 +6623,7 @@ index 9fae0d4..fe10ef3 100644
  
          // Make sure the versions vector matches the texture cache size.
          descriptorTextureVersions.resize(textureCacheSize, 0);
-@@ -473,6 +502,7 @@ namespace RT64 {
+@@ -473,6 +518,7 @@ namespace RT64 {
          interop::RasterParams rasterParams;
          RenderDescriptorSet *descRealFbSet = framebuffer.descRealFbSet->get();
          RenderDescriptorSet *descDummyFbSet = framebuffer.descDummyFbSet->get();
@@ -6595,7 +6631,7 @@ index 9fae0d4..fe10ef3 100644
  
          auto switchToGraphicsPipeline = [&]() {
              previousCallType = InstanceDrawCall::Type::Unknown;
-@@ -481,8 +511,15 @@ namespace RT64 {
+@@ -481,8 +527,15 @@ namespace RT64 {
              previousScissor = RenderRect();
              worker->commandList->setGraphicsPipelineLayout(rendererPipelineLayout);
              worker->commandList->setGraphicsDescriptorSet(descCommonSet->get(), 0);
@@ -6613,7 +6649,7 @@ index 9fae0d4..fe10ef3 100644
              worker->commandList->setGraphicsDescriptorSet(depthState ? descRealFbSet : descDummyFbSet, 3);
              worker->commandList->setViewports(framebuffer.viewport);
          };
-@@ -499,12 +536,13 @@ namespace RT64 {
+@@ -499,12 +552,13 @@ namespace RT64 {
              }
          };
  
@@ -6629,7 +6665,7 @@ index 9fae0d4..fe10ef3 100644
              }
          };
  
-@@ -551,13 +589,14 @@ namespace RT64 {
+@@ -551,13 +605,14 @@ namespace RT64 {
                  }
  
                  // A new pass must be started if decals are required and something wrote to the depth buffer before this call.
@@ -6646,7 +6682,7 @@ index 9fae0d4..fe10ef3 100644
                      switchToDepthWrite();
                  }
  
-@@ -570,10 +609,35 @@ namespace RT64 {
+@@ -570,10 +625,35 @@ namespace RT64 {
                      worker->commandList->setPipeline(triangles.pipeline);
                      previousPipeline = triangles.pipeline;
                  }
@@ -6682,7 +6718,7 @@ index 9fae0d4..fe10ef3 100644
                  worker->commandList->setGraphicsPushConstants(0, &rasterParams);
  
                  drawCallTriangles(drawCall);
-@@ -618,7 +682,12 @@ namespace RT64 {
+@@ -618,7 +698,12 @@ namespace RT64 {
                  const interop::RSPVertexTestZCB &testZCB = drawCall.vertexTestZ;
                  switchToDepthRead();
  
@@ -6695,7 +6731,7 @@ index 9fae0d4..fe10ef3 100644
                  const auto &rspVertexTestZ = useMSAA ? shaderLibrary->rspVertexTestZMS : shaderLibrary->rspVertexTestZ;
                  worker->commandList->barriers(RenderBarrierStage::COMPUTE, RenderBufferBarrier(testZIndexBuffer, RenderBufferAccess::WRITE));
                  worker->commandList->setPipeline(rspVertexTestZ.pipeline.get());
-@@ -1339,8 +1408,15 @@ namespace RT64 {
+@@ -1339,8 +1424,15 @@ namespace RT64 {
          memcpy(paramBufferBytes, &fbParams, sizeof(interop::FramebufferParams));
          framebuffer.paramsBuffer->unmap();
  
@@ -6711,7 +6747,7 @@ index 9fae0d4..fe10ef3 100644
          framebuffer.descRealFbSet->setBuffer(framebuffer.descRealFbSet->FbParams, framebuffer.paramsBuffer.get(), sizeof(interop::FramebufferParams));
          framebuffer.descRealFbSet->setTexture(framebuffer.descRealFbSet->gBackgroundColor, backgroundColorTexture, RenderTextureLayout::SHADER_READ, backgroundColorTextureView);
          framebuffer.descRealFbSet->setTexture(framebuffer.descRealFbSet->gBackgroundDepth, p.fbStorage->depthTarget->texture.get(), RenderTextureLayout::DEPTH_READ, p.fbStorage->depthTarget->textureView.get());
-@@ -1608,8 +1684,10 @@ namespace RT64 {
+@@ -1608,8 +1700,10 @@ namespace RT64 {
                          triangles.shaderDesc = call.shaderDesc;
  
                          RasterShader *gpuShader = p.ubershadersOnly ? nullptr : p.rasterShaderCache->getGPUShader(call.shaderDesc);
@@ -6722,7 +6758,7 @@ index 9fae0d4..fe10ef3 100644
                          }
                          else {
                              const bool copyMode = (call.shaderDesc.otherMode.cycleType() == G_CYC_COPY);
-@@ -1619,7 +1697,7 @@ namespace RT64 {
+@@ -1619,7 +1713,7 @@ namespace RT64 {
                                  (call.shaderDesc.otherMode.cvgDst() == CVG_DST_WRAP) || (call.shaderDesc.otherMode.cvgDst() == CVG_DST_SAVE));
                          }
                          
@@ -6731,7 +6767,7 @@ index 9fae0d4..fe10ef3 100644
                          triangles.vertexTestZ = (vertexTestZCallIndex >= 0);
                          triangles.postBlendDitherNoise = false;
  
-@@ -1628,6 +1706,16 @@ namespace RT64 {
+@@ -1628,6 +1722,16 @@ namespace RT64 {
                          switch (proj.type) {
                          case Projection::Type::Perspective:
                          case Projection::Type::Orthographic: {
@@ -6748,7 +6784,7 @@ index 9fae0d4..fe10ef3 100644
                              instanceDrawCall.type = InstanceDrawCall::Type::IndexedTriangles;
                              triangles.indexStart = triangles.vertexTestZ ? vertexTestZFaceIndicesStart : call.meshDesc.faceIndicesStart;
                              invRatioScale = projInvRatioScale;
-@@ -1760,7 +1848,215 @@ namespace RT64 {
+@@ -1760,7 +1864,215 @@ namespace RT64 {
          checkRasterScene(rasterScene);
      }
  
@@ -6965,7 +7001,7 @@ index 9fae0d4..fe10ef3 100644
          bool shaderViewRtEnabled = false;
          std::vector<BufferUploader::Upload> shaderUploads = {
              { renderIndicesVector.data(), { 0, renderIndicesVector.size() }, sizeof(interop::RenderIndices), RenderBufferFlag::STORAGE, { }, &renderIndicesBuffer},
-@@ -1816,8 +2112,16 @@ namespace RT64 {
+@@ -1816,8 +2128,16 @@ namespace RT64 {
          }
  #   endif
  
