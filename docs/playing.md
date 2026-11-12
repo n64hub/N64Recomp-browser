@@ -154,6 +154,11 @@ work, naming the game, the browser, the time and the curve.
   idle Intel UHD, which RT64's pacing takes for a GPU falling behind: Firefox's 20-30 there; a fast GPU's come back
   early) or the compositor on screen, so it doesn't clear a laptop result (docs/findings.md, WebGPU in Chrome and
   Firefox, A laptop, measured).
+- Not for a game at 30, though, whose 12 frames drawn a game frame at 360 outrun RT64's 8 colour targets: what it gets
+  there turns on when the game's next frame comes, so a change to the game's own timing (render to RAM, a late copy)
+  moves its number with the cost the same. Such a change is played at `?uncapped=240` too (`--query "?uncapped=240"`
+  beside `--uncapped`), with `?present-stats` for the frames RT64 drew a game frame and the rate it timed the game at
+  (docs/findings.md, A game at 30, uncapped).
 - Chrome on Windows times its animation frames by the display's vblank; with no display (a monitor off) it sleeps
   17.9 ms between frames, and every page whose game runs below 60 presents ~55.6 at the display's rate. play_page
   records animation frames a second beside the presents, and leaves presents out of the comparison for a display-rate

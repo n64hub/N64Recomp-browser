@@ -1585,6 +1585,31 @@ with too few workloads, and Goldwood then presented 346-356, every frame interpo
 Pages' 62.5, its p99 gap 4.6 ms against 18.2, and Banjo-Kazooie's 360 against 359 (whole GPU turns, a host shared
 with other plays; plays.jsonl).
 
+## A game at 30, uncapped
+
+Uncapped at 360, a game at 30 needs 12 frames drawn for each of its own, and on a page those take turns in RT64's 8
+colour targets (rt64 8a2c6a7): each waits for the one drawn into its target before it to be presented, and those not
+drawn when the game's next frame ends are dropped (RT64_GAME_FRAME_WORKLOADS). How many a game frame gets then turns on
+how late the game's next frame comes, not on what a frame costs, and a change to the game's own timing moves the page's
+presents a second there with the cost the same. Turok: Dinosaur Hunter's page with render to RAM's exact copy, whose
+readback holds the game 5-6 ms a list, read 244-269 presents a second against 225-236 without it (Chrome, 3840x2000,
+an RTX 2070, whole GPU turns in pairs, a host 27-50% busy; plays.jsonl, set `t1-r2r-limit` and the A/B before it): RT64
+drew 8.9 frames a game frame with the copy and 7.8 without, the GPU's time a present 0.50 ms both ways, the present
+thread idle half of each second, and `?frame-log` showing the game the same both ways, one list of four framebuffer
+pairs a frame, each ended by the next, 33 ms apart. At `?uncapped=240`, where a game frame needs 8, both builds drew 7
+and presented 210.0. Games at 60 need 6 and read about 360 (Turok 3 and Rage Wars, 359 and 355-358 either way).
+
+So a 30-frame game's uncapped number compares two builds' cost only where both draw what it needs. A change that moves
+when the game's frames end (render to RAM, a late copy, a wait in the game's loop) is played at `?uncapped=240` too
+(`play_page.mjs --uncapped --query "?uncapped=240"`), and `?present-stats` says what RT64 drew a game frame and what
+rate it timed the game at.
+
+That rate is the other thing such a change can move. Turok 2's levels run at 30 either way, and with the exact copy
+RT64 timed them at 60 ("the game reports 60"), so it drew too few frames between them: at the display's rate none,
+30.2 frames a second against 55-56 without the copy (headless Chrome with no display, its frames at about 56; set
+`t2-r2r-display`), and at 240 about 113 against 211. Uncapped at 360 the copy still read higher (281-282 against
+226-255) for the reason above. Without the copy RT64 times them at 30, as it does Turok: Dinosaur Hunter's either way.
+
 ## A frame drawn in many workloads
 
 Mario Party 2's Tile Driver (minigame 0x46, its overlay 0x37) draws each game frame in 16 workloads, and
