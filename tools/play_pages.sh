@@ -5,7 +5,7 @@
 # retest's own machine builds and plays the next ones.
 #
 #   bash tools/play_pages.sh <rush-2049-recomp checkout> <chrome|firefox> <game>... [--build <label>] [--note <text>]
-#       [--backcheck] [-- <queue command>...]
+#       [--backcheck] [--logs <dir>] [-- <queue command>...]
 #
 # <game> is a name in publish_pages.sh's list, whose games, repos and hub folders this reads. For each, one after
 # another:
@@ -24,19 +24,21 @@
 # --backcheck plays the web port list's W2, W5, W6 and W7 instead (docs/new-recomp.md): play_page.mjs --backcheck (its
 # header), uncapped at 1256x645, the plan's own size (2512x1290 device pixels at Chrome's 2x), and prints its verdicts,
 # the pad's line and each fault's after the play's line. Play it in Chrome and in Firefox.
+# --logs keeps each play's whole log there, as <game>.<browser>.log.
 # A queue command after -- goes in front of each play_page.mjs, so each takes its own turn in the machine's GPU queue
 # (CLAUDE.md, Playing a page), a shared one with a short limit like a smoke play's. It exits 1 if any play failed.
 # It needs gh, each other game's plain dump as $ROMS/<game>.z64 (Rush 2049's in the checkout's roms/), as
 # publish_pages.sh does, and NODE for play_page.mjs (node unless set).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-label="" note="" args=() queue=() backcheck=()
+label="" note="" args=() queue=() backcheck=() logs=
 while [[ $# -gt 0 ]]; do
     case "$1" in
     --) shift; queue=("$@"); break ;;
     --build) label="$2"; shift ;;
     --note) note="$2"; shift ;;
     --backcheck) backcheck=(--backcheck) ;;
+    --logs) logs="$2"; mkdir -p "$logs"; shift ;;
     *) args+=("$1") ;;
     esac
     shift
@@ -87,6 +89,7 @@ for g in "${selected[@]}"; do
         s.webgpuErrors.length + ' WebGPU errors, ' + s.exceptions + ' exceptions')" "$work/$g/summary.json" 2> /dev/null ||
         echo "FAILED: no summary")"
     echo "== $g from Pages in $browser: $result"
+    [[ -z $logs ]] || cp "$work/$g/play.log" "$logs/$g.$browser.log"
     [[ ${#backcheck[@]} -eq 0 ]] || grep -E "^(backcheck W|pad: |fault [a-z]+: )" "$work/$g/play.log" | sed 's/^/   /'
     if [[ $result != ok* ]]; then
         failed+=("$g")
