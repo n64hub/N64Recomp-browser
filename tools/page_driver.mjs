@@ -706,11 +706,13 @@ const openChrome = async ({ profile, port, width, height, executable, rom, prelo
     },
     // A Chrome trace, what DevTools' Performance panel records: start() traces every process and samples the
     // JavaScript and wasm stacks of every thread of the page's (V8's sampler, the workers the game's threads are
-    // included), and stop(file) writes the trace as JSON for the Performance panel or ui.perfetto.dev.
+    // included), and stop(file) writes the trace as JSON for the Performance panel or ui.perfetto.dev. With Dawn's
+    // categories, the GPU process's main thread shows each WebGPU call it runs (a pipeline compiled in line is an
+    // APICreateComputePipeline or APICreateRenderPipeline with its shader compile under it).
     chromeTrace: {
       start: () => send('Tracing.start', { transferMode: 'ReturnAsStream', traceConfig: { recordMode: 'recordAsMuchAsPossible',
         includedCategories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.frame',
-          'toplevel', 'v8.execute', 'blink.console', 'disabled-by-default-v8.cpu_profiler', 'gpu', 'webgpu'] } }),
+          'toplevel', 'v8.execute', 'blink.console', 'disabled-by-default-v8.cpu_profiler', 'gpu', 'webgpu', 'gpu.dawn', 'disabled-by-default-gpu.dawn'] } }),
       stop: async (file) => {
         tracingComplete = null;
         await send('Tracing.end');
