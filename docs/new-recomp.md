@@ -117,7 +117,8 @@ What it looks for:
   Quackers'); 2D (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
 - Letterboxes: black bars or a black row where the picture should reach the window, at odd window heights too, and
   the picture's last row and column filled at any window size (Turok 3's cutscene bars stopped a column short at
-  1280x720, Dinosaur Planet's a row short).
+  1280x720, RT64's anchoring, docs/forks.md; Dinosaur Planet's a row short, with a grey strip of an old frame under
+  them, since the game's own scissor ends a row before the frame's, its docs/restored-content.md).
 - Tiling: seams or misaligned tiles on walls, ground, sky and the HUD's pieces at high resolution.
 - Widescreen: things culled or the level cut off near the picture's left and right edges (a game can cut its level a
   second time, at 16:9, as Turok 2 does); full-screen overlays, tints, wipes and fades cut at the 4:3 picture's
