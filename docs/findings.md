@@ -725,7 +725,8 @@ made after the pipelines changed it, and fbWriteColor and rspWorld were still bu
 built every compute pipeline again. fbReadAnyFull is still built at its dispatch, at the launcher, where nothing
 plays: RT64 leaves one of its set's bindings unbound. Debug builds' boots (the logos, the same plan, a host shared with
 another card's plays): 3,061 frames short before, 360 and 49 after, those in the game's first second, where every
-build, either way, has three frames of 130-140 ms.
+build, either way, has three frames of 130-140 ms. A release build's A/B against the page Pages served: 3,642
+frames short there, 617 (13 ms) in the build, all in the game's first 3 s.
 
 ## What the prebuilt lists miss
 

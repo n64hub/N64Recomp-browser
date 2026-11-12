@@ -78,9 +78,10 @@ items by almost no game when the record began.
 
 What the fails are: Smash's and Paper Mario's HUD and menus stay in the middle 4:3 (1); F-Zero X's, the Mario Parties'
 and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok 2's regular plans, played on a fresh
-profile, miss shaders their lists lack (W3); Dinosaur Planet's page loses about 85 ms of sound at the boot's logos in
-Chrome (W5); the Mario Parties keep render to RAM on in their desktop builds, and Smash's and Paper Mario's pages
-keep the exact copy with no reason given (W4).
+profile, miss shaders their lists lack (W3); Dinosaur Planet's page still loses up to 13 ms of sound in its game's
+first seconds in Chrome on a first visit, though none at the logos since plume-web e69d031 (W5; docs/findings.md,
+Compute pipelines built at their first dispatch); the Mario Parties keep render to RAM on in their desktop builds, and
+Smash's and Paper Mario's pages keep the exact copy with no reason given (W4).
 
 ## A new recomp's list
 
