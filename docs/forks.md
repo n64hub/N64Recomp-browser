@@ -711,6 +711,13 @@ rt64 11940aa           the device thread's copy on the calling side are made at 
 plume 73a6625,         Vulkan: a scissor or clear rect past the target's edges is clamped to it, as a GPU clips it (a
 rt64 138edee           wide window's extended scissor starts left of 0); Mesa's lavapipe wrote past the image into the
                        heap, and Mario Party 3's Linux build crashed seconds into its opening. Desktop only
+plume e69d031,         WebGPU: where the browser builds pipelines off the device (Chrome), a compute pipeline is built
+rt64 febfa83           with createComputePipelineAsync when it's created, for the layout predicted from its set layouts
+                       and its WGSL's declarations, and again when a new binding stage changes it; built at its first
+                       dispatch, Chrome compiled it in line on its GPU main thread, 50-125 ms on a profile's first visit,
+                       and Dinosaur Planet's render-to-RAM copy and sound waited behind RT64's texture decode,
+                       framebuffer write and RSP pipelines at its boot (docs/findings.md, Compute pipelines built at
+                       their first dispatch)
 rt64 8cc291f           a target copied into one of the other kind (its last write was the other's) is copied only
                        inside it, on every build: the last write's rect starts left of x 0 where a wide window's 3D
                        reaches past the 4:3 picture, and copyFromTarget took it unsigned, so its viewport began at
@@ -906,7 +913,7 @@ rt64 dea05ba           a coordinate with an extended origin on the right half (a
                        its own edge, as one on the left half snaps down: snapped down, the window's right edge fell 1-2
                        pixels short where the width isn't on that grid (1280x720: 1278), and Turok 3's cutscene bars let
                        the scene through the window's last two columns. Every build
-rt64 428fb6d           the RAM of the framebuffer a VI shows changed to what render to RAM copied into it is no present
+rt64 32e204c           the RAM of the framebuffer a VI shows changed to what render to RAM copied into it is no present
                        and no frame of its own (VIHistory::pushFactor), as with render to RAM off: Turok 2's second list
                        a frame draws into the framebuffer already shown, and its exact copy, landing a VI after the
                        swap, made each game frame two, the second of one VI, so RT64 timed its levels at 30 as 60 and

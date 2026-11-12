@@ -707,6 +707,27 @@ the new, 10.7 MB on disk, and its visits stayed cold until Chrome trimmed it: co
 third open for 5 minutes, in which it fell to 5.3 MB, then 0.7 and 0.4 s. A rebuild with the same WGSL still added 59
 entries and took 2.0 s once. The page shows its indicator only after a second, so a warm visit shows nothing.
 
+## Compute pipelines built at their first dispatch
+
+Dinosaur Planet's page lost 1,700-7,200 sound frames (35-150 ms) at its boot's Nintendo and Rareware logos in Chrome on
+a profile's first visit, and none on the next (an RTX 5080, 3840x2000 uncapped; plays.jsonl). A Chrome trace with
+Dawn's categories (`play_page.mjs --chrome-trace`) showed the GPU process's main thread compiling a compute pipeline in
+line, `APICreateComputePipeline` with its DXC compile, for 53 and 94 ms at the game's first frames and 125 and 64 ms at
+the second logo, the page's queue held behind it. plume made a compute pipeline at its first dispatch, with
+createComputePipeline: RT64's fbReadAnyFull at the launcher, textureDecode and fbWriteColor at the first frames, and
+rspProcess and rspWorld at the first 3D. The game keeps render to RAM's exact copy, whose readback waited behind them,
+so its graphics task ended late, its scheduler started no audio task for 152 ms, and the worklet's ring ran dry.
+
+plume-web e69d031 builds each in the background with createComputePipelineAsync when RT64 creates it, for the layout
+its sets resolve to with every binding bound, the set layouts giving the buffers' types and the WGSL's declarations
+the textures' and samplers'. A layout's visibility is each binding's stages over every shader made so far, so shaders
+made after the pipelines changed it, and fbWriteColor and rspWorld were still built in line until a new binding stage
+built every compute pipeline again. fbReadAnyFull is still built at its dispatch, at the launcher, where nothing
+plays: RT64 leaves one of its set's bindings unbound. Debug builds' boots (the logos, the same plan, a host shared with
+another card's plays): 3,061 frames short before, 360 and 49 after, those in the game's first second, where every
+build, either way, has three frames of 130-140 ms. A release build's A/B against the page Pages served: 3,642
+frames short there, 617 (13 ms) in the build, all in the game's first 3 s.
+
 ## What the prebuilt lists miss
 
 Each list was recorded from a plan that reaches a level's start and plays a few seconds of it (its header says what
@@ -1614,7 +1635,7 @@ The copy was counted as a frame of its own. Turok 2 draws each frame in two list
 VI already shows, and that list's exact copy lands in its RAM a VI after the swap. RT64 takes a change to the shown
 framebuffer's RAM with no swap for a frame the CPU drew: it queued a second present of it (`?frame-log`: two `PQ` lines
 a game frame, the old framebuffer's and the new one's) and counted the VIs since the swap as a frame of one
-(`pushFactor`), so every game frame read as two of one VI and logicalRateFromFactors() said 60. rt64 428fb6d leaves a
+(`pushFactor`), so every game frame read as two of one VI and logicalRateFromFactors() said 60. rt64 32e204c leaves a
 change to what render to RAM wrote out of both, as with the copy off: Turok 2 at d8f0446 (the exact copy) then read 30
 in its levels, one present a game frame, 53-56 frames drawn a second against 30.2 (set `r2r-screen-copy`). Played from
 Pages at the display's rate with `?present-stats` (set `r2r-rate-survey`), the other pages that keep the exact copy
