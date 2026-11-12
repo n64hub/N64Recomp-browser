@@ -874,6 +874,13 @@ a6eca00                thread looked a row before it, found none for Turok 2's h
                        FramebufferManager::shownAddress() is the one lookup, for the present, its skip-buffering
                        history, early presents, the CPU's writes to the shown framebuffer and the workload queue. The
                        present's is taken on a line after the one Jet Force Gemini's rt64 patch has as context
+rt64 9b14961,          the present holds the workload mutex while it uses an interpolated frame's own target (without
+b1d62e4                MSAA, or with one frame), as for a frame with none interpolated, and lets it go once that frame
+                       is drawn, before it waits for an interpolated one: unheld, the workload thread's
+                       RenderTarget::resize() freed the textures the present had just taken, and Turok 1's page stopped
+                       once in Firefox on 'indirect call to null' in plume::DTTexture::get() as its game was let go
+                       after the boot shaders. Taken off the lines Jet Force Gemini's rt64 patch and Pokémon Snap's
+                       rt64 change, so theirs apply as they are. Every build
 N64Recomp d6441f7,     RECOMP_KUSEG_WINDOW, for a recomp whose code runs from TLB-mapped (KUSEG) addresses and
 N64ModernRuntime       reads its strings, tables and constants through them (the Turok games, from 0x00200400): on the
 007b675                web its loads and stores and TO_PTR map KUSEG's first 16 MB into a window librecomp allocates

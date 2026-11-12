@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web a6eca007ec6c11e94bde13f0563b24e87b63c144
+rt64: https://github.com/n64hub/rt64-web b1d62e4ab2b59cdc51cf357bfeae70803b0f9c36
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3067,7 +3067,7 @@ index e1889e5..3a6cb10 100644
  };
 \ No newline at end of file
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index 3227ab1..0fbd0bd 100644
+index 3227ab1..3ea827e 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -7,6 +7,10 @@
@@ -3157,7 +3157,25 @@ index 3227ab1..0fbd0bd 100644
                                  presentFb = colorFb;
                                  break;
                              }
-@@ -271,6 +310,7 @@ namespace RT64 {
+@@ -187,6 +226,17 @@ namespace RT64 {
+                 }
+ 
+                 if (presentFb->interpolationEnabled) {
++                    // The workload thread resizes the manager's targets as it draws (RenderTarget::resize() frees their
++                    // textures), so where this frame's own target is the first one drawn (without MSAA, or with nothing
++                    // interpolated) it is held as for a frame with none interpolated, and let go once that frame is drawn,
++                    // before an interpolated frame is waited for, which that thread draws holding it. Unheld, a resize as
++                    // Turok's page let its game go after the boot shaders freed the textures the present had just taken,
++                    // and Firefox stopped on a call through the freed texture's wrapper.
++                    if ((frameCounters.count == 1) || (!usingMSAA && (frameCounters.count > 1))) {
++                        lockedWorkloadMutex = true;
++                        ext.sharedResources->workloadMutex.lock();
++                    }
++
+                     framesToPresent = frameCounters.count;
+                 }
+                 else {
+@@ -271,6 +321,7 @@ namespace RT64 {
              if ((framesToPresent > 1) && (usingMSAA || (i > 0))) {
                  // Stall until the interpolated color target is available.
                  const uint32_t targetIndex = usingMSAA ? i : (i - 1);
@@ -3165,7 +3183,7 @@ index 3227ab1..0fbd0bd 100644
                  std::unique_lock<std::mutex> interpolatedLock(ext.sharedResources->interpolatedMutex);
                  ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
                      return (frameCounters.available > targetIndex) || ((frameCounters.available == targetIndex) && frameCounters.skipped);
-@@ -287,7 +327,8 @@ namespace RT64 {
+@@ -287,7 +338,8 @@ namespace RT64 {
  
                  if (i < framesToPresent) {
                      uint32_t targetIndex = usingMSAA ? i : (i - 1);
@@ -3175,7 +3193,7 @@ index 3227ab1..0fbd0bd 100644
                  }
                  else {
                      colorTarget = nullptr;
-@@ -299,7 +340,9 @@ namespace RT64 {
+@@ -299,7 +351,9 @@ namespace RT64 {
  
              uint32_t swapChainIndex = 0;
              const bool presentFrame = (i < framesToPresent) && swapChainValid;
@@ -3185,7 +3203,7 @@ index 3227ab1..0fbd0bd 100644
                  swapChainValid = ext.swapChain->acquireTexture(acquiredSemaphore.get(), &swapChainIndex);
              }
  
-@@ -369,6 +412,7 @@ namespace RT64 {
+@@ -369,6 +423,7 @@ namespace RT64 {
                  }
              }
  
@@ -3193,7 +3211,7 @@ index 3227ab1..0fbd0bd 100644
              if (lockedWorkloadMutex) {
                  ext.sharedResources->workloadMutex.unlock();
                  lockedWorkloadMutex = false;
-@@ -391,19 +435,67 @@ namespace RT64 {
+@@ -391,19 +446,67 @@ namespace RT64 {
              if (presentFrame && swapChainValid) {
                  // Wait until the approximate time the next present should be at the current intended rate.
                  if ((presentTimestamp != Timestamp()) && (targetRate > 0) && (targetRate > viOriginalRate)) {
@@ -3261,7 +3279,7 @@ index 3227ab1..0fbd0bd 100644
      }
  
      void PresentQueue::skipInterpolation() {
-@@ -416,6 +508,205 @@ namespace RT64 {
+@@ -416,6 +519,205 @@ namespace RT64 {
          ext.sharedResources->interpolatedCondition.notify_all();
      }
  
@@ -3467,7 +3485,7 @@ index 3227ab1..0fbd0bd 100644
      void PresentQueue::notifyPresentId(const Present &present) {
          {
              std::scoped_lock<std::mutex> cursorLock(presentIdMutex);
-@@ -446,12 +737,15 @@ namespace RT64 {
+@@ -446,12 +748,15 @@ namespace RT64 {
  
          int processCursor = -1;
          bool skipPresent = false;
@@ -3483,7 +3501,7 @@ index 3227ab1..0fbd0bd 100644
                  cursorCondition.wait(cursorLock, [&]() {
                      return (writeCursor != threadCursor) || !presentThreadRunning;
                  });
-@@ -459,7 +753,23 @@ namespace RT64 {
+@@ -459,7 +764,23 @@ namespace RT64 {
                  if (presentThreadRunning) {
                      processCursor = threadCursor;
                      threadCursor = (threadCursor + 1) % presents.size();
@@ -3508,7 +3526,7 @@ index 3227ab1..0fbd0bd 100644
                  }
              }
  
-@@ -501,15 +811,49 @@ namespace RT64 {
+@@ -501,15 +822,49 @@ namespace RT64 {
                      }
                  }
  
