@@ -2,7 +2,8 @@
 
 What a recomp's code and RT64 need to run as a page: WebGPU and the shaders, prebuilt shader lists, building with
 Emscripten, and mods. Read it before porting a game or changing a fork; the README's Using it in a recomp has the steps
-a port takes, `docs/game-forks.md` what each port found, and `docs/findings.md` the measurements.
+a port takes, `docs/new-recomp.md`'s web port list what a page is checked for before it is called done,
+`docs/game-forks.md` what each port found, and `docs/findings.md` the measurements.
 
 ## WebGPU and the shaders
 
