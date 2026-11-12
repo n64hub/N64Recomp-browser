@@ -79,7 +79,9 @@ page's plan checks it with stand-in pads (`tools/gamepad_probe.js`'s `plugPads`)
   clock, and time spent in the launcher before Start Game doesn't reach the game's clock (an attract demo that skips
   ahead, a game that runs fast for a while). Checked by waiting two minutes in the launcher first, and below full speed.
 - No sound lost or turned to noise: through the boot (none short in the first 10 s on the page), a window dragged, a
-  tab hidden and shown again.
+  tab hidden and shown again. On Windows a drag holds the window's thread in the move loop that a `WM_SYSCOMMAND`
+  `SC_MOVE` posted to the window starts as well, which a script holds and ends (Escape) without the mouse, and SDL's
+  disk driver (`SDL_AUDIODRIVER=disk`, `SDL_DISKAUDIOFILE`) records what the game played, its gaps as runs of zeros.
 
 ## 7. The page
 
