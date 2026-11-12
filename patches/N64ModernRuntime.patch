@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 2fe2d6eaf410e2b75a18999d7ac82d4463b9a1d3
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 6264916528648d60bf91be4009b4c6334879c85a
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -1064,7 +1064,7 @@ index d60c4ec..7f9c814 100644
  
          std::string get_graphics_api_name(GraphicsApi api);
 diff --git a/ultramodern/include/ultramodern/rsp.hpp b/ultramodern/include/ultramodern/rsp.hpp
-index dda1b08..9702d70 100644
+index dda1b08..610483d 100644
 --- a/ultramodern/include/ultramodern/rsp.hpp
 +++ b/ultramodern/include/ultramodern/rsp.hpp
 @@ -23,6 +23,29 @@ namespace ultramodern {
@@ -1080,8 +1080,8 @@ index dda1b08..9702d70 100644
 +        // now (rsp.cpp says why); otherwise nothing.
 +        void yield_asked();
 +
-+        // Whether the graphics task the renderer takes still needs its RSP done sent, and if so takes it as sent: not
-+        // where yield_asked sent it already. Always true where ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS is off.
++        // Whether the graphics task the renderer takes still needs its RSP done sent (false where yield_asked sent it
++        // already), counting it as sent. Always true where ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS is off.
 +        bool graphics_sp_due();
 +
 +        // The data of the task the RSP is running (its OSTask's data_ptr and data_size) as the game submitted it, where
@@ -1703,7 +1703,7 @@ index a6af900..2921365 100644
  std::unique_ptr<ultramodern::renderer::RendererContext> ultramodern::renderer::create_render_context(uint8_t* rdram, WindowHandle window_handle, bool developer_mode) {
      if (render_callbacks.create_render_context == nullptr) {
 diff --git a/ultramodern/src/rsp.cpp b/ultramodern/src/rsp.cpp
-index 1594304..6653b6f 100644
+index 1594304..9aff03c 100644
 --- a/ultramodern/src/rsp.cpp
 +++ b/ultramodern/src/rsp.cpp
 @@ -3,8 +3,21 @@
@@ -1711,7 +1711,7 @@ index 1594304..6653b6f 100644
  #include "ultramodern/rsp.hpp"
  
 +#if ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS
-+#include <atomic>
++#include <mutex>
 +#endif
 +
 +#if ULTRAMODERN_RSP_TASKS_COPIED
@@ -1728,7 +1728,7 @@ index 1594304..6653b6f 100644
  void ultramodern::rsp::set_callbacks(const callbacks_t& callbacks) {
      rsp_callbacks = callbacks;
  }
-@@ -15,8 +28,128 @@ void ultramodern::rsp::init() {
+@@ -15,8 +28,145 @@ void ultramodern::rsp::init() {
      }
  }
  
@@ -1774,24 +1774,40 @@ index 1594304..6653b6f 100644
 +// events.cpp's: sends the game the RSP's done.
 +void sp_complete();
 +
-+// Graphics tasks started whose RSP done hasn't gone yet.
-+static std::atomic<uint32_t> graphics_sp_owed{ 0 };
++// Counted together, under the mutex: a graphics task the graphics thread takes either sends its RSP done or finds it
++// sent by yield_asked, never both. A task a game starts without task_submitted (its own osSpTaskStartGo) isn't counted,
++// so a yield asked of it is ignored, as it was.
++static struct {
++    std::mutex mutex;
++    // Graphics tasks started whose RSP done hasn't gone yet.
++    uint32_t owed = 0;
++    // RSP dones yield_asked sent for tasks the graphics thread hasn't taken yet.
++    uint32_t sent_early = 0;
++} graphics_sp;
 +
 +bool ultramodern::rsp::graphics_sp_due() {
-+    uint32_t owed = graphics_sp_owed.load();
-+    while (owed > 0) {
-+        if (graphics_sp_owed.compare_exchange_weak(owed, owed - 1)) {
-+            return true;
-+        }
++    std::lock_guard lock{ graphics_sp.mutex };
++    if (graphics_sp.sent_early > 0) {
++        graphics_sp.sent_early--;
++        return false;
++    }
++    if (graphics_sp.owed > 0) {
++        graphics_sp.owed--;
 +    }
 +
-+    return false;
++    return true;
 +}
 +
 +void ultramodern::rsp::yield_asked() {
-+    if (graphics_sp_due()) {
-+        sp_complete();
++    // Sent under the mutex, so the graphics thread can't take the task and send its RDP's done first. sp_complete takes
++    // only the events' message mutex, which the graphics thread doesn't hold as it asks graphics_sp_due.
++    std::lock_guard lock{ graphics_sp.mutex };
++    if (graphics_sp.owed == 0) {
++        return;
 +    }
++    graphics_sp.owed--;
++    graphics_sp.sent_early++;
++    sp_complete();
 +}
 +#else
 +bool ultramodern::rsp::graphics_sp_due() {
@@ -1806,7 +1822,8 @@ index 1594304..6653b6f 100644
 +#if ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS
 +    // Counted before the graphics thread can take it (submit_rsp_task comes after)
 +    if (TO_PTR(OSTask, task_)->t.type == M_GFXTASK) {
-+        graphics_sp_owed++;
++        std::lock_guard lock{ graphics_sp.mutex };
++        graphics_sp.owed++;
 +    }
 +#endif
 +#if ULTRAMODERN_RSP_TASKS_COPIED

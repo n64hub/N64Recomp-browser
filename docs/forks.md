@@ -909,7 +909,7 @@ rt64 dea05ba           a coordinate with an extended origin on the right half (a
                        the scene through the window's last two columns. Every build
 N64ModernRuntime       ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS: a yield the game asks of a graphics task still queued
 684377c 82f39c1        for the renderer sends the task's RSP done at once, and the graphics thread sends none as it
-2fe2d6e                takes the task. Ignored, a yield went unanswered until the renderer got to the task, and Beetle
+2fe2d6e 6264916        takes the task. Ignored, a yield went unanswered until the renderer got to the task, and Beetle
                        Adventure Racing's scheduler took one unanswered at the next VI for a hung RSP and sent itself
                        the RSP's and RDP's done: lists counted done before RT64 read them, RT64 ran from one into data
                        loaded since until the page ran out of memory, or the scheduler's thread queues broke. With
