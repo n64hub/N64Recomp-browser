@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web f5afe593669d7042fb1e4f5f6cbef5d4abf79ed0
+rt64: https://github.com/n64hub/rt64-web a6eca007ec6c11e94bde13f0563b24e87b63c144
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3067,7 +3067,7 @@ index e1889e5..3a6cb10 100644
  };
 \ No newline at end of file
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index 3227ab1..4bc2f85 100644
+index 3227ab1..0fbd0bd 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -7,6 +7,10 @@
@@ -3136,16 +3136,19 @@ index 3227ab1..4bc2f85 100644
  
          // TODO: There's a possible race condition interactions that can happen while the workload
          // queue is rendering extra frames and the present event is processed while it's generating
-@@ -141,7 +175,7 @@ namespace RT64 {
-         if (present.screenVI.visible()) {
+@@ -142,6 +176,11 @@ namespace RT64 {
              Framebuffer *viFb = nullptr;
              if (!viewRDRAM) {
--                viFb = fbManager.find(present.screenVI.fbAddress());
-+                viFb = fbManager.find(fbManager.shownAddress(present.screenVI));
+                 viFb = fbManager.find(present.screenVI.fbAddress());
++
++                // Where the estimate a row before the origin finds none, the framebuffer at the origin is the one shown
++                // (FramebufferManager::shownAddress()). Taken on a line of its own, off the one Jet Force Gemini's page
++                // patches around.
++                viFb = (viFb != nullptr) ? viFb : fbManager.find(fbManager.shownAddress(present.screenVI));
              }
  
              Framebuffer *presentFb = viFb;
-@@ -170,7 +204,7 @@ namespace RT64 {
+@@ -170,7 +209,7 @@ namespace RT64 {
                      if (!present.debuggerFramebuffer.view && (presentationMode == EnhancementConfiguration::Presentation::Mode::SkipBuffering)) {
                          for (size_t h = 0; h < viHistory.history.size(); h++) {
                              const VIHistory::Present &entry = viHistory.history[h];
@@ -3154,7 +3157,7 @@ index 3227ab1..4bc2f85 100644
                                  presentFb = colorFb;
                                  break;
                              }
-@@ -271,6 +305,7 @@ namespace RT64 {
+@@ -271,6 +310,7 @@ namespace RT64 {
              if ((framesToPresent > 1) && (usingMSAA || (i > 0))) {
                  // Stall until the interpolated color target is available.
                  const uint32_t targetIndex = usingMSAA ? i : (i - 1);
@@ -3162,7 +3165,7 @@ index 3227ab1..4bc2f85 100644
                  std::unique_lock<std::mutex> interpolatedLock(ext.sharedResources->interpolatedMutex);
                  ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
                      return (frameCounters.available > targetIndex) || ((frameCounters.available == targetIndex) && frameCounters.skipped);
-@@ -287,7 +322,8 @@ namespace RT64 {
+@@ -287,7 +327,8 @@ namespace RT64 {
  
                  if (i < framesToPresent) {
                      uint32_t targetIndex = usingMSAA ? i : (i - 1);
@@ -3172,7 +3175,7 @@ index 3227ab1..4bc2f85 100644
                  }
                  else {
                      colorTarget = nullptr;
-@@ -299,7 +335,9 @@ namespace RT64 {
+@@ -299,7 +340,9 @@ namespace RT64 {
  
              uint32_t swapChainIndex = 0;
              const bool presentFrame = (i < framesToPresent) && swapChainValid;
@@ -3182,7 +3185,7 @@ index 3227ab1..4bc2f85 100644
                  swapChainValid = ext.swapChain->acquireTexture(acquiredSemaphore.get(), &swapChainIndex);
              }
  
-@@ -369,6 +407,7 @@ namespace RT64 {
+@@ -369,6 +412,7 @@ namespace RT64 {
                  }
              }
  
@@ -3190,7 +3193,7 @@ index 3227ab1..4bc2f85 100644
              if (lockedWorkloadMutex) {
                  ext.sharedResources->workloadMutex.unlock();
                  lockedWorkloadMutex = false;
-@@ -391,19 +430,67 @@ namespace RT64 {
+@@ -391,19 +435,67 @@ namespace RT64 {
              if (presentFrame && swapChainValid) {
                  // Wait until the approximate time the next present should be at the current intended rate.
                  if ((presentTimestamp != Timestamp()) && (targetRate > 0) && (targetRate > viOriginalRate)) {
@@ -3224,11 +3227,11 @@ index 3227ab1..4bc2f85 100644
 +#               else
                      Timer::preciseSleepUntil(presentTimestamp + std::chrono::nanoseconds(1'000'000'000 / targetRate));
 +#               endif
-                 }
++                }
 +#           if defined(__EMSCRIPTEN__)
 +                else {
 +                    presentSlot = Timestamp();
-+                }
+                 }
 +#           endif
  
                  if (presentWaitEnabled) {
@@ -3258,7 +3261,7 @@ index 3227ab1..4bc2f85 100644
      }
  
      void PresentQueue::skipInterpolation() {
-@@ -416,6 +503,205 @@ namespace RT64 {
+@@ -416,6 +508,205 @@ namespace RT64 {
          ext.sharedResources->interpolatedCondition.notify_all();
      }
  
@@ -3464,7 +3467,7 @@ index 3227ab1..4bc2f85 100644
      void PresentQueue::notifyPresentId(const Present &present) {
          {
              std::scoped_lock<std::mutex> cursorLock(presentIdMutex);
-@@ -446,12 +732,15 @@ namespace RT64 {
+@@ -446,12 +737,15 @@ namespace RT64 {
  
          int processCursor = -1;
          bool skipPresent = false;
@@ -3480,7 +3483,7 @@ index 3227ab1..4bc2f85 100644
                  cursorCondition.wait(cursorLock, [&]() {
                      return (writeCursor != threadCursor) || !presentThreadRunning;
                  });
-@@ -459,7 +748,23 @@ namespace RT64 {
+@@ -459,7 +753,23 @@ namespace RT64 {
                  if (presentThreadRunning) {
                      processCursor = threadCursor;
                      threadCursor = (threadCursor + 1) % presents.size();
@@ -3505,7 +3508,7 @@ index 3227ab1..4bc2f85 100644
                  }
              }
  
-@@ -501,15 +806,49 @@ namespace RT64 {
+@@ -501,15 +811,49 @@ namespace RT64 {
                      }
                  }
  
