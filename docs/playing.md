@@ -49,9 +49,10 @@ options; `docs/findings.md` has what was measured this way.
   takes. A plan that goes on to more levels in one load makes each level's start one too, checking in RDRAM that the
   level it asked for is the one playing: Pilotwings 64's gyrocopter test didn't end when its results were pressed, so
   the next test's start found a vehicle flying, resolved at once, and the gyrocopter flew on for minutes.
-- Load ROM waits for the shader list Chrome builds behind the launcher (an `until` on `RT64: all <n> prebuilt shaders
-  built`, or on Firefox's line that it builds none there): a click while it builds can be lost (docs/findings.md,
-  Behind CLAUDE.md's rules).
+- Load ROM waits for the shader list Chrome builds behind the launcher: a click while it builds can be lost
+  (docs/findings.md, Behind CLAUDE.md's rules). `page_driver.mjs`'s rom step waits for `RT64: all <n> prebuilt shaders
+  built` itself before it presses, in every plan, so a plan's own `until` on it (or on Firefox's line that it builds
+  none there) only times its other steps.
 - A level the survey starts may crash when it ends: the screens after it read what the menus before it would have set
   up. So a plan that starts one keeps the player alive for as long as it plays (GoldenEye's `setInvincible()`): a
   GoldenEye play of Dam long enough for its guards to kill Bond stopped on the Mission Failed screen in Chrome and
