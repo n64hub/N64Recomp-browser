@@ -1289,7 +1289,12 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   and gets the frame. Jet Force Gemini's CPU reworks its shadows' render targets once the RDP has drawn them, and with
   the copy late they came out blurred or as dots, so its page keeps the exact copy too. The console reports each write
   it kept, so a page run through a game's levels with the late copy says whether its CPU touches a framebuffer with one
-  pending. Through the device thread, the main thread checks a
+  pending. Turned off where nothing reads a frame, in Chrome (uncapped at 3840x2000, the page Pages serves against the
+  build, an interleaved pair, an RTX 2070): WWF No Mercy, whose frames are drawn in several tasks each, went from 226
+  presents a second to 268, Rogue Squadron (its fork's write-back off, with the late copy) from 273 to 301, and THPS2
+  from 330 to 335, within the noise. Space Station Silicon Valley's late copy measured no faster (148 against 167, with
+  Pages' own two plays at 178 and 157), so it keeps the exact copy, and Beetle Adventure Racing's never got from the
+  menus into a race (docs/game-forks.md). Through the device thread, the main thread checks a
   READBACK buffer at each replay and present once a copy into it is replayed, maps it when the browser has delivered
   the data, and publishes the answer, which `isMapReady()` reads and `map()` waits for without waiting behind the
   main thread's queue; a build without threads would need `-sJSPI` (or ASYNCIFY) to wait in place. A call that waits
