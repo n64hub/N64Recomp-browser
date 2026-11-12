@@ -68,6 +68,12 @@
 // Chrome holds an open picker's input only weakly, and a page whose picker held it no better (one built before
 // RecompFrontend-web's and frontend/file_picker.cpp's fix) lost it to a GC within seconds now and then: the file went
 // nowhere, no copy came, and the run failed a minute later at 'RDRAM not found'. In Chrome the step says so and fails.
+// And Chrome builds a page's prebuilt shader list behind its launcher (rt64's "RT64: <n> prebuilt shaders, <m> pipelines,
+// ... built behind the game once it draws", then "RT64: all <m> prebuilt shaders built"), where a click on Load ROM can
+// be lost (docs/findings.md, Behind CLAUDE.md's rules): F-Zero X's boot from Pages, whose plan pressed 3 s after the
+// device came, pressed three times into a build on a busy host, opened no picker and failed. So a rom step presses only
+// once a list building behind the launcher is built, waiting up to listBuiltMs and saying how long, whatever the plan
+// waits for. Firefox builds none there and says nothing that waits.
 //
 // page.stop(reason) ends a run where it is: the step it is in is left (a clock wait included, which on a game that has
 // stopped waits out its whole 5 times and 30 s), no step after it starts, and run() throws reason, as a step that failed
@@ -256,6 +262,9 @@ const evaluateMs = 30000;
 const stepMs = 600000;
 // How long a rom step waits for the launcher to store the ROM.
 const romStoredMs = 30000;
+// How long a rom step waits for the prebuilt shader list Chrome builds behind the launcher before it presses Load ROM
+// anyway (the header says why).
+const listBuiltMs = 120000;
 // The path of a file of size bytes in the page's file system, outside /tmp, /dev and /proc, or null; false with no FS.
 const storedFile = (size) => `(() => {
   if (typeof FS === 'undefined') return false;
@@ -430,7 +439,15 @@ export const open = async (browser, { profile, port, size = [1256, 645], executa
   profile = path.resolve(profile);
   const [width, height] = size;
   const waiters = new Set();
-  const line = (text) => { onLine(text); for (const waiter of waiters) waiter(text); };
+  // Resolved once no prebuilt shader list is building behind the launcher (the header says why a rom step waits for it).
+  let listBuilt = Promise.resolve(), listDone = () => {};
+  const line = (text) => {
+    const list = /RT64: \d+ prebuilt shaders, (\d+) pipelines, .*built behind the game/.exec(text);
+    if (list && Number(list[1]) > 0) listBuilt = new Promise((resolve) => { listDone = resolve; });
+    if (/RT64: all \d+ prebuilt shaders built/.test(text)) listDone();
+    onLine(text);
+    for (const waiter of waiters) waiter(text);
+  };
   let page;
   if (cpuThrottle && browser !== 'chrome') throw new Error('cpuThrottle is Chrome\'s only');
   // A debugging port another browser holds is refused, not shared: the browser started here would take the other
@@ -516,6 +533,14 @@ export const open = async (browser, { profile, port, size = [1256, 645], executa
         if (op === 'need' && (failed || value === false || value === null)) throw new Error(`${a[0]} gave ${JSON.stringify(value)}`);
       }
       else if (op === 'rom') {
+        const from = Date.now();
+        let timer;
+        const built = await Promise.race([listBuilt.then(() => true),
+          new Promise((resolve) => { timer = setTimeout(() => resolve(false), listBuiltMs); })]);
+        clearTimeout(timer);
+        const waited = ((Date.now() - from) / 1000).toFixed(1);
+        if (!built) log(`the prebuilt shader list was still building behind the launcher after ${waited} s: pressing Load ROM anyway`);
+        else if (waited !== '0.0') log(`Load ROM waited ${waited} s for the prebuilt shader list building behind the launcher`);
         await page.rom(typeof a[0] === 'string' ? async () => { await page.key('down', a); await page.key('up', a); }
           : async () => page.click(...await place(a[0], a[1])));
         const given = Date.now(), size = (fs.statSync(rom).size + 3) & ~3;
@@ -731,10 +756,16 @@ if ($w) { ${place} | Out-Null; 'moved' }`;
     (err, stdout) => resolve(!err && stdout.includes('moved')));
 });
 
+// How long Firefox may take to give its tab a browsing context, and to answer a navigate.
+const contextMs = 60000;
+
 const openFirefox = async ({ profile, port, width, height, executable, rom, preload, onScreen, uncapped, scale, firefoxPrefs, affinity, line }) => {
   // No first-run pages or crash restore, scale device pixels a CSS pixel (but on screen), sound allowed to start without a click
-  // but silent.
+  // but silent. The first tab stays on about:blank: Firefox 160 opened a fresh profile on about:home whatever its command
+  // line asked, a privileged page BiDi's setViewport refuses ("does not support browsing contexts in privileged
+  // scope"), so every page played at the window's size, not the one asked for.
   const prefs = { 'browser.shell.checkDefaultBrowser': false, 'datareporting.policy.dataSubmissionEnabled': false,
+    'browser.startup.page': 0, 'browser.startup.homepage': 'about:blank', 'browser.startup.homepage_override.mstone': 'ignore',
     'browser.aboutwelcome.enabled': false, 'app.update.auto': false, 'browser.sessionstore.resume_from_crash': false,
     'dom.webgpu.enabled': true, 'media.volume_scale': '0.0', ...(onScreen ? {} : { 'layout.css.devPixelsPerPx': scale.toFixed(1) }),
     'media.autoplay.default': 0, 'media.autoplay.blocking_policy': 0, 'layout.frame_rate': uncapped ? firefoxUncappedRate : -1, ...firefoxPrefs };
@@ -763,10 +794,22 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
   if (!send) throw new Error('Firefox never answered on its debugging port');
   await send('session.new', { capabilities: {} });
   await send('session.subscribe', { events: ['log.entryAdded'] });
-  const context = (await send('browsingContext.getTree', {})).result.contexts[0].context;
+  // The first tab's browsing context. On a host whose every core was busy (builds beside a smoke play), getTree
+  // answered before the tab's browser had one, with a context of null: setViewport then said 'At least one of "context"
+  // or "userContexts" arguments should be provided', the navigate went nowhere, and the run failed a minute later at its
+  // first evaluate, "No context or realm provided". So it asks again until the tab has one.
+  let context = null;
+  for (const from = Date.now(); !context; await sleep(200)) {
+    const tree = await send('browsingContext.getTree', { maxDepth: 0 }, undefined, contextMs);
+    context = tree.result?.contexts?.[0]?.context ?? null;
+    if (!context && Date.now() - from > contextMs) throw new Error(`Firefox gave its tab no browsing context in ${contextMs / 1000} s`);
+  }
   if (process.platform === 'win32' && !await moveWindow('firefox.exe', profile, onScreen ? 0 : width, height)) line('page_driver: Firefox window not moved');
   if (!onScreen) {
-    const viewport = await send('browsingContext.setViewport', { context, viewport: { width, height }, devicePixelRatio: scale });
+    // At most 10 s: Firefox 160 sizes the viewport at once but has left the call unanswered in a window it doesn't
+    // paint, and play_page.mjs reads the viewport the page got anyway.
+    const viewport = await send('browsingContext.setViewport', { context, viewport: { width, height }, devicePixelRatio: scale }, undefined, 10000)
+      .catch((e) => ({ error: e.message }));
     if (viewport.error) line(`page_driver: viewport not set: ${viewport.message ?? viewport.error}`);
   }
   if (preload) await send('script.addPreloadScript', { functionDeclaration: preload });
@@ -824,7 +867,12 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
         if (r.result?.type === 'exception') throw new Error(r.result.exceptionDetails.text);
       },
     },
-    navigate: (url) => send('browsingContext.navigate', { context, url, wait: 'none' }),
+    // An error the browser answers with fails the run there, and so does no answer in contextMs: a navigate Firefox
+    // never answered would hold the play until its turn's limit, with no line from the page to say where it stood.
+    navigate: async (url) => {
+      const r = await send('browsingContext.navigate', { context, url, wait: 'none' }, undefined, contextMs);
+      if (r.error) throw new Error(`navigate: ${r.message ?? r.error}`);
+    },
     evaluate,
     click,
     key: (upDown, [code, key, keyCode]) => evaluate(`window.dispatchEvent(new KeyboardEvent('key${upDown}',

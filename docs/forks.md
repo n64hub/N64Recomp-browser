@@ -552,11 +552,14 @@ rt64 bce5e11           RT64_GAME_FRAME_WORKLOADS, in place of 179adb8's RT64_OFF
                        interpolate (246.1 and 238.9). A scene stays in one workload, as matching reads it through
                        that workload's maps alone; the frame's rate is read through upstream's own lines, beside which
                        Conker's own rt64 change sits
-rt64 997f61f,          with Emscripten, the VI's viewport into the swap chain has its edges on whole pixels: a target
+rt64 997f61f,          the VI's viewport into the swap chain has its edges on whole pixels, on every build: a target
 rt64 83d4be7,          rounded up to whole pixels (Auto's 1708x960 at a 1600x900 canvas under Expand) letterboxed the
-rt64 46f182f           picture by a third of a pixel, and Chrome's WebGPU drew no row past the viewport's last whole
-                       one, so the canvas's last row stayed black; 83d4be7 rounds in fromHDtoWindow and 46f182f with
-                       roundf and no include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change
+rt64 46f182f,          picture by a third of a pixel, and D3D12 drew no row past the viewport's last whole one, in
+rt64 7d5de03           Chrome's WebGPU and natively, so a canvas's or a desktop window's last row stayed black (Turok
+                       2's at 1920x1000 under Expand); 83d4be7 rounds in fromHDtoWindow and 46f182f with roundf and no
+                       include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change, and 7d5de03 on
+                       every build, where 997f61f did it with Emscripten only (7d5de03 has b1d62e4's message by
+                       mistake: its own is the empty fedf39f's, after it)
 rt64 d64a926           RT64_GAME_FRAME_WORKLOADS's frames drawn whole: a workload that draws nothing isn't an offscreen
                        pass, a shown framebuffer is any of the VI's last eight different ones (not viHistory's last
                        three VIs, which miss a third framebuffer shown now and then) and the queue holds 32, so a frame
@@ -868,6 +871,19 @@ ce2e0d3, 2516769       row before it (VI::fbAddress()'s estimate, libultra's mod
                        frames shown as one, 7.5 a second with all its shaders built (always on with Emscripten). Taken
                        where it is used, off the lines Jet Force Gemini's and DKR-R's rt64 patches change, so theirs
                        apply as they are
+rt64 f5afe59,          the framebuffer at a VI's origin (d49a689) is the one presented too, on every build: the present
+a6eca00                thread looked a row before it, found none for Turok 2's high resolution modes and Turok 3's, and
+                       showed the VI's RAM at 1x, never wider than 4:3, with nothing interpolated or skipped to.
+                       FramebufferManager::shownAddress() is the one lookup, for the present, its skip-buffering
+                       history, early presents, the CPU's writes to the shown framebuffer and the workload queue. The
+                       present's is taken on a line after the one Jet Force Gemini's rt64 patch has as context
+rt64 9b14961,          the present holds the workload mutex while it uses an interpolated frame's own target (without
+b1d62e4                MSAA, or with one frame), as for a frame with none interpolated, and lets it go once that frame
+                       is drawn, before it waits for an interpolated one: unheld, the workload thread's
+                       RenderTarget::resize() freed the textures the present had just taken, and Turok 1's page stopped
+                       once in Firefox on 'indirect call to null' in plume::DTTexture::get() as its game was let go
+                       after the boot shaders. Taken off the lines Jet Force Gemini's rt64 patch and Pokémon Snap's
+                       rt64 change, so theirs apply as they are. Every build
 N64Recomp d6441f7,     RECOMP_KUSEG_WINDOW, for a recomp whose code runs from TLB-mapped (KUSEG) addresses and
 N64ModernRuntime       reads its strings, tables and constants through them (the Turok games, from 0x00200400): on the
 007b675                web its loads and stores and TO_PTR map KUSEG's first 16 MB into a window librecomp allocates
