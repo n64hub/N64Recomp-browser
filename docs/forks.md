@@ -908,7 +908,7 @@ rt64 dea05ba           a coordinate with an extended origin on the right half (a
                        pixels short where the width isn't on that grid (1280x720: 1278), and Turok 3's cutscene bars let
                        the scene through the window's last two columns. Every build
 N64ModernRuntime       ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS: a yield the game asks of a graphics task still queued
-684377c 82f39c1        for the renderer sends the task's RSP done at once, and the graphics thread sends none as it
+684377c 82f39c1 2fe2d6e for the renderer sends the task's RSP done at once, and the graphics thread sends none as it
                        takes the task. Ignored, a yield went unanswered until the renderer got to the task, and Beetle
                        Adventure Racing's scheduler took one unanswered at the next VI for a hung RSP and sent itself
                        the RSP's and RDP's done: lists counted done before RT64 read them, RT64 ran from one into data
