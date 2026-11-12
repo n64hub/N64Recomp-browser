@@ -552,11 +552,14 @@ rt64 bce5e11           RT64_GAME_FRAME_WORKLOADS, in place of 179adb8's RT64_OFF
                        interpolate (246.1 and 238.9). A scene stays in one workload, as matching reads it through
                        that workload's maps alone; the frame's rate is read through upstream's own lines, beside which
                        Conker's own rt64 change sits
-rt64 997f61f,          with Emscripten, the VI's viewport into the swap chain has its edges on whole pixels: a target
+rt64 997f61f,          the VI's viewport into the swap chain has its edges on whole pixels, on every build: a target
 rt64 83d4be7,          rounded up to whole pixels (Auto's 1708x960 at a 1600x900 canvas under Expand) letterboxed the
-rt64 46f182f           picture by a third of a pixel, and Chrome's WebGPU drew no row past the viewport's last whole
-                       one, so the canvas's last row stayed black; 83d4be7 rounds in fromHDtoWindow and 46f182f with
-                       roundf and no include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change
+rt64 46f182f,          picture by a third of a pixel, and D3D12 drew no row past the viewport's last whole one, in
+rt64 7d5de03           Chrome's WebGPU and natively, so a canvas's or a desktop window's last row stayed black (Turok
+                       2's at 1920x1000 under Expand); 83d4be7 rounds in fromHDtoWindow and 46f182f with roundf and no
+                       include, out of the lines Wave Race's and Pokémon Snap's own rt64 changes change, and 7d5de03 on
+                       every build, where 997f61f did it with Emscripten only (7d5de03 has b1d62e4's message by
+                       mistake: its own is the empty fedf39f's, after it)
 rt64 d64a926           RT64_GAME_FRAME_WORKLOADS's frames drawn whole: a workload that draws nothing isn't an offscreen
                        pass, a shown framebuffer is any of the VI's last eight different ones (not viHistory's last
                        three VIs, which miss a third framebuffer shown now and then) and the queue holds 32, so a frame
