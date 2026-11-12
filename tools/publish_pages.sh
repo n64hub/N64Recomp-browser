@@ -208,7 +208,7 @@ browser_at() {
     # pin where it was, and the run built Pages' own bytes as the commit's.
     git -C $b fetch -q origin "$1"
     git -C $b checkout -q --detach FETCH_HEAD
-    git add $b
+    git add -f $b  # -f: a fork can ignore the folder its tracked pin sits in (THPS2-64Recomp-web, /lib/)
     git diff --cached --quiet || git -c user.name=publish_pages -c user.email=publish_pages@localhost commit -qm "N64Recomp-browser $1"
 }
 # unpatch / patched: the checkouts N64Recomp-browser patches go back to their commits when it moved since the last
