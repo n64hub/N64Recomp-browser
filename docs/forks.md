@@ -877,6 +877,16 @@ a6eca00                thread looked a row before it, found none for Turok 2's h
                        FramebufferManager::shownAddress() is the one lookup, for the present, its skip-buffering
                        history, early presents, the CPU's writes to the shown framebuffer and the workload queue. The
                        present's is taken on a line after the one Jet Force Gemini's rt64 patch has as context
+rt64 4343d10,          the VI shows the rows its framebuffer was drawn to, on every build: VI::fbSize() estimates the
+bf2d7fb, 9a263fb       height from the VI's lines, two rows more, to a multiple of four, and Turok 3's own VI mode
+                       (220.5 lines of a 284-wide framebuffer whose origin is its start) came to 224 where the game
+                       draws 222, so the present spread two rows never drawn over the window's bottom, 6 black rows of
+                       720 under Expand. FramebufferManager::shownSize() cuts the estimate to the most rows drawn since
+                       the framebuffer took its width and size, never below the VI's lines, and State::updateScreen()
+                       puts it on the VI it hands on (VI::shownHeight, which fbSize() returns), so the present and the
+                       workload's viFbSize (its resolution scale and aspect ratio) read it alike, off the lines the
+                       game ports' own rt64 patches change. A game that draws its framebuffer to the estimate keeps it
+                       (libultra's 320x240 modes)
 rt64 9b14961,          the present holds the workload mutex while it uses an interpolated frame's own target (without
 b1d62e4                MSAA, or with one frame), as for a frame with none interpolated, and lets it go once that frame
                        is drawn, before it waits for an interpolated one: unheld, the workload thread's
