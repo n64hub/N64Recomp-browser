@@ -26,6 +26,10 @@ a doc points at the other.
     rate, how the games compare. Read a game fork's part there and its own docs before changing it.
   - `docs/findings.md`: what has been measured, the numbers behind this file's rules included.
   - `docs/phones.md`: playing and measuring a page on an Android phone from a computer, and what phones do differently.
+  - `docs/new-recomp.md`: what a new recomp of the project's own is played and checked for before it is called done
+    (widescreen with the HUD at its sides, a graphics sweep past the first level, each controller its own port, and
+    what else turned up after games were called done). Read it before calling one done, and add to it what a game
+    turns up that the next one would too.
 
 This repo, the forks and the game forks are public. Write for a stranger, in the present tense: nothing about a
 contributor's machine, servers, host names, paths or accounts, no person's name, no history of renames or "until
