@@ -921,4 +921,10 @@ N64ModernRuntime       ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS: a yield the game 
                        the RSP's and RDP's done: lists counted done before RT64 read them, RT64 ran from one into data
                        loaded since until the page ran out of memory, or the scheduler's thread queues broke. With
                        render to RAM's late copy it came 33 times in a play, and the page never reached a race
+rt64 32e204c           the RAM of the framebuffer a VI shows changed to what render to RAM copied into it is no present
+                       and no frame of its own (VIHistory::pushFactor), as with render to RAM off: Turok 2's second list
+                       a frame draws into the framebuffer already shown, and its exact copy, landing a VI after the
+                       swap, made each game frame two, the second of one VI, so RT64 timed its levels at 30 as 60 and
+                       drew nothing between them (docs/findings.md, A game at 30, uncapped). Each framebuffer says
+                       whether its RAM hash is render to RAM's or the CPU's (Framebuffer::RAMHashCopied)
 ```
