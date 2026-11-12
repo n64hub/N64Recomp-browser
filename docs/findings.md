@@ -1703,6 +1703,18 @@ tasks each 10 s), the graphics tasks' SP completions came within 0.6 ms of their
 late are a busy host's. Firefox there stopped answering the driver 62-267 s into each of 8 plays of this page (A page
 that stops answering), so the page's own exit wasn't played on it.
 
+Beetle Adventure Racing's page threw "index out of bounds" from a worker now and then in Firefox in the menus, at the
+runtime's `do_send` on its first read of the queue: the scheduler's `_uvScDoneAud` sending an audio task's done
+message to a queue at 0. The game unloads its audio manager module three times on the way from the boot to a race,
+and the teardown frees the heap holding the audio task the scheduler still has; the next manager's init zeroes it, so
+a task retired after that reads its queue as 0. A debug page logged the scheduler still holding the task at every
+teardown (34, 36 and 63 s into the plan, queued for the next retrace each time), and holding each audio task's
+completion back 20 ms made every play crash at the first. On a console the RSP retires the task in about a
+millisecond, long before the module is loaded again; on a page the scheduler hears of it only at a game thread's next
+OS call, while the reload runs at the host's speed, so it lost the race on a busy host only. BeetleRecomp-web's fix
+waits, right after the teardown destroys the audio thread, until the scheduler holds no audio task (at most 250 ms;
+its `src/main/bar_audio_teardown.cpp`); the same 20 ms hold then played through to a race.
+
 ## A desktop build on WSL's GPU
 
 Mesa's Dozen (Vulkan over D3D12) gives a Docker container in WSL2 the Windows host's GPU through `/dev/dxg`; a game
