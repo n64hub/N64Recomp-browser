@@ -1642,9 +1642,19 @@ Pages at the display's rate with `?present-stats` (set `r2r-rate-survey`), the o
 time their games right: Dinosaur Planet, Space Station Silicon Valley, Mario Kart 64 and Pokémon Snap at 30 with 45-56
 frames drawn, Jet Force Gemini at 30-38 timed at 30, Paper Mario at 27-30 with 46-56, Majora's Mask at 20 with 54-56,
 Ocarina of Time at 20, 30 and 60 by its scene, Rayman 2, Goin' Quackers and Super Smash Bros. at their 60, Beetle
-Adventure Racing's race at 50-60. Only Beetle's screens before
-its race read 30 timed as 60, 30 drawn, for 10-20 s; a game at 60 held up by a load reads it for one 5 s sample too,
-its frames drawn its game frames, which is no frame lost.
+Adventure Racing's race at 50-60. Beetle's logos after Start read 30 timed as 60 for 10-20 s with the change too, and
+they are the game's own: its VI swaps between two framebuffers every VI while RT64 takes the two lists of a pair for a
+game frame, so 60 is the screen's rate there. A game at 60 held up by a load reads 60 for one 5 s sample too, its
+frames drawn its game frames, which is no frame lost.
+
+In the A/B (Chrome, 3840x2000, whole GPU turns in pairs, a host 34-63% busy; sets `r2r-screen-copy-*`) the change
+moved only what it fixes. Turok 2 at d8f0446 presented 56.0 a second at the display's rate against 54.8 from Pages,
+which had meanwhile taken Turok 2's copy off, and uncapped 273-285 against Pages' 233-248, the copy's 5-6 ms waits
+now beside the frames a game at 30 needs: there the build's sound was 2,700-42,500 frames short where Pages' was
+whole, which a page at the display's rate isn't (0 short) and Turok 2's page without the copy doesn't pay. Beetle,
+which the change doesn't touch past its logos, read 56.9 against 57.2 and uncapped 204-226 against 173-209. Its
+build's first uncapped play stopped 19 s in on "memory access out of bounds" as the game set up its heap, and the
+replayed series ran whole: Beetle's own fault, not this change, which no game thread reaches.
 
 ## A frame drawn in many workloads
 
