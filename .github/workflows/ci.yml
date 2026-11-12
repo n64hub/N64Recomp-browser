@@ -214,7 +214,8 @@ jobs:
           CHROME="$(command -v google-chrome)" node tests/wgsl_check.mjs "$(dirname "$(find rt64-wgsl -name '*.wgsl' | head -1)")"
 
   # The patches (patches/) are the forks at forks.txt's commits, and patches/apply.cmake patches every recomp's own
-  # upstream commits in patches/pins.txt with them, and merges their later change into files a recomp leaves out.
+  # upstream commits in patches/pins.txt with them, merges their later change into files a recomp leaves out, and takes
+  # what an older version of a patch put in a checkout out before the new one goes in.
   patches:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -235,6 +236,8 @@ jobs:
             bash tools/fetch_pins.sh "$RUNNER_TEMP/pins/$recomp" "$recomp"
             cmake -P patches/apply.cmake "$RUNNER_TEMP/pins/$recomp"   # a second time changes nothing
           done
+      - name: A checkout patched with an older version of a patch takes the new one
+        run: bash tests/apply_edit.sh
       # A recomp that leaves files out and makes the web's change to them its own way takes what the web has changed in
       # them since its merge with apply.cmake --since. On a recomp pinned at upstream's own commits: rt64 and the
       # runtime as the oldest commit on those commits patched them, every file merged forward, are patched as now. On a
