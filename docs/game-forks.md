@@ -437,7 +437,10 @@ the host's patches change too (`host/web/patches/files.txt`: the present queue a
 on each PR. The host's web changes, all behind `__EMSCRIPTEN__`: the Load ROM picker in place of the desktop's file
 dialog, the page's sound in place of SDL's, the swap chain in the format the canvas prefers, no crash handler, and the
 Frame Rate setting's 60 as Display, so the page interpolates the game's 30 to the display's rate; the rest is at the
-desktop's Enhanced preset (16:9, Full draw distance, MSAA 4, resolution Auto). Its list is 82 shaders: the boot (the
+desktop's Enhanced preset (16:9, Full draw distance, MSAA 4, resolution Auto). Render to RAM is off on the page (the
+host's `rt64_context.cpp`): the game's CPU never reads a frame it drew nor draws into one (its fades and pause
+backgrounds are display-list commands, and the loader's unpack blocks in the Z buffer wait for every graphics task
+first), and the desktop keeps it for the host's test tools, which read finished frames from RDRAM. Its list is 82 shaders: the boot (the
 launcher, the logos, the main menu and the career's menus to the level select, 14) and 10 sections (a run on each
 course of the career's level select), recorded by `tools/shader_plan.json` with the host's `--skip-intro` and
 `--unlock-levels` (the plan's arguments), which knows the front end's screens by a word that moves with each one and a
@@ -480,7 +483,11 @@ first frame drew). The page plays at RT64's Display rate and Auto resolution, wh
 own 30 (its interpolation is off there, for flicker in pooled effects), starts in the game's widescreen (Expand) where
 the desktop build starts in 4:3, leaves out ray tracing, which needs ray queries
 WebGPU hasn't, the multiplayer mods (online play needs sockets) and the tow cable mod (its instruction patches
-need the live recompiler), and keeps every other option at the desktop's defaults. Its list is 111 shaders: the
+need the live recompiler), and keeps every other option at the desktop's defaults. It copies no frame back into RDRAM (the fork's framebuffer
+write-back off, as its Raspberry Pi build has it): the game's CPU never reads one, only clearing a new video mode's
+buffers and building its heap in a free one. Render to RAM stays on, since the fork's RT64 tells the CPU's writes to a
+framebuffer by it (off, triangles flicker), with its late copy on, which with nothing to copy only spares each display
+list its wait for the GPU. Its list is 111 shaders: the
 boot (the launcher, the intro, SELECT GAME, ENTER NAME and AVAILABLE CRAFT, 61) and 16 sections, a mission each,
 recorded on a 4:3 build and again on a widescreen one (widescreen needed no shader 4:3 didn't) by
 `tools/shader_plan.json`, which sets the mission at AVAILABLE CRAFT as the port's own `--boot-target
@@ -506,7 +513,10 @@ can't do it on WebGPU) and RT64's developer tools with it, and a page opens wide
 the window, the desktop build opening in the console's 4:3), which the game's own code supports: it widens the
 frustum the game culls to (`src/main/bar_frustum.cpp`) and anchors the racing HUD to the picture's edges (HUD ratio
 Expand, its default); the rest is at the desktop's defaults (resolution Auto, the display's frame rate). The game times itself by the CPU's count register, a variable step, so the page runs
-it at the speed a console does whatever it presents. Its list is 261 shaders: the boot (the launcher, the Controller
+it at the speed a console does whatever it presents. Render to RAM's copy lands a display list late: the game's CPU
+reads its frames in three places, each of which takes one a list old (the sun glare's depth samples, of the list before
+the one just sent; the car's reflection, from a frame about two lists old; the menus' film-roll transitions, which copy
+the frame just drawn into the other framebuffer), and its depth fog's read of the Z-buffer is the RDP's. Its list is 261 shaders: the boot (the launcher, the Controller
 Pak screen, the logos, the intro, the title and the menus to a Single Race, 138) and 2 sections (Coventry Cove 70,
 Mount Mayhem 53), recorded by `tools/shader_plan.json`, which knows where the game is by `gGameSettings`
 (`tools/game_state.js`) and reaches each track through the menus, since a game state written from them stops the
@@ -556,7 +566,9 @@ BUILDING.md names, then put through the recomp's post-regen pipeline (`fix_stump
 out of the page: its bundled mods (a page has no live recompiler), the CRT filter, ray tracing and HDR,
 RetroAchievements, and the launcher's Mods and Exit, which the game builds itself (`src/main/main.cpp`). The rest is
 behind `__EMSCRIPTEN__` as in the other ports: the canvas, the sound through `audio_output.h`, resolution Auto and the
-display's frame rate through the port's own frame pairing. Its list is 37 shaders: the boot (the launcher, the
+display's frame rate through the port's own frame pairing. Render to RAM is off: the game's CPU never reads a frame
+nor writes into one (its framebuffers' addresses go only into display lists, the swap and the scheduler's compares),
+and each of the several tasks a frame is drawn in waited for its copy. Its list is 37 shaders: the boot (the launcher, the
 intro, the title and the menus, 13) and one section for a match (24, one of them a play's miss), recorded by
 `web/shader_plan.json` with a load in each of the eight arenas, whose matches draw the same shaders but one. The plan
 deletes the game's save each load, so that the menus' cursors are where a new one has them (the game keeps them in
