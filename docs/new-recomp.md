@@ -89,6 +89,14 @@ page's plan checks it with stand-in pads (`tools/gamepad_probe.js`'s `plugPads`)
   access out of bounds".
 - Firefox played on its own: black frames, white edges, traps and freezes have turned up there and in no other
   browser.
+- Render to RAM chosen, and why written beside the call: each display list's copy of its frame into RDRAM waits
+  5-6 ms for the browser's readback (README, The recomp's own code), and left at RT64's default it is the exact copy
+  with no reason anyone gave. Off where the game's CPU never reads a frame it drew, nor writes into one
+  (`set_render_to_ram(false)`, and off on the desktop build too, where it is a second draw of every frame: Rush 2049's
+  and Super Mario 64's Copy Frames to RAM option, Off by default). Else the copy a list late on the page, where the
+  game can take a frame one list old (`set_render_to_ram_late(true)`, played through its levels and the console's
+  reports of CPU writes to a framebuffer with a copy pending read). Else the exact copy, naming what reads it (Majora's
+  Mask's Pictograph Box, Jet Force Gemini's shadows' render targets).
 
 ## 8. The release
 
