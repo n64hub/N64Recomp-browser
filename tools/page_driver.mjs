@@ -35,7 +35,8 @@
 // ends the run there and fails it, rather than the steps after it pressing keys at a menu for minutes),
 // ["rom", x, y] (clicks there, moved as a click is, and gives the page the ROM; ["rom", code, key, keyCode] presses that
 // key instead, for a launcher whose Load ROM no one spot reaches at every size; then waits for the launcher to take it,
-// below), ["shot", file] (a screenshot of the page),
+// below; page.romPresses is then how many presses of Load ROM it took, 1 where the first opened the picker), ["shot",
+// file] (a screenshot of the page),
 // ["resize", w, h] (the viewport to that many CSS pixels, as a player's window resized: not on screen, where the
 // window is the desktop's), ["hide", ms] (another tab in front of the page's for ms of wall time, then the page's again,
 // as a player switching tabs: the page's document is hidden, and the browser throttles it as it does a player's) and
@@ -541,7 +542,7 @@ export const open = async (browser, { profile, port, size = [1256, 645], executa
         const waited = ((Date.now() - from) / 1000).toFixed(1);
         if (!built) log(`the prebuilt shader list was still building behind the launcher after ${waited} s: pressing Load ROM anyway`);
         else if (waited !== '0.0') log(`Load ROM waited ${waited} s for the prebuilt shader list building behind the launcher`);
-        await page.rom(typeof a[0] === 'string' ? async () => { await page.key('down', a); await page.key('up', a); }
+        page.romPresses = await page.rom(typeof a[0] === 'string' ? async () => { await page.key('down', a); await page.key('up', a); }
           : async () => page.click(...await place(a[0], a[1])));
         const given = Date.now(), size = (fs.statSync(rom).size + 3) & ~3;
         let at = null;
@@ -680,8 +681,10 @@ const openChrome = async ({ profile, port, width, height, executable, rom, prelo
     rom: async (act) => {
       await send('Page.setInterceptFileChooserDialog', { enabled: true });
       fileChooser = null;
+      let presses = 0;
       for (let tries = 1; !fileChooser; tries++) {
         await act();
+        presses = tries;
         for (const until = Date.now() + 10000; !fileChooser && Date.now() < until;) {
           await sleep(100);
           const r = await send('Runtime.evaluate', { expression: clickChooseButton, userGesture: true, returnByValue: true });
@@ -694,6 +697,7 @@ const openChrome = async ({ profile, port, width, height, executable, rom, prelo
       const given = await send('DOM.setFileInputFiles', { files: [path.resolve(rom)], backendNodeId: fileChooser.backendNodeId });
       await send('Page.setInterceptFileChooserDialog', { enabled: false });
       if (given.error) throw new Error(`the ROM never reached the page's file input (${given.error.message}): a GC took it`);
+      return presses;
     },
     screenshot: async () => Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'),
     resize: (w, h) => send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: scale, mobile: false }),
@@ -899,7 +903,7 @@ const openFirefox = async ({ profile, port, width, height, executable, rom, prel
         await act();
         for (let i = 0; i < 100; i++) {
           await sleep(100);
-          if (await evaluate(`window.__romGiven || (${clickChooseButton}, false)`)) return;
+          if (await evaluate(`window.__romGiven || (${clickChooseButton}, false)`)) return tries;
         }
         if (tries === 3) throw new Error('the page never asked for a file');
         line('page_driver: the page asked for no file 10 s after Load ROM: pressing it again');

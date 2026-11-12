@@ -5,7 +5,7 @@
 # retest's own machine builds and plays the next ones.
 #
 #   bash tools/play_pages.sh <rush-2049-recomp checkout> <chrome|firefox> <game>... [--build <label>] [--note <text>]
-#       [-- <queue command>...]
+#       [--backcheck] [-- <queue command>...]
 #
 # <game> is a name in publish_pages.sh's list, whose games, repos and hub folders this reads. For each, one after
 # another:
@@ -21,18 +21,22 @@
 # 3. Says ok or FAILED (no presents, a WebGPU error or an exception), its presents a second (Firefox's are not compared:
 #    docs/playing.md), and for a failed play its log's tail and whether the game got as far as "Initializing recomp
 #    heap" (one that never does hung in its loads, before the game started).
+# --backcheck plays the web port list's W2, W5, W6 and W7 instead (docs/new-recomp.md): play_page.mjs --backcheck (its
+# header), uncapped at 1256x645, the plan's own size (2512x1290 device pixels at Chrome's 2x), and prints its verdicts,
+# the pad's line and each fault's after the play's line. Play it in Chrome and in Firefox.
 # A queue command after -- goes in front of each play_page.mjs, so each takes its own turn in the machine's GPU queue
 # (CLAUDE.md, Playing a page), a shared one with a short limit like a smoke play's. It exits 1 if any play failed.
 # It needs gh, each other game's plain dump as $ROMS/<game>.z64 (Rush 2049's in the checkout's roms/), as
 # publish_pages.sh does, and NODE for play_page.mjs (node unless set).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-label="" note="" args=() queue=()
+label="" note="" args=() queue=() backcheck=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
     --) shift; queue=("$@"); break ;;
     --build) label="$2"; shift ;;
     --note) note="$2"; shift ;;
+    --backcheck) backcheck=(--backcheck) ;;
     *) args+=("$1") ;;
     esac
     shift
@@ -76,13 +80,14 @@ for g in "${selected[@]}"; do
     [[ -f "$plan" ]] || { echo "   no play_plan.json in tools/ or web/"; failed+=("$g"); continue; }
     build="${label:-Pages, $([[ $tag == v* ]] && echo "$tag" || echo "main ${served:0:7}")}"
     (cd "$work/$g/shots" && "${queue[@]}" "$node" "$here/play_page.mjs" "$browser" "$hub_url$folder/index.html" "$rom" "$plan" \
-        --uncapped --size 3840x2000 --profile "$work/$g/profile" --json "$work/$g/summary.json" \
+        --uncapped --size "$([[ ${#backcheck[@]} -gt 0 ]] && echo 1256x645 || echo 3840x2000)" "${backcheck[@]}" --profile "$work/$g/profile" --json "$work/$g/summary.json" \
         --record "$here/../plays.jsonl" --game "$g" --build "$build" ${note:+--note "$note"}) > "$work/$g/play.log" 2>&1 || true
     result="$("$node" -e "const s = require(process.argv[1]); const p = s.presents ? Math.round(s.presents.median * 10) / 10 : 0;
         console.log((p > 0 && !s.webgpuErrors.length && !s.exceptions ? 'ok' : 'FAILED') + ': ' + p + ' presents/s, ' +
         s.webgpuErrors.length + ' WebGPU errors, ' + s.exceptions + ' exceptions')" "$work/$g/summary.json" 2> /dev/null ||
         echo "FAILED: no summary")"
     echo "== $g from Pages in $browser: $result"
+    [[ ${#backcheck[@]} -eq 0 ]] || grep -E "^(backcheck W|pad: |fault [a-z]+: )" "$work/$g/play.log" | sed 's/^/   /'
     if [[ $result != ok* ]]; then
         failed+=("$g")
         tail -15 "$work/$g/play.log" | sed 's/^/   /'
