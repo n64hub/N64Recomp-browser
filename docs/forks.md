@@ -878,7 +878,7 @@ a6eca00                thread looked a row before it, found none for Turok 2's h
                        history, early presents, the CPU's writes to the shown framebuffer and the workload queue. The
                        present's is taken on a line after the one Jet Force Gemini's rt64 patch has as context
 rt64 4343d10,          the VI shows the rows its framebuffer was drawn to, on every build: VI::fbSize() estimates the
-bf2d7fb                height from the VI's lines, two rows more, to a multiple of four, and Turok 3's own VI mode
+bf2d7fb, 9a263fb       height from the VI's lines, two rows more, to a multiple of four, and Turok 3's own VI mode
                        (220.5 lines of a 284-wide framebuffer whose origin is its start) came to 224 where the game
                        draws 222, so the present spread two rows never drawn over the window's bottom, 6 black rows of
                        720 under Expand. FramebufferManager::shownSize() cuts the estimate to the most rows drawn since

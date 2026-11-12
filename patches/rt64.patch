@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web bf2d7fb8aba2434078664990061c0aba4aae8c10
+rt64: https://github.com/n64hub/rt64-web 9a263fba22fd6b1ccd2d2a3da567ac5bb08b03d5
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -5021,10 +5021,10 @@ index 7a8c13b..7cbc85a 100644
          void setExtendedRDRAM(bool isExtended);
          void setTexcoordWrapPoint(int16_t wrapU, int16_t wrapV);
 diff --git a/src/hle/rt64_vi.cpp b/src/hle/rt64_vi.cpp
-index a870166..1361980 100644
+index a870166..dce7792 100644
 --- a/src/hle/rt64_vi.cpp
 +++ b/src/hle/rt64_vi.cpp
-@@ -93,6 +93,13 @@ namespace RT64 {
+@@ -93,6 +93,23 @@ namespace RT64 {
      }
  
      hlslpp::uint2 VI::fbSize() const {
@@ -5035,24 +5035,20 @@ index a870166..1361980 100644
 +            return hlslpp::uint2(0, 0);
 +        }
 +
++        // The rows the game drew, where it drew fewer than the estimate below (shownHeight).
++        if (shownHeight > 0) {
++            VI estimated = *this;
++            estimated.shownHeight = 0;
++            hlslpp::uint2 shown = estimated.fbSize();
++            const uint32_t estimate = shown.y;
++            shown.y = std::min(shownHeight, estimate);
++            return shown;
++        }
++
          hlslpp::uint2 size = { width, 0 };
          
          // In interlaced without deflickering, the stride of the framebuffer is usually double of 
-@@ -118,6 +125,13 @@ namespace RT64 {
-             const uint32_t Divisor = 4;
-             size.y += ExtraRows;
-             size.y = lround(float(size.y) / Divisor) * Divisor;
-+
-+            // The rows the game drew, where it drew fewer (shownHeight).
-+            const uint32_t estimate = size.y;
-+            if (shownHeight > 0) {
-+                size.y = std::min(shownHeight, estimate);
-+            }
-+
-             return size;
-         } else {
-             return hlslpp::uint2(0, 0);
-@@ -147,6 +161,10 @@ namespace RT64 {
+@@ -147,6 +164,10 @@ namespace RT64 {
          factorCursor = 0;
          history.fill({});
          factors.fill(0);
@@ -5063,7 +5059,7 @@ index a870166..1361980 100644
      }
  
      void VIHistory::pushVI(const VI &vi, uint32_t fbWidth) {
-@@ -159,16 +177,37 @@ namespace RT64 {
+@@ -159,16 +180,37 @@ namespace RT64 {
      void VIHistory::pushFactor(uint32_t factor) {
          factorCursor = (factorCursor + 1) % factors.size();
          factors[factorCursor] = factor;
