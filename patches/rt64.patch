@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 25167698a8bad0eceb092a3d4c6e21e7a5b3d0dd
+rt64: https://github.com/n64hub/rt64-web a6eca007ec6c11e94bde13f0563b24e87b63c144
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1735,10 +1735,37 @@ index 7b38b8e..2a5c6c0 100644
          std::unique_ptr<FramebufferReadChangesDescriptorChangesSet> readChangesSet;
          bool used;
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index d7caa12..69396c7 100644
+index d7caa12..ba503e6 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
-@@ -420,8 +420,8 @@ namespace RT64 {
+@@ -61,6 +61,26 @@ namespace RT64 {
+         }
+     }
+ 
++    uint32_t FramebufferManager::shownAddress(const VI &vi) const {
++        // VI::fbAddress() takes the origin to be a row or two into the framebuffer, as libultra's VI modes put it. A game
++        // with a VI mode of its own can put it at the framebuffer's start (Turok 2's high resolution modes, Turok 3's),
++        // and then the address is a row before any framebuffer the game drew. The origin names the framebuffer then,
++        // where one of the VI's width and size is there and none is at the estimate. Everything that matches the VI to a
++        // framebuffer goes by it: the present, which otherwise found none and showed the VI's RAM at 1x and 4:3, the
++        // framebuffers the present can skip to and interpolate, early presents, the CPU's writes to the shown framebuffer,
++        // and with RT64_GAME_FRAME_WORKLOADS the present a game frame ends at, which no workload drew otherwise, so each
++        // was held to its limit and four of the game's frames were shown as one.
++        const uint32_t estimate = vi.fbAddress();
++        if ((estimate != vi.origin) && (find(estimate) == nullptr)) {
++            const Framebuffer *atOrigin = find(vi.origin);
++            if ((atOrigin != nullptr) && (atOrigin->width == vi.fbSize().x) && (atOrigin->siz == vi.fbSiz())) {
++                return vi.origin;
++            }
++        }
++
++        return estimate;
++    }
++
+     Framebuffer *FramebufferManager::findMostRecentContaining(uint32_t addressStart, uint32_t addressEnd) {
+         Framebuffer *mostRecent = nullptr;
+         auto it = framebuffers.begin();
+@@ -420,8 +440,8 @@ namespace RT64 {
          // Relative offset of the image start to the framebuffer start.
          const uint32_t offset = addressStart - fb->addressStart;
  
@@ -1749,7 +1776,7 @@ index d7caa12..69396c7 100644
  
          // The offset is not aligned to the pixel size. It's not possible to make a direct copy.
          if ((offset % pixelSize) != 0) {
-@@ -444,6 +444,15 @@ namespace RT64 {
+@@ -444,6 +464,15 @@ namespace RT64 {
          else {
              const uint32_t rowRightPixels = ((rowBytes - rowOffset) / pixelSize) << pixelShift;
              outTile.right = outTile.left + rowRightPixels;
@@ -1765,7 +1792,7 @@ index d7caa12..69396c7 100644
          }
  
          // Tile height is defined.
-@@ -633,15 +642,55 @@ namespace RT64 {
+@@ -633,15 +662,55 @@ namespace RT64 {
          }
      }
  
@@ -1821,7 +1848,7 @@ index d7caa12..69396c7 100644
              if (it->fbTile.valid() && (tmemStart >= it->tmemStart) && (tmemEnd <= it->tmemEnd)) {
                  bool validCopy = false;
                  bool reinterpret = false;
-@@ -735,12 +784,23 @@ namespace RT64 {
+@@ -735,12 +804,23 @@ namespace RT64 {
              it++;
          }
  
@@ -1845,7 +1872,7 @@ index d7caa12..69396c7 100644
              if (RGBA32) {
                  tmemStart += 256;
                  tmemEnd += 256;
-@@ -758,6 +818,9 @@ namespace RT64 {
+@@ -758,6 +838,9 @@ namespace RT64 {
              while (it != activeRegionsTMEM.end()) {
                  if (it->syncRequired && (tmemStart < it->tmemEnd) && (it->tmemStart < tmemEnd)) {
                      result.syncRequired = true;
@@ -1855,7 +1882,7 @@ index d7caa12..69396c7 100644
                      break;
                  }
  
-@@ -778,25 +841,33 @@ namespace RT64 {
+@@ -778,25 +861,33 @@ namespace RT64 {
          return usedTimestamp;
      }
  
@@ -1893,7 +1920,7 @@ index d7caa12..69396c7 100644
                  tileCopy.usedWidth = width;
                  tileCopy.usedHeight = height;
                  tileCopy.usedTimestamp = usedTimestamp;
-@@ -804,9 +875,13 @@ namespace RT64 {
+@@ -804,9 +895,13 @@ namespace RT64 {
              }
          }
  
@@ -1909,7 +1936,7 @@ index d7caa12..69396c7 100644
          tileCopy.usedWidth = width;
          tileCopy.usedHeight = height;
          tileCopy.usedTimestamp = usedTimestamp;
-@@ -859,6 +934,16 @@ namespace RT64 {
+@@ -859,6 +954,16 @@ namespace RT64 {
              const uint8_t *fbRAM = &RDRAM[fb->addressStart];
              const FramebufferChange::Type fbChangeType = (fb->lastWriteFmt == G_IM_FMT_DEPTH) ? FramebufferChange::Type::Depth : FramebufferChange::Type::Color;
              FramebufferChange &fbChange = fbChangePool.use(renderWorker, fbChangeType, fb->width, fb->height, shaderLibrary->usesHDR);
@@ -1926,7 +1953,7 @@ index d7caa12..69396c7 100644
              const uint32_t DifferenceFractionNum = 1;
              const uint32_t DifferenceFractionDiv = 4;
              const uint32_t differentPixels = fb->copyRAMToNativeAndChanges(renderWorker, fbChange, fbRAM, 0, fb->height, fb->lastWriteFmt, false, shaderLibrary);
-@@ -1001,16 +1086,46 @@ namespace RT64 {
+@@ -1001,16 +1106,46 @@ namespace RT64 {
              tileCopyBeforeBarriers.clear();
              tileCopyAfterBarriers.clear();
  
@@ -1976,7 +2003,7 @@ index d7caa12..69396c7 100644
  
              // Use the rasterization pipeline to copy the texture regions. Using the dedicated transfer commands does not behave consistently
              // enough across hardware to use it directly when it comes to synchronization due to unknown reasons found during testing (probably
-@@ -1033,6 +1148,7 @@ namespace RT64 {
+@@ -1033,6 +1168,7 @@ namespace RT64 {
                  renderWorker->commandList->setGraphicsPushConstants(0, &copy.pushConstants);
                  renderWorker->commandList->drawInstanced(3, 1, 0, 0);
              }
@@ -1985,10 +2012,18 @@ index d7caa12..69396c7 100644
              renderWorker->commandList->barriers(RenderBarrierStage::GRAPHICS_AND_COMPUTE, tileCopyAfterBarriers);
          }
 diff --git a/src/hle/rt64_framebuffer_manager.h b/src/hle/rt64_framebuffer_manager.h
-index 8d36b51..629d290 100644
+index 8d36b51..576e00a 100644
 --- a/src/hle/rt64_framebuffer_manager.h
 +++ b/src/hle/rt64_framebuffer_manager.h
-@@ -108,6 +108,11 @@ namespace RT64 {
+@@ -20,6 +20,7 @@
+ #include "rt64_framebuffer.h"
+ #include "rt64_framebuffer_changes.h"
+ #include "rt64_framebuffer_storage.h"
++#include "rt64_vi.h"
+ 
+ namespace RT64 {
+     struct FramebufferOperation {
+@@ -108,6 +109,11 @@ namespace RT64 {
              uint8_t fmt = 0;
              bool reinterpret = false;
              bool syncRequired = false;
@@ -2000,7 +2035,7 @@ index 8d36b51..629d290 100644
  
              CheckCopyResult() = default;
  
-@@ -161,6 +166,7 @@ namespace RT64 {
+@@ -161,6 +167,7 @@ namespace RT64 {
  
          std::unordered_map<uint32_t, Framebuffer> framebuffers;
          std::unordered_map<uint64_t, TileCopy> tileCopies;
@@ -2008,7 +2043,13 @@ index 8d36b51..629d290 100644
          std::unordered_map<uint64_t, uint64_t> reinterpretTileCache;
          std::unique_ptr<RenderTexture> dummyTLUTTexture;
          std::vector<std::unique_ptr<ReinterpretDescriptorSet>> descriptorReinterpretSets;
-@@ -181,6 +187,7 @@ namespace RT64 {
+@@ -176,11 +183,13 @@ namespace RT64 {
+         ~FramebufferManager();
+         Framebuffer &get(uint32_t address, uint8_t siz, uint32_t width, uint32_t height);
+         Framebuffer *find(uint32_t address) const;
++        uint32_t shownAddress(const VI &vi) const;
+         Framebuffer *findMostRecentContaining(uint32_t addressStart, uint32_t addressEnd);
+         void writeChanges(RenderWorker *renderWorker, const FramebufferChangePool &fbChangePool, const FramebufferOperation &op, RenderTargetManager &targetManager, const ShaderLibrary *shaderLibrary);
          void clearUsedTileCopies();
          uint64_t getUsedTimestamp() const;
          uint64_t findTileCopyId(uint32_t width, uint32_t height);
@@ -2016,7 +2057,7 @@ index 8d36b51..629d290 100644
          void createTileCopySetup(RenderWorker *renderWorker, const FramebufferOperation &op, hlslpp::float2 resolutionScale, RenderTargetManager &targetManager, std::unordered_set<RenderTarget *> *resizedTargets);
          void createTileCopyRecord(RenderWorker *renderWorker, const FramebufferOperation &op, const FramebufferStorage &fbStorage, RenderTargetManager &targetManager,
              hlslpp::float2 resolutionScale, uint32_t maxFbPairIndex, CommandListCopies &cmdListCopies, CommandListDiscards &cmdListDiscards, const ShaderLibrary *shaderLibrary);
-@@ -197,6 +204,9 @@ namespace RT64 {
+@@ -197,6 +206,9 @@ namespace RT64 {
              interop::uint2 texelShift, interop::uint2 texelMask, uint64_t tlutHash, uint32_t tlutFormat);
  
          CheckCopyResult checkRegionsTMEM(uint32_t tmemStart, uint32_t tmemEnd, uint32_t lineWidth, uint8_t siz, uint8_t fmt, uint16_t uls, bool usesTLUT, uint8_t palette);
@@ -3026,7 +3067,7 @@ index e1889e5..3a6cb10 100644
  };
 \ No newline at end of file
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index 3227ab1..ae697ac 100644
+index 3227ab1..0fbd0bd 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -7,6 +7,10 @@
@@ -3095,7 +3136,28 @@ index 3227ab1..ae697ac 100644
  
          // TODO: There's a possible race condition interactions that can happen while the workload
          // queue is rendering extra frames and the present event is processed while it's generating
-@@ -271,6 +305,7 @@ namespace RT64 {
+@@ -142,6 +176,11 @@ namespace RT64 {
+             Framebuffer *viFb = nullptr;
+             if (!viewRDRAM) {
+                 viFb = fbManager.find(present.screenVI.fbAddress());
++
++                // Where the estimate a row before the origin finds none, the framebuffer at the origin is the one shown
++                // (FramebufferManager::shownAddress()). Taken on a line of its own, off the one Jet Force Gemini's page
++                // patches around.
++                viFb = (viFb != nullptr) ? viFb : fbManager.find(fbManager.shownAddress(present.screenVI));
+             }
+ 
+             Framebuffer *presentFb = viFb;
+@@ -170,7 +209,7 @@ namespace RT64 {
+                     if (!present.debuggerFramebuffer.view && (presentationMode == EnhancementConfiguration::Presentation::Mode::SkipBuffering)) {
+                         for (size_t h = 0; h < viHistory.history.size(); h++) {
+                             const VIHistory::Present &entry = viHistory.history[h];
+-                            if ((colorFb->addressStart == entry.vi.fbAddress()) && (colorFb->width == entry.fbWidth) && (colorFb->siz == entry.vi.fbSiz()) && entry.vi.compatibleWith(present.screenVI)) {
++                            if ((colorFb->addressStart == fbManager.shownAddress(entry.vi)) &&(colorFb->width == entry.fbWidth) && (colorFb->siz == entry.vi.fbSiz()) && entry.vi.compatibleWith(present.screenVI)) {
+                                 presentFb = colorFb;
+                                 break;
+                             }
+@@ -271,6 +310,7 @@ namespace RT64 {
              if ((framesToPresent > 1) && (usingMSAA || (i > 0))) {
                  // Stall until the interpolated color target is available.
                  const uint32_t targetIndex = usingMSAA ? i : (i - 1);
@@ -3103,7 +3165,7 @@ index 3227ab1..ae697ac 100644
                  std::unique_lock<std::mutex> interpolatedLock(ext.sharedResources->interpolatedMutex);
                  ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
                      return (frameCounters.available > targetIndex) || ((frameCounters.available == targetIndex) && frameCounters.skipped);
-@@ -287,7 +322,8 @@ namespace RT64 {
+@@ -287,7 +327,8 @@ namespace RT64 {
  
                  if (i < framesToPresent) {
                      uint32_t targetIndex = usingMSAA ? i : (i - 1);
@@ -3113,7 +3175,7 @@ index 3227ab1..ae697ac 100644
                  }
                  else {
                      colorTarget = nullptr;
-@@ -299,7 +335,9 @@ namespace RT64 {
+@@ -299,7 +340,9 @@ namespace RT64 {
  
              uint32_t swapChainIndex = 0;
              const bool presentFrame = (i < framesToPresent) && swapChainValid;
@@ -3123,7 +3185,7 @@ index 3227ab1..ae697ac 100644
                  swapChainValid = ext.swapChain->acquireTexture(acquiredSemaphore.get(), &swapChainIndex);
              }
  
-@@ -369,6 +407,7 @@ namespace RT64 {
+@@ -369,6 +412,7 @@ namespace RT64 {
                  }
              }
  
@@ -3131,7 +3193,7 @@ index 3227ab1..ae697ac 100644
              if (lockedWorkloadMutex) {
                  ext.sharedResources->workloadMutex.unlock();
                  lockedWorkloadMutex = false;
-@@ -391,19 +430,67 @@ namespace RT64 {
+@@ -391,19 +435,67 @@ namespace RT64 {
              if (presentFrame && swapChainValid) {
                  // Wait until the approximate time the next present should be at the current intended rate.
                  if ((presentTimestamp != Timestamp()) && (targetRate > 0) && (targetRate > viOriginalRate)) {
@@ -3165,11 +3227,11 @@ index 3227ab1..ae697ac 100644
 +#               else
                      Timer::preciseSleepUntil(presentTimestamp + std::chrono::nanoseconds(1'000'000'000 / targetRate));
 +#               endif
-                 }
++                }
 +#           if defined(__EMSCRIPTEN__)
 +                else {
 +                    presentSlot = Timestamp();
-+                }
+                 }
 +#           endif
  
                  if (presentWaitEnabled) {
@@ -3199,7 +3261,7 @@ index 3227ab1..ae697ac 100644
      }
  
      void PresentQueue::skipInterpolation() {
-@@ -416,6 +503,205 @@ namespace RT64 {
+@@ -416,6 +508,205 @@ namespace RT64 {
          ext.sharedResources->interpolatedCondition.notify_all();
      }
  
@@ -3405,7 +3467,7 @@ index 3227ab1..ae697ac 100644
      void PresentQueue::notifyPresentId(const Present &present) {
          {
              std::scoped_lock<std::mutex> cursorLock(presentIdMutex);
-@@ -446,12 +732,15 @@ namespace RT64 {
+@@ -446,12 +737,15 @@ namespace RT64 {
  
          int processCursor = -1;
          bool skipPresent = false;
@@ -3421,7 +3483,7 @@ index 3227ab1..ae697ac 100644
                  cursorCondition.wait(cursorLock, [&]() {
                      return (writeCursor != threadCursor) || !presentThreadRunning;
                  });
-@@ -459,7 +748,23 @@ namespace RT64 {
+@@ -459,7 +753,23 @@ namespace RT64 {
                  if (presentThreadRunning) {
                      processCursor = threadCursor;
                      threadCursor = (threadCursor + 1) % presents.size();
@@ -3446,7 +3508,7 @@ index 3227ab1..ae697ac 100644
                  }
              }
  
-@@ -501,15 +806,49 @@ namespace RT64 {
+@@ -501,15 +811,49 @@ namespace RT64 {
                      }
                  }
  
@@ -3954,7 +4016,7 @@ index 8858dac..a9417c7 100644
          EnhancementConfiguration enhancementConfig;
          EmulatorConfiguration emulatorConfig;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 2970e71..9e067dd 100644
+index 2970e71..b2012b9 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -7,6 +7,13 @@
@@ -4512,6 +4574,15 @@ index 2970e71..9e067dd 100644
  
              advanceFramebufferRenderer();
  
+@@ -1805,7 +2134,7 @@ namespace RT64 {
+ 
+                 for (size_t h = 0; (h < viHistory.history.size()) && !viPresented; h++) {
+                     const VIHistory::Present &entry = viHistory.history[h];
+-                    const uint32_t fbAddress = entry.vi.fbAddress();
++                    const uint32_t fbAddress = framebufferManager.shownAddress(entry.vi);
+                     const hlslpp::uint2 fbSize = entry.vi.fbSize();
+                     const uint8_t fbSiz = entry.vi.fbSiz();
+                     if ((colorImg.address == fbAddress) &&
 @@ -1824,6 +2153,12 @@ namespace RT64 {
          Workload &nextWorkload = ext.workloadQueue->workloads[workloadCursor];
          nextWorkload.begin(workloadCounter++);
@@ -4541,7 +4612,7 @@ index 2970e71..9e067dd 100644
                  viHistory.pushFactor(lastScreenFactorCounter + 1);
                  lastScreenFactorCounter = 0;
 +
-+                const uint32_t shownFbAddress = shownFramebufferAddress(newVI);
++                const uint32_t shownFbAddress = framebufferManager.shownAddress(newVI);
 +                bool shownBefore = false;
 +                for (const ShownFramebuffer &shown : shownFramebuffers) {
 +                    shownBefore = shownBefore || ((shown.address == shownFbAddress) && (shown.width == screenFbSize.x) && (shown.siz == screenFbSiz));
@@ -4554,6 +4625,15 @@ index 2970e71..9e067dd 100644
              }
              else if (viVisible) {
                  lastScreenFactorCounter++;
+@@ -1901,7 +2251,7 @@ namespace RT64 {
+             // See if there's an existing framebuffer that lines up with the VI. If there is, we support reading 
+             // CPU changes directly to it and recreating them in the render thread at low resolution.
+             RenderWorker *worker = ext.framebufferGraphicsWorker;
+-            Framebuffer *screenFb = framebufferManager.find(screenFbAddress);
++            Framebuffer *screenFb = framebufferManager.find(framebufferManager.shownAddress(newVI));
+             if (screenFb != nullptr) {
+                 // Check compatibility of the high resolution framebuffer with the VI first.
+                 // Ensure both the siz and width are the same.
 @@ -1909,6 +2259,7 @@ namespace RT64 {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
@@ -4573,7 +4653,7 @@ index 2970e71..9e067dd 100644
 +#       if RT64_GAME_FRAME_WORKLOADS
 +            ext.workloadQueue->presentAdvancing = false;
 +            if (newVI.visible()) {
-+                ext.workloadQueue->presentQueued(present.workloadId, shownFramebufferAddress(newVI));
++                ext.workloadQueue->presentQueued(present.workloadId, framebufferManager.shownAddress(newVI));
 +            }
 +#       endif
  
@@ -4589,7 +4669,7 @@ index 2970e71..9e067dd 100644
          framebufferRenderer->updateMultisampling();
          updateRenderFlagSampleCount();
      }
-@@ -2660,12 +3023,118 @@ namespace RT64 {
+@@ -2660,12 +3023,101 @@ namespace RT64 {
          workload.debuggerCamera = debuggerInspector.camera;
          workload.debuggerRenderer = debuggerInspector.renderer;
          workload.paused = paused;
@@ -4666,23 +4746,6 @@ index 2970e71..9e067dd 100644
 +
 +            workload.offscreenOnly = viShowsAny && drawsAny && !workload.drawsShown;
 +        }
-+    }
-+
-+    uint32_t State::shownFramebufferAddress(const VI &vi) const {
-+        // VI::fbAddress() takes the origin to be a row or two into the framebuffer, as libultra's VI modes put it. A game
-+        // with a VI mode of its own can put it at the framebuffer's start (Turok 3's), and then the address is a row before
-+        // any framebuffer the game drew: no workload drew what the VI showed, and with RT64_GAME_FRAME_WORKLOADS no
-+        // present ended a game frame, so each was held to its limit, four of the game's frames shown as one. The origin
-+        // names the framebuffer then, where one of the VI's width and size is there and none is at the estimate.
-+        const uint32_t estimate = vi.fbAddress();
-+        if ((estimate != vi.origin) && (framebufferManager.find(estimate) == nullptr)) {
-+            const Framebuffer *atOrigin = framebufferManager.find(vi.origin);
-+            if ((atOrigin != nullptr) && (atOrigin->width == vi.fbSize().x) && (atOrigin->siz == vi.fbSiz())) {
-+                return vi.origin;
-+            }
-+        }
-+
-+        return estimate;
      }
  
      void State::advancePresent(Present &present, bool paused) {
@@ -4696,7 +4759,7 @@ index 2970e71..9e067dd 100644
 +        // minigames do, had the present wait for that frame's workloads too, which ended it there at a wait in the
 +        // middle (WorkloadQueue::endedGameFrame()), its rest drawn as a frame of its own, or held it and the game with
 +        // it. A framebuffer no workload has drawn since the VI first showed it waits for the newest, as before.
-+        const uint32_t screenFbAddress = shownFramebufferAddress(present.screenVI);
++        const uint32_t screenFbAddress = framebufferManager.shownAddress(present.screenVI);
 +        const uint32_t screenFbWidth = present.screenVI.fbSize().x;
 +        const uint8_t screenFbSiz = present.screenVI.fbSiz();
 +        for (const ShownFramebuffer &shown : shownFramebuffers) {
@@ -4708,7 +4771,7 @@ index 2970e71..9e067dd 100644
          present.debuggerFramebuffer.address = debuggerInspector.renderer.framebufferAddress;
          present.debuggerFramebuffer.view = (debuggerInspector.renderer.framebufferIndex >= 0);
      }
-@@ -2724,6 +3193,25 @@ namespace RT64 {
+@@ -2724,6 +3176,25 @@ namespace RT64 {
          extended.renderToRAM = renderToRAM;
      }
  
@@ -4735,7 +4798,7 @@ index 2970e71..9e067dd 100644
          extended.ditherNoiseStrength = noiseStrength;
      }
 diff --git a/src/hle/rt64_state.h b/src/hle/rt64_state.h
-index 7a8c13b..5b010ae 100644
+index 7a8c13b..7cbc85a 100644
 --- a/src/hle/rt64_state.h
 +++ b/src/hle/rt64_state.h
 @@ -4,6 +4,8 @@
@@ -4845,15 +4908,7 @@ index 7a8c13b..5b010ae 100644
          void fullSync();
          void fullSyncFramebufferPairTiles(Workload &workload, FramebufferPair &fbPair, uint32_t &loadOpCursor, uint32_t &rdpTileCursor);
          void listProcessBegin();
-@@ -152,6 +210,7 @@ namespace RT64 {
-         void updateMultisampling();
-         void inspect();
-         void advanceWorkload(Workload &workload, bool paused);
-+        uint32_t shownFramebufferAddress(const VI &vi) const;
-         void advancePresent(Present &present, bool paused);
-         void dpInterrupt();
-         void spInterrupt();
-@@ -162,6 +221,7 @@ namespace RT64 {
+@@ -162,6 +220,7 @@ namespace RT64 {
          DisplayList *popReturnAddress();
          void setRefreshRate(uint16_t refreshRate);
          void setRenderToRAM(uint8_t renderToRAM);
