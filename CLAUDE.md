@@ -26,10 +26,10 @@ a doc points at the other.
     rate, how the games compare. Read a game fork's part there and its own docs before changing it.
   - `docs/findings.md`: what has been measured, the numbers behind this file's rules included.
   - `docs/phones.md`: playing and measuring a page on an Android phone from a computer, and what phones do differently.
-  - `docs/new-recomp.md`: what a new recomp of the project's own is played and checked for before it is called done
-    (widescreen with the HUD at its sides, a graphics sweep past the first level, each controller its own port, and
-    what else turned up after games were called done). Read it before calling one done, and add to it what a game
-    turns up that the next one would too.
+  - `docs/new-recomp.md`: the two checklists, what a new recomp of the project's own (widescreen with the HUD at its
+    sides, a graphics sweep past the first level, each controller its own port) and every game's page (the shader
+    list, render to RAM, saves, sound, a long play) are played and checked for before they are called done, and where
+    each game stands against them. Read it before calling a port or recomp done (Rules says who keeps it).
 
 This repo, the forks and the game forks are public. Write for a stranger, in the present tense: nothing about a
 contributor's machine, servers, host names, paths or accounts, no person's name, no history of renames or "until
@@ -92,6 +92,10 @@ docs line) is made in the same work like any other.
   option on by default with Emscripten). The games' pages are there to build out and test it, not ports of their own:
   what one game or browser turns up is fixed in the shared support unless it really is that game's, and what one game
   does better (a shader list in sections, the late copy) is tried on the others.
+- The checklists in docs/new-recomp.md are kept by the work that plays the games, in the same PR (its Keeping them): a
+  problem one game turns up that another could have too goes in as an item, an item added is backchecked (its label
+  in the row of every game it can apply to, and work filed to play it there), and a play of a game for an item updates
+  that game's row. A port or new recomp is called done once its row holds only fails whose fixes are filed.
 - Work that is started: a critical fix, a new port, and work whose likely cause is shared code, measured on two games
   or more. One game's polish (one browser's sound in one game, 100 ms gaps at one screen change) is filed and waits
   until asked for.
