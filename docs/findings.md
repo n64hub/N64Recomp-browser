@@ -1279,7 +1279,8 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   `headless/main.cpp` header has the measurements), so a game that never reads its frames on the CPU turns it off
   (RecompFrontend-0004, `set_render_to_ram`), and one that does keeps it on. If it can take a frame one list old (a
   patch of the screen, a row of depth), `set_render_to_ram_late` (rt64 73e9ca0) makes the copy land later instead,
-  and the list stops waiting: Conker's, GoldenEye's, Donkey Kong 64's and Perfect Dark's pages do. It landed when the
+  and the list stops waiting: Conker's, GoldenEye's, Donkey Kong 64's, Perfect Dark's and Beetle Adventure Racing's
+  pages do. It landed when the
   next list started, which waited there for the GPU where the GPU took longer over a frame than the game between lists
   (a phone's, at its lowest clock); since rt64 330f84a it lands at the first VI or list start that finds the GPU done,
   or at the latest where the next list's draws are synced, before that list's RDP is done (docs/phones.md, Conker's Bad
@@ -1293,8 +1294,9 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   build, an interleaved pair, an RTX 2070): WWF No Mercy, whose frames are drawn in several tasks each, went from 226
   presents a second to 268, Rogue Squadron (its fork's write-back off, with the late copy) from 273 to 301, and THPS2
   from 330 to 335, within the noise. Space Station Silicon Valley's late copy measured no faster (148 against 167, with
-  Pages' own two plays at 178 and 157), so it keeps the exact copy, and Beetle Adventure Racing's never got from the
-  menus into a race (docs/game-forks.md). Through the device thread, the main thread checks a
+  Pages' own two plays at 178 and 157), so it keeps the exact copy. Beetle Adventure Racing's went from 217 to 238
+  once a yield its scheduler asks of a queued graphics task was answered: unanswered, its page never got from the menus
+  into a race with the late copy (docs/game-forks.md). Through the device thread, the main thread checks a
   READBACK buffer at each replay and present once a copy into it is replayed, maps it when the browser has delivered
   the data, and publishes the answer, which `isMapReady()` reads and `map()` waits for without waiting behind the
   main thread's queue; a build without threads would need `-sJSPI` (or ASYNCIFY) to wait in place. A call that waits
