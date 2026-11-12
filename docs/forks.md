@@ -868,6 +868,12 @@ ce2e0d3, 2516769       row before it (VI::fbAddress()'s estimate, libultra's mod
                        frames shown as one, 7.5 a second with all its shaders built (always on with Emscripten). Taken
                        where it is used, off the lines Jet Force Gemini's and DKR-R's rt64 patches change, so theirs
                        apply as they are
+rt64 f5afe59,          the framebuffer at a VI's origin (d49a689) is the one presented too, on every build: the present
+a6eca00                thread looked a row before it, found none for Turok 2's high resolution modes and Turok 3's, and
+                       showed the VI's RAM at 1x, never wider than 4:3, with nothing interpolated or skipped to.
+                       FramebufferManager::shownAddress() is the one lookup, for the present, its skip-buffering
+                       history, early presents, the CPU's writes to the shown framebuffer and the workload queue. The
+                       present's is taken on a line after the one Jet Force Gemini's rt64 patch has as context
 N64Recomp d6441f7,     RECOMP_KUSEG_WINDOW, for a recomp whose code runs from TLB-mapped (KUSEG) addresses and
 N64ModernRuntime       reads its strings, tables and constants through them (the Turok games, from 0x00200400): on the
 007b675                web its loads and stores and TO_PTR map KUSEG's first 16 MB into a window librecomp allocates
