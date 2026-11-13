@@ -20,6 +20,9 @@
 #   <s> stop                  this: for a moment whose time varies from run to run
 #   <s> size <w> <h>          the window's client area resized to w x h pixels, where it is: an aspect ratio of the
 #                             desktop's own (16:9, 21:9) for a game whose window opens at another
+#   <s> drag <ms>             the window's thread held in Windows' move loop for ms, as a drag by the title bar holds
+#                             it, without the mouse: item 6b's check, with -Env SDL_AUDIODRIVER=disk,SDL_DISKAUDIOFILE=<f>
+#                             recording what the game played, a gap a run of zeros (docs/new-recomp.md)
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
 # now and then and one of several frames most times. A burst's and a record's captures are kept in memory until the
@@ -218,6 +221,12 @@ try {
                 # SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE
                 [void][CaptureWindow]::SetWindowPos($hwnd, [IntPtr]::Zero, 0, 0, $w, $h, 0x16)
                 Write-Output ("{0,6:N1}s size {1}x{2}" -f $clock.Elapsed.TotalSeconds, $p[2], $p[3]) }
+            'drag' { # WM_SYSCOMMAND SC_MOVE: the window's thread runs Windows' move loop, as in a drag by its title bar,
+                # held ms, then Escape ends it where it began.
+                [void][CaptureWindow]::PostMessage($hwnd, 0x112, [IntPtr]0xF010, [IntPtr]0)
+                Start-Sleep -Milliseconds ([int]$p[2])
+                Send-Key $hwnd 'Escape' 120
+                Write-Output ("{0,6:N1}s drag {1} ms" -f $clock.Elapsed.TotalSeconds, $p[2]) }
             'end' { break }
             default { throw "unknown plan step: $line" }
         }
