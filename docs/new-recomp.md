@@ -37,7 +37,7 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b, 8a fails | W2, W5, W6, W7 |
+| San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b, 8a fails | W2, W5 fails, W6, W7 |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
@@ -52,7 +52,7 @@ items by almost no game when the record began.
 | Turok: Dinosaur Hunter | 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W8, W9 |
 | Turok 2: Seeds of Evil | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8c fails | W2, W3 fails, W5, W6, W7, W8, W9 |
 | Turok 3: Shadow of Oblivion | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W8, W9 |
-| GoldenEye 007 | | W2, W5, W6, W7 |
+| GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
 | Conker's Bad Fur Day | | W2, W5, W6, W7 |
@@ -93,7 +93,11 @@ are built in line (filed; W5); the Mario Parties' pages in Firefox run 66k-108k 
 10 s, as its prebuilt shaders are built with the game waiting, and Mario Party 2's 59k in the 30 s after its tab was
 hidden came from the same kind of wait, not from the hidden tab: the 1.4 s its section Minigames13's 34 shaders took
 fell in those 30 s (W5, filed); Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds
-whatever the window does, none more for a drag (6b, filed).
+whatever the window does, none more for a drag (6b, filed). In Firefox, where every page's boot section was built
+with its sound started (0.1-11.7 s short in the first 10 s on 37 pages of 38), it is built before the game starts
+since rt64 c5ced59: GoldenEye's page loses 0.8 s there, against 7.9-9.1 s from Pages, which may be play_page.mjs's
+own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s (a later
+section's wait, filed; W5; docs/findings.md, Firefox's boot wait and the first sound).
 
 ## A new recomp's list
 
