@@ -39,7 +39,7 @@ items by almost no game when the record began.
 |---|---|---|
 | San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b, 8a fails | W2, W5, W6, W7 |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
-| Super Mario 64 | 2 fails, 4c | W2, W5 fails, W6, W7 |
+| Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
 | Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
@@ -78,10 +78,9 @@ items by almost no game when the record began.
 
 What the fails are: Smash's magnifying bubble, which shows a fighter past the picture's edge, sits at the 4:3 picture's
 edge in a wider window (2, filed); Paper Mario's file select shows white beside its stage in widescreen, and its opening
-cutscene at Mario's house flickers between two pictures on the desktop (2, both filed); Super Mario 64's title screen
-leaves the top line of its picture undrawn, black on the page and flickering dark red on the desktop (2, filed), and its
-4c has been played with the keyboard only, its pads waiting for a way to play them (filed); F-Zero X's, the Mario
-Parties' and Turok 2's READMEs don't link their pages (8c); Turok 2's regular plan, played on a fresh profile, misses
+cutscene at Mario's house flickers between two pictures on the desktop (2, both filed); Super Mario 64's 4c has been
+played with the keyboard only, its pads waiting for a way to play them (filed); F-Zero X's, the Mario Parties' and
+Turok 2's READMEs don't link their pages (8c); Turok 2's regular plan, played on a fresh profile, misses
 shaders its list lacks (W3); Dinosaur Planet's page still loses a render quantum or two (up to 8 ms) in its sound's
 first 0.5 s in Chrome on most first visits, where the ring it keeps thin runs dry (the browser's burst counted as
 queued, filed), and the desktop build loses 22 ms as its sound starts, none at the logos since plume-web e69d031
@@ -131,7 +130,10 @@ What it looks for:
 - Letterboxes: black bars or a black row where the picture should reach the window, at odd window heights too, and
   the picture's last row and column filled at any window size (Turok 3's cutscene bars stopped a column short at
   1280x720, RT64's anchoring, docs/forks.md; Dinosaur Planet's a row short, with a grey strip of an old frame under
-  them, since the game's own scissor ends a row before the frame's, its docs/restored-content.md).
+  them, since the game's own scissor ends a row before the frame's, its docs/restored-content.md; Super Mario 64's
+  title backdrop the window's top row, flickering with three framebuffers' old frames, since the game's full-screen
+  projection falls a quarter of a line short of the top, which only a picture taller than 240 rows shows, its
+  patches/widescreen.c).
 - Tiling: seams or misaligned tiles on walls, ground, sky and the HUD's pieces at high resolution.
 - Widescreen: things culled or the level cut off near the picture's left and right edges (a game can cut its level a
   second time, at 16:9, as Turok 2 does); an off-screen marker (a bubble or an arrow for a character past the edge)
