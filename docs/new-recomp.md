@@ -37,7 +37,7 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 8a fails | W2, W5 fails, W6, W7 |
+| San Francisco Rush 2049 | 8a fails | W5 fails, W6, W9 fails |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
@@ -93,7 +93,8 @@ game waiting, break up its music for 0.1-0.3 s a dozen times (W5); the Mario Par
 none in their boot's first 10 s built on v0.200.0 (66k-108k from Pages on v0.184.0, as section boot's shaders were
 built with the game waiting), but on a busy GPU none drew in the 30 s after its tab was hidden and shown again, nor
 did Mario Party 1's page from Pages: Firefox's GPU process grew to 9-11 GB while hidden, 0.8-1.6M frames short after,
-the page back 25-60 s after the show (W5, filed); with the GPU to themselves, from Pages, they came through, Mario
+the page back 25-60 s after the show, the frames interpolated for presents a hidden page skips, which rt64 edd5da8
+no longer draws (W5, its replay filed); with the GPU to themselves, from Pages, they came through, Mario
 Party 2's 59k short there the 1.4 s its section Minigames13's 34 shaders took, a later section's wait (W5, filed);
 Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds whatever the window does, none
 more for a drag (6b, filed). In Firefox, where every page's boot section was built
