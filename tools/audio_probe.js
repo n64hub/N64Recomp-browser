@@ -14,6 +14,12 @@
 //                                                   falls to 0
 //   audiopeak <s> <peak> <peak> ...                  the same second's loudest sample played in each 20 ms, to tell a
 //                                                   loss in the game's silence from one in its sound
+//   audiomark <s> <hidden|visible>                   the page's tab hidden or shown again (visibilitychange), at <s>
+//                                                   on the sound's clock, as near as the last tick (below) puts it
+//   pagestall <s> <ms>                               the page's thread answered none of the worklet's ticks, one each
+//                                                   20 ms, for <ms> ms, ending at <s>: it was busy, and it runs the
+//                                                   game's WebGPU calls, which the game waits for (docs/findings.md, A
+//                                                   page in a hidden tab), so a stall there holds the game
 //
 // The processor's script is a blob audio_output.js hands to audioWorklet.addModule(); the probe fetches it, appends a
 // wrapper of RecompAudioProcessor's process(), and adds that in its place. The worklet sends its lines over the node's
@@ -51,6 +57,7 @@ if (self.crossOriginIsolated && !self.__audioProbe && self.AudioWorklet) {
     p.low = Math.min(p.low, fill);
     p.frames += length;
     if (p.frames % p.window < length) {
+      this.port.postMessage({ audioProbeTick: p.frames / sampleRate });
       p.lows.push(p.low);
       p.peaks.push(p.peak.toFixed(3));
       p.last = p.peak;
@@ -82,9 +89,23 @@ if (self.crossOriginIsolated && !self.__audioProbe && self.AudioWorklet) {
     const node = new Node(context, name, options);
     if (name === 'recomp-audio') {
       const port = node.port;
+      let tick = null, tickMs = 0;
       port.addEventListener('message', (event) => {
         if (event.data && event.data.audioProbe) {
           console.log(event.data.audioProbe);
+        }
+        if (event.data && (event.data.audioProbeTick !== undefined)) {
+          const now = performance.now();
+          if ((tick !== null) && (now - tickMs > 60)) {
+            console.log('pagestall ' + event.data.audioProbeTick.toFixed(3) + ' ' + Math.round(now - tickMs));
+          }
+          tick = event.data.audioProbeTick;
+          tickMs = now;
+        }
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (tick !== null) {
+          console.log('audiomark ' + (tick + (performance.now() - tickMs) / 1000).toFixed(3) + ' ' + document.visibilityState);
         }
       });
       port.start();
@@ -95,7 +116,7 @@ if (self.crossOriginIsolated && !self.__audioProbe && self.AudioWorklet) {
           if (handler) {
             port.removeEventListener('message', handler);
           }
-          handler = f && ((event) => (event.data && event.data.audioProbe) || f(event));
+          handler = f && ((event) => (event.data && (event.data.audioProbe || (event.data.audioProbeTick !== undefined))) || f(event));
           if (handler) {
             port.addEventListener('message', handler);
           }

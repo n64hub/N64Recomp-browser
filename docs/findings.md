@@ -511,7 +511,7 @@ Mario Kart 64 run lost 149,016 in one 5 s while hidden, and another Star Fox 64 
 second for the 30 s it was played after, its presents done 60-650 ms late with the GPU 9-21% busy and 7.5 of its 8 GB
 in use by other pages (Pages' build under the same load came back at 60). On an idle host Pages' kept 60 presents a
 second while hidden, and with a preload that times animation frames at 240 a second both came back at 221-225. Firefox
-158 plays through it either way, its sound never short.
+158 plays through it either way, its sound never short (on a busier host not always: Paper Mario's, below).
 
 What stalls it is Chrome's priority, not the page's work. On Windows, within 2 s of a tab going hidden, Chrome 155
 lowers its renderer process from normal priority (8) to idle (4), unless the tab plays sound;
@@ -551,6 +551,36 @@ from Pages against 298 and 307, and Mario Kart 64 with Chrome's CPU throttled 4 
 So a play that hides a page in Chrome sends its sound to no device (`--chrome-flag --disable-audio-output`). Muted,
 it measures Chrome idling a silent tab. A player's page plays its game's sound, so Chrome keeps it at normal priority
 and its game plays on.
+
+Paper Mario's page from Pages, played from Start Game 20 s into its intro story's music and hidden 30 s (`--fault
+hidden` with `tools/audio_probe.js`, whose `pagestall` lines say when the page's thread answered none of the worklet's
+20 ms ticks; an RTX 2070, 3840x2000 uncapped, new profiles, a host 19-48% busy):
+
+- What read as Firefox losing 0.3 s at the hide was `play_page.mjs`'s own. Its report of Firefox's GPU process
+  (`gpuProcessMemory`, nsIMemoryReporterManager's getReports) runs every process's memory reporters, the page's on the
+  page's thread, which answered nothing for 338-473 ms each time, the ring empty for 0.34 s: in the half second before
+  the tab was hidden, counted as the hidden tab's, and as the play started, counted as the play's. A sample after each
+  report now ends the one it fell in, which neither counts, and the play's sound is read as it ends, not after the
+  faults. With it out, Firefox lost 0, 164 and 56 frames while hidden in three plays and kept every one of its processes
+  at normal priority (8) throughout, but on a host 47% busy its page's thread answered only every 100-270 ms while hidden
+  and 51,464-77,180 frames ran short a 5 s (filed). As the tab came back, the page's thread was busy 130-220 ms and
+  9,792 frames ran short in one play, none in two.
+- Chrome (`--chrome-flag --disable-audio-output`) lost 784 frames (16 ms) of the music 0.27 s after the tab was hidden
+  in one play of two, none in the other, and the page's thread answered all through, so it isn't Chrome's priority
+  drop above. Where the present thread is waiting for a present in flight as the tab goes hidden, plume learns the page
+  is hidden only from a publish the next present queues (plume's isHidden()), and the game waits for a free present
+  until Chrome's late callback comes (filed). Both Chrome plays lost 1,632-2,260 frames 80.6 s into the sound, where
+  the loudest sample before it was 0-0.04: the game's own quiet, as at its boot (Compute pipelines built at their
+  first dispatch).
+- What Firefox lost after the tab came back in the play that filed this, a dozen rounds of `building N prebuilt shaders
+  for section (none), the game waiting`, is the intro story's own shaders, none missing from the list. Of the 64 the
+  story draws in 110 s by itself, 36 are the boot section's and 28 the intro section's, which the list records from
+  the title (tools/shader_survey.js's intro()), and those come 56-106 s after Start Game, one to eight in a 5 s. RT64
+  enters a section only where a frame wants 4 of it (rt64's RasterShaderCache), so Firefox builds them as strays, 1-3
+  a round with the game waiting, 0.0-0.3 s each. They stay in the intro section: in the boot section, which Firefox
+  builds before the game's first frame, they would cost about as much once and on every visit, a player who presses
+  Start included, as Paper Mario's sections cost Firefox 0.06-0.16 s a shader (demo's 62 in 3.6-9.8 s, new_game's 151
+  in 5.7-13.8 s; plays.jsonl), 2-4 s more at the boot.
 
 ## A host that holds Chrome's presents
 
@@ -1410,6 +1440,8 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   wait sends, so the timer is not this wait. `play_page.mjs`'s about:memory read (`gpuProcessMemory`) held Firefox's
   presents and animation frames 120-203 ms each time, at the play's start and end, and a settled launcher's play
   counted the first as its longest gap (136 and 202 ms, 13.5 and 14.7 without it), so a play's gaps start after it.
+  It holds the page's thread too, 338-473 ms in Paper Mario's intro with its sound, so neither the play's sound nor a
+  fault's counts it either (A page in a hidden tab).
 - Chrome on Windows gives a page the integrated GPU on a laptop that has two, since it ignores `powerPreference`
   (crbug.com/369219127); `chrome://flags/#force-high-performance-gpu` gives it the other. On that laptop's Intel UHD
   (D3D12) Rush 2049's page crawled until its specialized pipelines were built (~1 fps for minutes in menus, 20-30 in

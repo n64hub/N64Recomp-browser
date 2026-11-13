@@ -45,7 +45,7 @@ items by almost no game when the record began.
 | Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Super Smash Bros. | | W2, W5, W6 |
-| Paper Mario | 2 fails, 4a, 4c, 6b | W2, W5 fails, W6, W7 |
+| Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
@@ -76,10 +76,9 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7, W8, W9 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: Paper Mario's opening cutscene at Mario's house flickers between two pictures on the desktop (2,
-filed); Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way to play them
-(filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs
-don't link their pages (8c); Turok 2's regular plan, played on a fresh profile, misses shaders its list lacks (W3);
+What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way to play
+them (filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); Turok 2's regular
+plan, played on a fresh profile, misses shaders its list lacks (W3);
 Dinosaur Planet's page still loses a render quantum or two (up to 8 ms) in its sound's first 0.5 s in Chrome on most
 first visits, where the ring it keeps thin runs dry (the browser's burst counted as queued, filed), and the desktop
 build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
@@ -88,8 +87,9 @@ Firefox builds RT64's ubershader in line; Super Mario 64's page in Chrome loses 
 and at 3.4 s inside its own silence, where the game's sound code makes nothing as it reloads, and 3-85 ms of its logo's
 fading sound at 0.5-0.6 s in 4 of 10 plays, where the ring is still refilling (the thin ring's, filed; W5); Paper
 Mario's boot loses sound in both browsers only inside its own silence, which lasts until its intro stage's music, but
-its tab hidden in its intro loses 32 ms of that music in Chrome and 0.3 s in Firefox, there as shaders its list lacks
-are built in line (filed; W5); the Mario Parties' pages in Firefox run 66k-108k sound frames short in their boot's first
+its tab hidden in its intro loses 16-32 ms of that music in Chrome in some plays, as the present thread waits for a
+present in flight (filed), and in Firefox the intro story's own shaders, which RT64 builds a few at a time with the
+game waiting, break up its music for 0.1-0.3 s a dozen times (W5); the Mario Parties' pages in Firefox run 66k-108k sound frames short in their boot's first
 10 s, as its prebuilt shaders are built with the game waiting, and Mario Party 2's 59k in the 30 s after its tab was
 hidden came from the same kind of wait, not from the hidden tab: the 1.4 s its section Minigames13's 34 shaders took
 fell in those 30 s (W5, filed); Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds
@@ -128,7 +128,11 @@ Firefox, with captures or clips of what is found. What it plays, beyond the firs
 What it looks for:
 
 - Flicker: a surface or the HUD blinking frame to frame, z-fighting, a frame of garbage or a stale framebuffer in a
-  transition, a frame drawn without its HUD, text or characters.
+  transition, a frame drawn without its HUD, text or characters, or with only the part of its world drawn first. A
+  game that draws a frame in several RSP tasks needs `RT64_GAME_FRAME_WORKLOADS` on its desktop build too, as its page
+  has it, or RT64 interpolates each task as a frame of its own (docs/forks.md; the Mario Parties' and Paper Mario's
+  CMakeLists.txt: Paper Mario's opening at Mario's house showed the house's inside without its outer wall, roof and
+  trees in half the frames one host showed).
 - Interpolation: on the frame a level section, room or the world's origin changes, what is drawn snaps rather than
   blending between the two (Dinosaur Planet's, Perfect Dark's and GoldenEye's sections); characters' model parts carry
   ids of their own, or RT64 pairs one character's parts with a look-alike's (Mario Party's, Rayman 2's, Goin'
