@@ -40,7 +40,7 @@ items by almost no game when the record began.
 | San Francisco Rush 2049 | 8a fails | W5 fails, W6 |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
-| F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
+| F-Zero X | 4c | W6 |
 | Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
@@ -77,7 +77,7 @@ items by almost no game when the record began.
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
 What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way
-to play them (filed); F-Zero X's and the Mario Parties' READMEs don't link their pages (8c);
+to play them (filed); the Mario Parties' READMEs don't link their pages (8c);
 Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
 first audio tasks come late (filed), and none after it since the ring's count leaves out the browser's burst, and the desktop
 build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
@@ -171,12 +171,13 @@ the second pad plays port 2 without anyone assigning players first, and the game
 each. RecompFrontend's `RECOMPINPUT_PADS_IN_ORDER` does that (set before `add_subdirectory` of RecompFrontend, with
 `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED`, `set_single_player_mode(false)` and the game's player count), and the
 game's `get_connected_device_info` reports a controller in port 1, in each port a pad is connected for
-(`get_detected_controller_count`) and in each assigned player's: F-Zero X's, Super Smash Bros.' and Mario Party's
-`main.cpp` are the pattern. A game whose pads become players on their first press (per-pad bindings) can keep that
-and join every connected pad in the order it was plugged in on any pad's first press instead (Rush 2049's
-`RecompFrontend-0009` runtime patch). Single-player mode, where every pad plays port 1, is for a game of one player
-only. The
-page plays it with stand-in pads (W7).
+(`get_detected_controller_count`) and in each assigned player's, each with a Rumble Pak in it unless the game keeps
+its save on a Controller Pak there (5a): a game that finds no Rumble Pak (`osMotorInit`) never rumbles for that
+player. F-Zero X's, Super Smash Bros.' and Mario Party's `main.cpp` are the pattern. A game whose pads become
+players on their first press (per-pad bindings) can keep that and join every connected pad in the order it was
+plugged in on any pad's first press instead (Rush 2049's `RecompFrontend-0009` runtime patch). Single-player mode,
+where every pad plays port 1, is for a game of one player only. The page plays it with stand-in pads (W7), their
+rumble included.
 
 ### 4. Input
 
