@@ -761,6 +761,21 @@ and 32,815 frames short; the build had 123-218 ms gaps, no GPU process task over
 desktop build v0.1.3's boot, recorded with SDL's disk driver, loses 19.7 ms 0.017 s into its sound and 2.0 ms at 0.040
 s, and nothing else, so the page loses less where the game's sound starts than the desktop does.
 
+The hold doesn't hold the sound. A build on rt64 1589517 with two switches of an experiment's own, one that leaves a
+frame of offscreen passes alone unheld and a log of how long the game's graphics thread waits for a free present
+(updateScreen's advanceToNextPresent), played in three interleaved pairs of first visits (Chrome 155, an RTX 2070,
+3840x2000 uncapped, beside other plays on the GPU): held, the game waited 10-13 ms at most after the click, three
+frames ending `end=held`; unheld, never 5 ms; and the sound ran short in two plays of each, 364 frames each held and
+364 and 285 unheld, every time in the sound's first 0.03-0.23 s. A preload that patches the worklet's processor logged
+each short render quantum and the ring's lowest fill in each 20 ms: Dinosaur Planet keeps its ring thin, lowest at
+80-300 frames (2-6 ms) through the whole boot, as its osAiGetLength reads the frames queued less a VI's worth, and
+the losses are a quantum or two each where it reached 10-120. A worklet that starts only once the ring holds two VIs
+(1,600 frames) lost 49, 0 and 49 against 107, 0 and 403 started at once, its fill the same frame for frame after the
+start: the game makes that much less sound in its next frames. The same probe on Pages' pages of Super Mario 64 and
+Paper Mario, whose rings sit at 1,000-1,500 frames, found larger losses of another kind, runs of empty quanta where
+the game made nothing for 40-100 ms: Super Mario 64 5,792 and 10,272 frames short in its boot's first 0.6 s and at 3.5
+s, Paper Mario 612 and 1,016 at 0.016 s and 9.3 s.
+
 Firefox lost Dinosaur Planet's sound at its boot for the same builds, and for one more (an RTX 2070, 3840x2000 uncapped,
 a new profile, a busy host; a preload that logs each create*Pipeline call and every queue round trip,
 onSubmittedWorkDone polled every 50 ms, over 40 ms). Its GPU process builds every pipeline in line, and plume left
