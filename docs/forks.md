@@ -958,4 +958,9 @@ d405b65 497dab9        six VIs behind every list that took about that long, and 
                        held VIs while a graphics task was unfinished for two VIs, counted in submit_rsp_task and
                        dp_complete, lines five game forks' runtimes change; 497dab9 puts those back and shortens the
                        stall instead. Web only
+plume 0ac34ab,         WebGPU: where the device builds pipelines in line (Firefox), a draw of nothing builds the bound
+rt64 77e98da           pipeline for the layout it resolves, as a draw would, so RT64's warm-up in prepareForGame() has
+                       Firefox compile the ubershader's 245 KB shaders before the game starts; it built nothing there,
+                       and the game's first draw with the ubershader built it in line with the game's sound running
+                       (docs/findings.md, Compute pipelines built at their first dispatch). Chrome is as it was
 ```

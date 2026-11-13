@@ -910,8 +910,19 @@ regular plan, Firefox, 3840x2000 uncapped, new profiles, an RTX 2070 on a busy h
 pipeline probe preloaded"). The first build is the one at the game's first frame, beside section boot's: Dinosaur
 Planet's 6 boot shaders were built in 0.4-0.6 s and the round trip there took 1.4-4.2 s, Super Mario 64's 27 with
 two states 3.2-3.7 s. RT64 skips its warm-up draw of nothing at setup (State::warmUpPipelines()) where pipelines
-don't build in the background, so in Firefox nothing built the ubershader before the game's first frame did, until
-rt64 c5ced59 did that draw just before the game starts (Firefox's boot wait and the first sound, below).
+don't build in the background, so in Firefox nothing built the ubershader before the game's first frame did. rt64
+c5ced59 does that draw just before the game starts (Firefox's boot wait and the first sound, below), but in Firefox it
+built nothing: a draw of nothing resolves the layout, which starts builds only where they run in the background, and
+plume built a pipeline in line only when something was drawn with it. The probe showed it on v0.198.0: Dinosaur
+Planet's ubershader was built at its menu, 25 s after section boot's 6 shaders, with a 1.4-1.7 s round trip and 71,285
+and 83,295 frames short in those 5 s; Super Mario 64's at the castle grounds' first frame, beside its 30 shaders, a
+2.4-2.6 s wait and 99,520 and 114,912 short. plume-web 0ac34ab builds the bound pipeline at a draw of nothing where
+the device builds in line, so the warm-up builds the ubershader's first state with section boot, the game waiting
+before its sound starts (section boot's wait 1.1 and 2.3 s against 0.5 and 0.4 s in Dinosaur Planet, 2.3 and 3.3 s
+against 1.9 and 1.5 s in Super Mario 64), and its other states are built for about nothing later. Dinosaur Planet's
+menu then lost 2,244 and 1,187 frames, and Super Mario 64's castle grounds waited 1.7 and 1.9 s and lost 74,712 and
+89,952, the section's own 30 shaders (two interleaved pairs a game, Firefox, 3840x2000 uncapped, new profiles, an RTX
+2070 on a busy host; plays.jsonl, notes "the warm-up's draw of nothing builds the ubershader").
 
 ## Firefox's boot wait and the first sound
 
