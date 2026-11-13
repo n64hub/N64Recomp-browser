@@ -963,4 +963,9 @@ rt64 77e98da           pipeline for the layout it resolves, as a draw would, so 
                        Firefox compile the ubershader's 245 KB shaders before the game starts; it built nothing there,
                        and the game's first draw with the ubershader built it in line with the game's sound running
                        (docs/findings.md, Compute pipelines built at their first dispatch). Chrome is as it was
+rt64 edd5da8           a hidden page draws no interpolated frames, only its game's own: it presents none, so nothing
+                       held the workload thread to the presents in flight, and the frames for every slot of the
+                       display's rate went to the GPU unseen. Firefox queued what a busy GPU couldn't finish, its GPU
+                       process grew to 9-21 GB while hidden and the page drew nothing for 25-60 s after it was shown
+                       (docs/findings.md, A page in a hidden tab). Web only
 ```
