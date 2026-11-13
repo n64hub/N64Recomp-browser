@@ -744,6 +744,20 @@ and 32,815 frames short; the build had 123-218 ms gaps, no GPU process task over
 desktop build v0.1.3's boot, recorded with SDL's disk driver, loses 19.7 ms 0.017 s into its sound and 2.0 ms at 0.040
 s, and nothing else, so the page loses less where the game's sound starts than the desktop does.
 
+Firefox lost Dinosaur Planet's sound at its boot for the same builds, and for one more (an RTX 2070, 3840x2000 uncapped,
+a new profile, a busy host; a preload that logs each create*Pipeline call and every queue round trip,
+onSubmittedWorkDone polled every 50 ms, over 40 ms). Its GPU process builds every pipeline in line, and plume left
+Firefox's compute pipelines to their first dispatch. As the first 3D drew, 5-6 s after Start Game, rspProcess and
+rspWorld were built there, the round trips took 200-255 ms, and 2,200-16,600 frames were short (the page Pages served,
+and main's own build, in seven boots). At the game's first frames textureDecode and fbWriteColor were built beside
+RT64's ubershader, one 245 KB pixel shader, which plume builds with createRenderPipeline when first drawn: the round
+trips took 2.2-2.6 s there, nothing was presented for 1-2 s, and 3,500-122,000 frames were short, most in most boots.
+plume-web 4381169 builds Firefox's compute pipelines for their predicted layout too, with createComputePipeline at the
+device's next submission after RT64 makes them, so at the launcher, where its GPU process takes 1.6-1.8 s for the 21
+before any sound plays (each built where it was made, 8 were built twice as later shaders changed their layouts).
+Three interleaved pairs against main's build: nothing short at the first 3D in the build against 2,216-14,690, and
+at Start 103,000-107,000 against 88,000-116,000, which is the ubershader's, the same either way.
+
 ## What the prebuilt lists miss
 
 Each list was recorded from a plan that reaches a level's start and plays a few seconds of it (its header says what
