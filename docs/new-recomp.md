@@ -39,7 +39,7 @@ items by almost no game when the record began.
 |---|---|---|
 | San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b | W2, W5, W6, W7 |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W9 |
-| Super Mario 64 | 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W5, W6, W7 |
+| Super Mario 64 | 2 fails, 4c | W2, W5, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
 | Mario Party | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Mario Party 2 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
@@ -77,9 +77,11 @@ items by almost no game when the record began.
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
 What the fails are: Smash's magnifying bubble, which shows a fighter past the picture's edge, sits at the 4:3
-picture's edge in a wider window (2, filed); Paper Mario's file select shows white beside its
-stage in widescreen, and its opening cutscene at Mario's house flickers between two pictures on the desktop (2, both
-filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok
+picture's edge in a wider window (2, filed); Paper Mario's file select shows white beside its stage in widescreen, and
+its opening cutscene at Mario's house flickers between two pictures on the desktop (2, both filed); Super Mario 64's
+title screen leaves the top line of its picture undrawn, black on the page and flickering dark red on the desktop
+(2, filed), and its 4c has been played with the keyboard only, its pads waiting for a way to play them (filed);
+F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok
 2's regular plans, played on a fresh profile, miss shaders their lists lack (W3); Dinosaur Planet's page still loses one
 silence of about 10 ms 0.4 s into its game's sound in Chrome on a first visit, while RT64 holds the game's first frames
 before it shows one, where the desktop build loses 22 ms as its sound starts, and none at the logos since plume-web
