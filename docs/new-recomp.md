@@ -86,8 +86,9 @@ first 0.5 s in Chrome on most first visits, where the ring it keeps thin runs dr
 queued, filed), and the desktop build loses 22 ms as its sound starts, none at the logos since plume-web e69d031
 (docs/findings.md, Compute pipelines built at their first dispatch), and in Firefox, since plume-web 4381169 none at its
 first 3D, 1-2 s at Start Game while Firefox builds RT64's ubershader in line; Super Mario 64's page in Chrome loses
-120-214 ms in its boot's first 0.6 s and at 3.5 s, and Paper Mario's 13-21 ms at 9.3 s, its game making no sound there
-(both filed; W5); the Mario Parties' pages in Firefox run 66k-108k sound frames short in their boot's first 10 s, as its
+120-214 ms in its boot's first 0.6 s and at 3.5 s (filed; W5); Paper Mario's boot loses sound in both browsers only
+inside its own silence, which lasts until its intro stage's music, but its tab hidden in its intro loses 32 ms of that
+music in Chrome and 0.3 s in Firefox, there as shaders its list lacks are built in line (filed; W5); the Mario Parties' pages in Firefox run 66k-108k sound frames short in their boot's first 10 s, as its
 prebuilt shaders are built with the game waiting, and Mario Party 2's 59k in the 30 s after its tab was hidden came from
 the same kind of wait, not from the hidden tab: the 1.4 s its section Minigames13's 34 shaders took fell in those 30 s
 (W5, filed); Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds whatever the window
@@ -220,7 +221,9 @@ Every game's page, a game fork's or a recomp of the project's own, is checked fo
   its levels and the console's reports of CPU writes to a framebuffer with a copy pending read). Else the exact copy,
   naming what reads it (Majora's Mask's Pictograph Box, Jet Force Gemini's shadows' render targets).
 - **W5.** No sound lost or turned to noise: none short in the boot's first 10 s in Chrome and Firefox
-  (`audioShort`), nor after the tab is hidden and shown again.
+  (`audioShort`), nor after the tab is hidden and shown again. A loss inside the game's own silence (a boot's silent
+  logos) is no sound lost: `tools/audio_probe.js` logs each short render quantum with the loudest sample played
+  before it, 0 there.
 - **W6.** The game finds its save after the page is reloaded and after the browser is closed and opened again, and a
   signed-in player's save reaches the Drive and comes back in another browser (`frontend/save_sync.js`).
 - **W7.** A stand-in pad (`tools/gamepad_probe.js`) drives the launcher, the menus and play, its rumble played; a game
