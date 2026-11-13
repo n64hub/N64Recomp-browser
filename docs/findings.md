@@ -788,6 +788,23 @@ same music and has no run of zeros of 1 ms or more in the 9 s after it starts. F
 boot, nearly all in its first 3 s as a section's shaders were built with the game waiting (2.2 s), every one in the
 silence too.
 
+Super Mario 64's are its own sound code's, which makes nothing while it reloads (Pages' page in Chrome 155, an RTX 2070,
+3840x2000 uncapped, a new profile, Start Game and 12 s; a host 34-61% busy, others' plays beside it). The losses fall in
+the same places in every play, to the render quantum: the sound's first 0.03 s, 0.11-0.2 s and 3.4-3.5 s, about 4,500
+frames (95 ms) a play, and in the plays that logged it the loudest sample before each was 0. While the game's sound
+session is reset (`audio_reset_session`, which fades every note out first and then holds `gAudioLoadLock` for 3 frames
+or more) or a sequence is loaded with the game waiting (`preload_sequence`, `load_sequence`), its sound thread's
+`create_next_audio_frame_task` returns before `osAiSetNextBuffer` ("DAC:Lost 1 Frame"), so a console's audio interface
+gets no buffer there either. The desktop build v0.1.11, recorded twice with SDL's disk driver, has 2,405 frames of zeros
+(3 frames' worth) at the same reset, 2.93 s into its sound, between the logo's sound and the title's, the same in both.
+Neither Chrome's lazy wasm compilation (the same losses with `--js-flags=--no-wasm-lazy-compilation`, two pairs) nor a
+load waiting for the renderer to read a display list (ultramodern's displaylists.cpp: a build that logged each wait over
+5 ms logged none, and one that let the sound thread run during it lost as much) is in it. What a player can hear comes
+after: the ring, back at 0 when the game makes sound again, takes about 0.6 s to refill to its 1,200 frames, as the game
+makes only a few samples a frame more than it plays, and a late frame there ran it dry in the logo's fading sound at
+0.5-0.6 s in 4 of 10 plays, 152-4,072 frames (3-85 ms; the loudest sample 0.04-0.06 where it was logged, the desktop's
+sound there 0.03-0.05): what the thin ring at Dinosaur Planet's start loses (above).
+
 Firefox lost Dinosaur Planet's sound at its boot for the same builds, and for one more (an RTX 2070, 3840x2000 uncapped,
 a new profile, a busy host; a preload that logs each create*Pipeline call and every queue round trip,
 onSubmittedWorkDone polled every 50 ms, over 40 ms). Its GPU process builds every pipeline in line, and plume left
