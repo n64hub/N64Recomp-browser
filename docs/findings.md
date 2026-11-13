@@ -542,6 +542,9 @@ play): main's GPU process went from 2.2 GB to 21.5 GB while hidden, 16.7 GB of i
 presented nothing in the 30 s after it was shown, 2.28 M frames short; the build's held 2.07-2.16 GB in one play and
 2.43 GB in another, lost no sound hidden and was back at 30-110 presents a second within 5-10 s of the show, 9,890 and
 2,339 frames short. In Chrome (`--disable-audio-output`) the build lost none hidden and came back at 124, 412 short.
+Its tag, v0.201.0, played the run that had run out of memory (Rush 2049's extended plan of 160 s of races at 3840x2000
+uncapped in Firefox, then hidden 30 s, on a GPU 97% busy): the GPU process held 2.45 GB hidden, against main's 25.6 GB
+and the lost device, and the page came back at 95 presents a second with no WebGPU error.
 
 What stalls it is Chrome's priority, not the page's work. On Windows, within 2 s of a tab going hidden, Chrome 155
 lowers its renderer process from normal priority (8) to idle (4), unless the tab plays sound;
