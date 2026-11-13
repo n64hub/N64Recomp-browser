@@ -213,11 +213,12 @@ each one. Paper Mario's page from Pages in Firefox 158 (RTX 2070, 3840x2000 unca
 plays of 4, and a test build of it in 3 of 3: hidden there, every list took 50-230 ms, its render to RAM's readbacks waiting on the page's thread, and
 the game freed what the list in hand pointed at as its intro handed over to its attract demo. Visible on the same host
 it came through, but its lists took 60-210 ms for several seconds after the demo's section built. Chrome, hidden,
-came through. N64ModernRuntime d405b65 holds VIs too while a graphics task has gone unfinished for two VIs, as a
-console's RDP would have finished it: the same hidden play came through 3 times in 3, into the demo. Its cost is the
-game's sound wherever lists run long, since its audio runs on the same VIs: visible on that host, the 9 s after the
-demo's 12 s section wait lost 220,000-350,000 sound frames against 23,000-90,000 without the hold (two interleaved
-pairs), the presents the same (medians 102-116 against 97-105).
+came through. Held after two VIs on one action, as a console's RDP would have finished a list (N64ModernRuntime
+497dab9, a stall of 30 ms), the same hidden play came through 3 times in 3, into the demo, and so did d405b65's hold
+while a graphics task was unfinished for two VIs, which it replaced. Its cost is the game's sound wherever lists run
+long, since its audio runs on the same VIs: visible on that host, the 9 s after the demo's 12 s section wait lost
+220,000-350,000 sound frames with d405b65's hold against 23,000-90,000 without it (two interleaved pairs), the presents
+the same (medians 102-116 against 97-105).
 
 A page that runs out of heap does so in a burst after a stall, not by leaking. Banjo-Kazooie's page aborted with
 `Aborted(OOM)` in Firefox 158 in 3 of 6 runs of a retest (2026-10-19 21:11-21:56 UTC, uncapped at 3840x2000 on an RTX
