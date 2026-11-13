@@ -49,9 +49,9 @@ items by almost no game when the record began.
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
-| Turok: Dinosaur Hunter | 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W9 |
-| Turok 2: Seeds of Evil | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8c fails | W2, W3 fails, W5, W6, W7, W9 |
-| Turok 3: Shadow of Oblivion | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W8, W9 |
+| Turok: Dinosaur Hunter | 4c, 5a | W2, W5, W6, W7 |
+| Turok 2: Seeds of Evil | 3, 4c, 5a | W2, W5, W6, W7 |
+| Turok 3: Shadow of Oblivion | 3, 4c, 5a | W2, W5, W6, W7, W8 |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
@@ -73,12 +73,11 @@ items by almost no game when the record began.
 | Tony Hawk's Pro Skater 2 | | W2, W5, W6, W7, W9 |
 | Star Wars: Rogue Squadron | | W2, W5, W6, W7, W9 |
 | Beetle Adventure Racing! | | W2, W5, W6, W7, W9 |
-| Turok: Rage Wars | | W2, W5, W6, W7, W9 |
+| Turok: Rage Wars | | W2, W5, W6, W7 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
 What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way
-to play them (filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); Turok 2's regular
-plan, played on a fresh profile, misses shaders its list lacks (W3);
+to play them (filed); F-Zero X's and the Mario Parties' READMEs don't link their pages (8c);
 Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
 first audio tasks come late (filed), and none after it since the ring's count leaves out the browser's burst, and the desktop
 build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
@@ -180,7 +179,9 @@ page plays it with stand-in pads (W7).
 - **4a.** On a new profile: mouse look on and pointing the way the game's stick does, and keyboard defaults that reach
   every menu (the arrows and the D-pad's keys) as well as play.
 - **4b.** Start or Enter pressed or held through the boot: many games open their Controller Pak manager for it, which
-  must neither crash nor stop the game.
+  must neither crash nor stop the game. The launcher's own Enter on Start Game can be that press: Turok: Dinosaur
+  Hunter's first read of the pad comes while the key is still down, so a game started with Enter opened its manager
+  every time (Start leaves it).
 - **4c.** Bindings are kept across a restart and a pad plugged in again, two pads of one model included.
 
 ### 5. Saves and settings
@@ -201,7 +202,11 @@ page plays it with stand-in pads (W7).
 - **6b.** No sound lost or turned to noise on the desktop through the boot and a window dragged (the page's is W5). On
   Windows a drag holds the window's thread in the move loop that a `WM_SYSCOMMAND` `SC_MOVE` posted to the window
   starts as well, which a script holds and ends (Escape) without the mouse, and SDL's disk driver
-  (`SDL_AUDIODRIVER=disk`, `SDL_DISKAUDIOFILE`) records what the game played, its gaps as runs of zeros.
+  (`SDL_AUDIODRIVER=disk`, `SDL_DISKAUDIOFILE`) records what the game played, its gaps as runs of zeros
+  (`tools/capture_window.ps1`'s `drag`). A gap is a loss only where a recording of the same boot without drags has
+  none (a game's own cut to its attract demo is a run of zeros too, as Turok: Dinosaur Hunter's is) and a second drag
+  play loses it again: Turok 3's first lost 65 ms in a drag over its title music beside a page play at 3840 wide, and
+  two more lost nothing.
 
 ### 7. The page
 
