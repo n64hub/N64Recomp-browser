@@ -37,8 +37,8 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b | W2, W5, W6, W7 |
-| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W9 |
+| San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b, 8a fails | W2, W5, W6, W7 |
+| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 2 fails, 4c | W2, W5, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
 | Mario Party | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
@@ -180,7 +180,9 @@ The web port list, every item of it.
 
 ### 8. The release
 
-- **8a.** The desktop build runs on Windows and on Linux, Mesa's lavapipe included.
+- **8a.** The desktop build runs on Windows and on Linux, Mesa's lavapipe included: its release's boot
+  (`tools/boot_release.sh`, 90 s) passes on both. A build whose pin is older than plume a8e74eb crashes on lavapipe
+  seconds into its game (docs/findings.md, A desktop build on Mesa's lavapipe), so it fails until the retest moves it.
 - **8b.** Its icon, window title and launcher art are its own game's, not the recomp it was started from.
 - **8c.** Its README links its page.
 

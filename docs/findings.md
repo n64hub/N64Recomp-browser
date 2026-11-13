@@ -1846,6 +1846,22 @@ froze, and only a restart brought it back. A device lost in a browser
 costs only its page (Faults); one lost through `/dev/dxg` costs the host and everything on it, so a desktop build
 under WSL runs on lavapipe (CLAUDE.md, Playing a page).
 
+## A desktop build on Mesa's lavapipe
+
+Every recomp's Linux release crashed on lavapipe (Vulkan on the CPU) seconds into its game: Perfect Dark's v0.1.12 in
+its intro at 32 s, Rush 2049's v0.1.65 in its attract races at 59 s, booted in `tools/boot_release.Dockerfile`'s
+Ubuntu 24.04 (Mesa 25.2.8). Ubuntu 25.10's Mesa 25.2.8, 26.04's 26.0.8 and 26.10's 26.2.4 crashed alike. Under gdb an
+llvmpipe rasterizer thread faulted in a fragment shader's compiled code, in the loop gallivm builds over the lanes of a
+non-uniformly indexed texture array (RT64's `gTextures[NonUniformResourceIndex(...)]`, TextureSampler.hlsli): the
+descriptor set's address was 0 in lanes 0-3 and the set's own in lanes 4-7, and the loop took lane 0's, reading
+texture 654's descriptor from address 0xa3b8. The validation layer (through a `vk_layer_settings.txt`: its
+`VK_KHRONOS_VALIDATION_*` variables were ignored), GPU-assisted validation included, reported nothing up to the crash.
+
+plume a8e74eb reports no descriptor indexing on a device with Mesa's vendor ID, so RT64 binds each draw's textures as
+on WebGPU and no shader indexes a texture array. Both builds with it ran 240 s on lavapipe and drew as before. Perfect
+Dark's first picture comes later there, by 30 s where it came within 10 s (twice each, alone on an idle host); Rush
+2049's comes at 10 s either way. A GPU's driver is unchanged.
+
 ## Firefox slow to start
 
 On some stretches of an afternoon, every Firefox play on one host (an RTX 2070, other cards' pages beside it) took 50

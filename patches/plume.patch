@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web 438116983bab90b44411c825fe5e3465d7cd36c6
+plume: https://github.com/n64hub/plume-web a8e74ebba8d28b7ec2249509ecf4b865330b607c
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2872,7 +2872,7 @@ index 9dcfedf..b352bb6 100644
          uint64_t maxTextureSize = 0;
  
 diff --git a/plume_vulkan.cpp b/plume_vulkan.cpp
-index f1dd503..4f8a64c 100644
+index f1dd503..48526ea 100644
 --- a/plume_vulkan.cpp
 +++ b/plume_vulkan.cpp
 @@ -3076,13 +3076,26 @@ namespace plume {
@@ -2949,6 +2949,19 @@ index f1dd503..4f8a64c 100644
      }
  
      void VulkanCommandList::copyBufferRegion(RenderBufferReference dstBuffer, RenderBufferReference srcBuffer, uint64_t size) {
+@@ -4126,7 +4143,11 @@ namespace plume {
+         capabilities.sampleLocations = (sampleLocationProperties.sampleLocationSampleCounts != 0);
+         capabilities.resolveRegion = true;
+         capabilities.resolveModes = false;
+-        capabilities.descriptorIndexing = descriptorIndexingSupported;
++        // Mesa's lavapipe (Mesa's vendor ID, Vulkan on the CPU) reports descriptor indexing but miscompiles a fragment
++        // shader's non-uniformly indexed texture array (Mesa 25.2 to 26.2): its loop over the lanes' indices took the
++        // set's address from a lane that held 0 for it, read a descriptor near address 0 and crashed the program.
++        // Without the capability a renderer binds its textures per draw, as it does on WebGPU, and never indexes one.
++        capabilities.descriptorIndexing = descriptorIndexingSupported && (uint32_t(description.vendor) != VK_VENDOR_ID_MESA);
+         capabilities.scalarBlockLayout = scalarBlockLayoutSupported;
+         capabilities.bufferDeviceAddress = bufferDeviceAddressSupported;
+         capabilities.samplerMirrorClampToEdge = supportedOptionalExtensions.find(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME) != supportedOptionalExtensions.end();
 diff --git a/plume_web_waits.h b/plume_web_waits.h
 new file mode 100644
 index 0000000..23df721
