@@ -177,7 +177,11 @@ The web port list, every item of it.
 
 ## The web port list
 
-Every game's page, a game fork's or a recomp of the project's own, is checked for each.
+Every game's page, a game fork's or a recomp of the project's own, is checked for each. W2, W5, W6 and W7 are one
+short play a browser: `bash tools/play_pages.sh <rush-2049-recomp checkout> chrome <game> --backcheck`, and again with
+`firefox` (`play_page.mjs --backcheck`, its header), from Pages on a fresh profile, which prints a verdict for each and
+records the run in `plays.jsonl`. Firefox's play is W5's alone; a save reaching the Drive (W6) is a signed-in
+player's, played by hand.
 
 - **W1.** It draws at the display's rate and the canvas's size whatever the recomp's desktop build defaults to
   (Framerate Display, resolution Auto: the README's The recomp's own code): played uncapped in Chrome, it presents

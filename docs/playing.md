@@ -206,6 +206,10 @@ work, naming the game, the browser, the time and the curve.
   work grows it: `tools/gpu_growth.mjs` (its header) plays each kind of a page's calls alone, at the rates
   `--preload tools/webgpu_census.js` reads off the page; whose code made what it grows (D3D12's, a driver's, DXC's,
   Firefox's): `tools/memory_scan.ps1`, unelevated, from outside the process.
+- The web port list's W2, W5, W6 and W7 (docs/new-recomp.md): `--backcheck` (play_page's header), in Chrome at 2
+  device pixels a CSS pixel with a stand-in pad driving the plan, then a hidden tab, a reload and the browser closed
+  and opened again (`--fault reopen`) with the saves compared, and in Firefox the boot's sound and a hidden tab;
+  `play_pages.sh --backcheck` plays it on each page from Pages. `--pad` alone plays a plan with the pad.
 - How it comes through what a player's browser does to it: `--fault resize,hidden,audio,device,reload` (play_page's
   header) does each in turn once the play is in its level (a resized window, another tab in front for 30 s, its
   AudioContext suspended, its WebGPU device lost, then a reload over a warm cache and service worker), and records
