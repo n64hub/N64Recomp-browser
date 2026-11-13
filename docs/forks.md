@@ -951,4 +951,9 @@ RecompFrontend d143d0a the graphics thread run the renderer's (RecompFrontend's,
                        the game with its sound started, 0.1-11.7 s of the first 10 s of sound lost on 37 pages of 38
                        (docs/findings.md, Firefox's boot wait and the first sound). Chrome waits for nothing there.
                        Web only
+plume 0ac34ab,         WebGPU: where the device builds pipelines in line (Firefox), a draw of nothing builds the bound
+rt64 77e98da           pipeline for the layout it resolves, as a draw would, so RT64's warm-up in prepareForGame() has
+                       Firefox compile the ubershader's 245 KB shaders before the game starts; it built nothing there,
+                       and the game's first draw with the ubershader built it in line with the game's sound running
+                       (docs/findings.md, Compute pipelines built at their first dispatch). Chrome is as it was
 ```
