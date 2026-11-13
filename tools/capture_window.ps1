@@ -30,6 +30,7 @@
 #                             run ends there as failed (exit 1)
 #   <s> poke <addr> <value>   writes the 32-bit word value at addr, and
 #   <s> or <addr> <bits>      ors bits into it: a cheat that reaches a later level, the way a page plan's n64w does
+#   <s> peek <addr>[,<addr>]  prints the 32-bit words at those addresses, in hex: a save's record before and after a restart
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
 # now and then and one of several frames most times. A burst's and a record's captures are scaled by -Scale (1).
@@ -436,6 +437,8 @@ try {
                 Write-Output ("{0,6:N1}s poke {1} {2}" -f $clock.Elapsed.TotalSeconds, $p[2], $p[3]) }
             'or' { $addr = Num $p[2]; [CaptureWindow]::Write($handle, (Rdram), $addr, ([CaptureWindow]::Read($handle, (Rdram), $addr) -bor (Num $p[3])))
                 Write-Output ("{0,6:N1}s or {1} {2}" -f $clock.Elapsed.TotalSeconds, $p[2], $p[3]) }
+            'peek' { $words = $p[2] -split ',' | ForEach-Object { '{0}=0x{1:X8}' -f $_, [CaptureWindow]::Read($handle, (Rdram), (Num $_)) }
+                Write-Output ("{0,6:N1}s peek {1}" -f $clock.Elapsed.TotalSeconds, ($words -join ' ')) }
             'end' { break plan }
             default { throw "unknown plan step: $line" }
         }
