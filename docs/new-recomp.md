@@ -79,13 +79,14 @@ items by almost no game when the record began.
 What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way to play
 them (filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); Turok 2's regular
 plan, played on a fresh profile, misses shaders its list lacks (W3);
-Dinosaur Planet's page still loses a render quantum or two (up to 8 ms) in its sound's first 0.5 s in Chrome on most
-first visits, where the ring it keeps thin runs dry (the browser's burst counted as queued, filed), and the desktop
+Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
+first audio tasks come late (filed), and none after it since the ring's count leaves out the browser's burst, and the desktop
 build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
 built at their first dispatch), and in Firefox, since plume-web 4381169 none at its first 3D, 1-2 s at Start Game while
 Firefox builds RT64's ubershader in line; Super Mario 64's page in Chrome loses about 95 ms in its boot's first 0.2 s
 and at 3.4 s inside its own silence, where the game's sound code makes nothing as it reloads, and 3-85 ms of its logo's
-fading sound at 0.5-0.6 s in 4 of 10 plays, where the ring is still refilling (the thin ring's, filed; W5); Paper
+fading sound at 0.5-0.6 s in 4 of 10 plays, where the ring is still refilling (none in 10 plays since, and the
+browser's burst left out of the ring's count cuts less of the logo's sound at its 6 s reset, 1 play of 5 against 4; W5); Paper
 Mario's boot loses sound in both browsers only inside its own silence, which lasts until its intro stage's music, but
 its tab hidden in its intro loses 16-32 ms of that music in Chrome in some plays, as the present thread waits for a
 present in flight (filed), and in Firefox the intro story's own shaders, which RT64 builds a few at a time with the
