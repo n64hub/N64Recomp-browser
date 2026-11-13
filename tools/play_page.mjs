@@ -731,7 +731,8 @@ const hostAfter = hostTimes();
 const playErrors = errors.slice(), playExceptions = exceptions;
 const faultResults = [];
 const tracingFaults = Boolean(chromeTraceFile && faultList.length && !failure);
-if (tracingFaults) await page.chromeTrace.start();
+// Its start holds every thread of the page's 100-150 ms (V8's sampler starting), so the first fault comes 5 s after.
+if (tracingFaults) { await page.chromeTrace.start(); await sleep(5000); }
 for (const [i, name] of (failure ? [] : faultList).entries()) {
   const faultResult = { name, at: Math.round(seconds()),
     presentsBefore: median(samples.filter((s) => i ? s.fault === `${i - 1} after` : s.playing).slice(-3).map((s) => s.presents)) };
