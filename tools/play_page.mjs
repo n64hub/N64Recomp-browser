@@ -54,11 +54,11 @@
 // hears a tab that plays sound and keeps it at a player's priority when it is hidden, which --fault hidden needs
 // (docs/findings.md, A page in a hidden tab). A run records its flags and is compared only with runs that set the same
 // ones.
-// --gecko-profile (Firefox only) runs the Gecko profiler from the page's navigate to the end of the play, so the boot
-// too, every process and the GPU process's CanvasRenderer thread among them (page_driver.mjs's geckoProfile), and
-// writes the profile to the file (a run that failed too, a page that stopped answering as it booted among them, once the
-// browser's own process answers, waiting up to 3 minutes for it), to open in profiler.firefox.com, which symbolicates
-// it. It samples every 10 ms: the profiler asks Windows for 1 ms timers
+// --gecko-profile (Firefox only) runs the Gecko profiler from the page's navigate to the end of the play, or of the
+// last fault with --fault, so the boot too, every process and the GPU process's CanvasRenderer thread among them
+// (page_driver.mjs's geckoProfile), and writes the profile to the file (a run that failed too, a page that stopped
+// answering as it booted among them, once the browser's own process answers, waiting up to 3 minutes for it), to open
+// in profiler.firefox.com, which symbolicates it. It samples every 10 ms: the profiler asks Windows for 1 ms timers
 // below that, which changes how Firefox's waits end (docs/playing.md, Uncapped, and the browsers' clocks).
 // --chrome-trace (Chrome only) records a Chrome trace over the play, every thread's JavaScript and wasm stacks sampled
 // (page_driver.mjs's chromeTrace), and writes it to the file, to open in DevTools' Performance panel or
@@ -650,7 +650,8 @@ const finish = async (code) => {
   if (profileOption === null) { try { fs.rmSync(profile, { recursive: true, force: true }); } catch {} }
   process.exit(code);
 };
-let audioBefore = null;
+// The sound's counters as the play starts and ends, so its frames short are the play's alone, not a fault's after it.
+let audioBefore = null, audioAfter = null;
 // Firefox's report of its GPU process when the play starts and ends (page_driver.mjs's gpuProcessMemory).
 let memoryBefore = null, memoryAfter = null;
 let failure = null;
@@ -678,12 +679,13 @@ try {
   if (geckoProfileFile) { await page.geckoProfile.start(); profiling = true; }
   firstBoot = await boot();
   await page.run([...(freshProfile ? (plan.setup ?? []) : []), ...(plan.start ?? [])], steps);
-  audioBefore = last?.audio ?? null;
   memoryBefore = page.gpuProcessMemory ? await page.gpuProcessMemory().catch(() => null) : null;
-  // That report runs every process's memory reporters, which held a Firefox page's presents and animation frames 120-203
-  // ms (Banjo's and Conker's launchers; counted, it was a settled launcher's longest gap), so the play's gaps start once
-  // it has passed, and none from before the play comes into them.
-  if (memoryBefore) await sleep(500);
+  // That report runs every process's memory reporters, the page's too, which held a Firefox page's presents and animation
+  // frames 120-203 ms (Banjo's and Conker's launchers; counted, it was a settled launcher's longest gap) and its thread,
+  // which runs the game's WebGPU calls, 444-473 ms in Paper Mario's intro, its sound running dry for 0.3-0.4 s. So the
+  // play's gaps and sound start once it has passed: a sample after it ends the one it fell in, which the play leaves out.
+  if (memoryBefore) { await sleep(500); await sample(); }
+  audioBefore = last?.audio ?? null;
   await page.evaluate('window.__gaps = []; undefined').catch(() => {});
   if (chromeTraceFile) await page.chromeTrace.start();
   playing = true;
@@ -693,9 +695,12 @@ try {
   await page.run(shotFile ? [...play, ['shot', path.resolve(shotFile)]] : play, steps);
   await sample();
   playing = false;
-  if (geckoProfileFile) { profiling = false; await page.geckoProfile.dump(geckoProfileFile); }
+  audioAfter = last?.audio ?? null;
+  if (geckoProfileFile && !faultList.length) { profiling = false; await page.geckoProfile.dump(geckoProfileFile); }
   if (chromeTraceFile) await page.chromeTrace.stop(path.resolve(chromeTraceFile));
   memoryAfter = page.gpuProcessMemory ? await page.gpuProcessMemory().catch(() => null) : null;
+  // And the faults' samples start after it: its 0.3-0.4 s of sound read as a hidden tab's in Firefox.
+  if (memoryAfter && faultList.length) { await sleep(500); await sample(); }
 } catch (error) {
   log(`failed: ${error.message}`);
   failure = error.message;
@@ -703,6 +708,7 @@ try {
   // process is what stopped answering (docs/findings.md, A page that stops answering) it comes once that process
   // answers again, if it does within 3 minutes.
   if (profiling) {
+    profiling = false;
     const from = Date.now();
     await Promise.race([page.geckoProfile.dump(geckoProfileFile),
       sleep(180000).then(() => { throw new Error('the browser gave no answer in 3 minutes'); })]).then(
@@ -795,6 +801,12 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
   for (const text of faultResult.lines) console.log(`  console ${text}`);
   if (faultResult.failed) break;
 }
+// A profile of a run with faults runs on through them: what a hidden page's threads do is the reason to take one.
+if (profiling) {
+  profiling = false;
+  await page.geckoProfile.dump(geckoProfileFile).then(() => log(`gecko profile written to ${geckoProfileFile}`),
+    (e) => log(`no gecko profile: ${e.message}`));
+}
 
 const during = samples.filter((s) => s.playing);
 const presents = during.map((s) => s.presents).filter((p) => p !== null);
@@ -803,7 +815,7 @@ const animationFrames = median(during.map((s) => s.animationFrames));
 // Uncapped, and the browsers' clocks): Chrome on Windows then sleeps 17 ms and a timer tick between frames, and
 // plume takes that for the display.
 const noDisplay = !uncapped && animationFrames !== null && animationFrames < 57;
-const audioAfter = last?.audio ?? null;
+audioAfter ??= last?.audio ?? null;  // a play that failed partway: its sound until then
 const percentile = (values, q) => {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] : null;
