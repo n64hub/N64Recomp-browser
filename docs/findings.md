@@ -876,7 +876,31 @@ regular plan, Firefox, 3840x2000 uncapped, new profiles, an RTX 2070 on a busy h
 pipeline probe preloaded"). The first build is the one at the game's first frame, beside section boot's: Dinosaur
 Planet's 6 boot shaders were built in 0.4-0.6 s and the round trip there took 1.4-4.2 s, Super Mario 64's 27 with
 two states 3.2-3.7 s. RT64 skips its warm-up draw of nothing at setup (State::warmUpPipelines()) where pipelines
-don't build in the background, so in Firefox nothing builds the ubershader before the game's first frame does.
+don't build in the background, so in Firefox nothing built the ubershader before the game's first frame did, until
+rt64 c5ced59 did that draw just before the game starts (Firefox's boot wait and the first sound, below).
+
+## Firefox's boot wait and the first sound
+
+In Firefox the prebuilt list's boot section was built once the game's first frame had resolved the pipelines' WebGPU
+layout, with the game waiting before its second frame, and by then its sound had started: the backcheck's W5 (the
+first 10 s of sound, docs/new-recomp.md) counted 0.1-11.7 s short on 37 pages of 38 from Pages, each loss on RT64's
+"the game waiting" for section boot (GoldenEye 9.7 s for 64 shaders, Conker 10.2 s, Rush 2049 3.8 s). Since rt64
+c5ced59 the runtime has the graphics thread build it before the game's code first runs (forks.md), the draw of nothing
+first, so the game and its sound start once Firefox has built it, the launcher's last frame held meanwhile:
+
+| Firefox, short in the first 10 s of sound | Pages | The fix's build |
+|---|---|---|
+| GoldenEye 007 (section boot 64 shaders, 8.3-9.5 s) | 7.9 s, 9.1 s | 0.76 s, 0.83 s |
+| San Francisco Rush 2049 (section boot 21, 1.6-3.6 s) | 4.6 s, 3.8 s | 4.2 s, 3.2 s |
+
+(two interleaved pairs a game, Firefox, 1256x645 uncapped, new profiles, an RTX 2070 on a busy host; plays.jsonl,
+notes "the game's start waiting for RT64's section boot"). What GoldenEye's build still loses isn't its boot's: two
+plays of an earlier build of the same change, whose plan started 40 s later, lost 47 and 99 ms, and play_page.mjs's
+memory report in Firefox holds the page's thread 0.3-0.5 s right after a plan's start steps, inside those 10 s when
+the start comes early. Rush 2049's is its next section's: the race's 43 shaders, an 8.4-9.0 s wait about 8 s into the
+sound, the first race being that early in its plan. A later section's wait stops the sound in Firefox as the boot's
+did, and no point before the game gets there is free to build it in: built before the game starts too, Rush 2049's
+would add 7-9 s to every Firefox start.
 
 ## What the prebuilt lists miss
 

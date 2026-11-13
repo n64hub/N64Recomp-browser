@@ -213,8 +213,8 @@ What changes in the game's own code (behind `__EMSCRIPTEN__`) and files:
   built, for those, holding its frame under a small "Preparing graphics" indicator in a corner; the rest of that
   section is built next. Rush 2049's page, cold, has its 75 pipelines built ~5 s after it opens, behind the
   launcher. Firefox waits instead, since anything built behind the game stalls its
-  frames: for the boot before the game's first frame, and for a whole section when a frame first asks for 4 of its
-  shaders. So a list's boot is what the game shows before its first level, and the rest goes in sections: Rush
+  frames: for the boot before the game starts, so that its first sound plays on through the boot, and for a whole
+  section when a frame first asks for 4 of its shaders. So a list's boot is what the game shows before its first level, and the rest goes in sections: Rush
   2049's boot (logos, title, menus) is 21 pipelines and 2 s in Firefox, against 75 and 9.8 s as one list, and its
   race section's 41 take 7 s when the first race starts. A boot that would still be long can end at the title, with
   the menus the next section: Pilotwings 64's title and menus were 80 pipelines and 24-37 s in Firefox before its

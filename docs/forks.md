@@ -942,4 +942,13 @@ plume a8e74eb,         Vulkan: no descriptor indexing on Mesa's lavapipe (Mesa's
 rt64 038d240           textures as on WebGPU: lavapipe miscompiled the raster shaders' non-uniformly indexed texture
                        array and crashed every recomp's Linux build seconds into its game (docs/findings.md, A desktop
                        build on Mesa's lavapipe). Desktop only
+rt64 c5ced59,          where pipelines build in line with the browser's other GPU work (Firefox), the prebuilt list's
+N64ModernRuntime       boot section is built before the game's code first runs, so before its first sound:
+e9d688a,               librecomp's wait_for_game_started() calls ultramodern::renderer::prepare_for_game(), which has
+RecompFrontend d143d0a the graphics thread run the renderer's (RecompFrontend's, and this repo's renderer/), RT64's
+                       Application::prepareForGame(): the draw of nothing that resolves the pipelines' layout, section
+                       0's round, and a round trip on the device. Built at the game's first frame, the boot stopped
+                       the game with its sound started, 0.1-11.7 s of the first 10 s of sound lost on 37 pages of 38
+                       (docs/findings.md, Firefox's boot wait and the first sound). Chrome waits for nothing there.
+                       Web only
 ```
