@@ -44,7 +44,7 @@ items by almost no game when the record began.
 | Mario Party | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Mario Party 2 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Mario Party 3 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
-| Super Smash Bros. | 2 fails, 8a | W2, W5, W6 |
+| Super Smash Bros. | 2 fails | W2, W5, W6 |
 | Paper Mario | 2 fails, 4a, 4c, 6b | W2, W5, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 4a fails, 5b | W2, W5, W6, W7 |
