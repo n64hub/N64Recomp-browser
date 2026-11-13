@@ -53,11 +53,12 @@ mean to do it anyway, and let whoever asked decide. The rule may be what is wron
 work.
 
 Priority is by what it breaks: high for a crash, med for an issue that affects every game, low for one game's. Work
-that comes from GitHub (an issue, a comment on one, a pull request from outside) is med, or high when it is a crash or
-stops someone playing, and never low, whichever game it is. Work without one gets one from whoever first can tell,
-before anything else they do on it, and a priority found wrong (the cause known, a second game showing it, a crash, a
-cause that is one game's own) is changed at once, in the same work. One game's symptom whose cause is shared code (a
-fork, this repo) is med, or high if it crashes or loses the device on any game.
+that comes from a player (a GitHub issue, a comment on one, a pull request from outside, a Quiver Launcher review that
+reports a problem) is med, or high when it is a crash or stops someone playing, and never low, whichever game it is.
+Work without one gets one from whoever first can tell, before anything else they do on it, and a priority found wrong
+(the cause known, a second game showing it, a crash, a cause that is one game's own) is changed at once, in the same
+work. One game's symptom whose cause is shared code (a fork, this repo) is med, or high if it crashes or loses the
+device on any game.
 
 The forks (`rt64-web`, `plume-web`, `hlslpp-web`, `N64ModernRuntime-web`, `N64Recomp-web`, `RecompFrontend-web`) and
 the game forks take no PRs: a change is a commit pushed to the fork's `main` as a fast-forward, pinned by its SHA
