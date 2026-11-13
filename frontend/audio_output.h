@@ -13,6 +13,7 @@ namespace n64recomp_browser::audio {
     uint32_t open(uint32_t channels);
     // Queues <frame_count> frames. What doesn't fit in the ring (about two thirds of a second) is dropped.
     void queue(const float* frames, size_t frame_count);
-    // Frames queued and not yet played.
+    // Frames queued and not yet played, less those the browser takes in one go (audio_output.cpp), as
+    // SDL_GetQueuedAudioSize leaves out its device's buffer.
     size_t queued_frames();
 }
