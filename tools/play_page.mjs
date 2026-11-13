@@ -51,14 +51,16 @@
 // Left Shift B, the arrows the C buttons on the right stick, WASD the left stick, Enter Start), held 150 ms at least,
 // since SDL reads a pad's state where it queues a key's events; a plan's "padKeys" ({ code: button number or "x-",
 // "x+", "y-", "y+", "rx-", ... } for a stick) adds to or changes them for a game whose keys differ. A click in the start
-// steps (Start Game) is a press of the pad's A, which recompui's launcher takes for its focused option. The setup's
+// steps (Start Game) is a press of the pad's A, which recompui's launcher takes for its focused option, pressed again
+// (twice at most) where the game hasn't started 5 s after, since a launcher can take a new pad's first press as the
+// switch to it; and Enter, RecompFrontend's accept in its menus, is the pad's A until the game runs, its Start after. The setup's
 // Load ROM stays the mouse's: a browser opens a file picker only for a click or a key. A key with no pad button stays
 // the keyboard's and is named in the summary's pad, with the presses that went to the pad and what reached its rumble
 // (padRumbles()). Keys an eval or evalFile step dispatches itself are the keyboard's.
 // --backcheck plays the web port list's W2, W5, W6 and W7 (docs/new-recomp.md) in one visit and prints a verdict line
 // for each ("backcheck W5 pass: ..."), recorded as the run's backcheck. In Chrome: --scale 2, --pad, --fault
 // hidden,reload,reopen and --chrome-flag --disable-audio-output unless given: W2 is Load ROM opening the picker at its
-// first click at 2 device pixels a CSS pixel; W5 no sound frame short in the boot's first 10 s of sound (to the sample)
+// first click at 2 device pixels a CSS pixel (a plan's Load ROM by a key clicked where recompui's launcher has it); W5 no sound frame short in the boot's first 10 s of sound (to the sample)
 // nor in the 30 s after the hidden tab; W6 the saves kept through the reload and the reopen; W7 the pad driving the
 // start steps and the play to the plan's end. In Firefox: the plan's play replaced by 20 s (--play 20) and --fault
 // hidden, for W5. Play it from Pages on a fresh profile; its note starts "backcheck".
@@ -616,19 +618,22 @@ const openPage = async () => {
     preload, headed, onScreen, uncapped, cpuThrottle, scale, firefoxPrefs, chromeFlags, affinity, fallbackAdapter, onLine, log });
   if (pad) {
     const keyboard = p.key, mouse = p.click;
-    p.key = (upDown, a) => {
-      if (!padDriving || padKeys[a[0]] === undefined) {
-        if (padDriving) padUse.keyboard.add(a[0]);
-        return keyboard(upDown, a);
-      }
-      return padPress(p, upDown, a[0]);
-    };
-    // A launcher's first press of a new pad can be taken as the switch to the pad (its focus shown), as a player's is,
-    // so A is pressed again, twice at most, while the game hasn't started (no RDRAM) 5 s after.
     const started = async () => {
       try { await p.evaluate(rdramHelpers); return await p.evaluate('(() => { try { n64r(0x80000300); return true; } catch { return false; } })()'); }
       catch { return false; }
     };
+    // Enter is RecompFrontend's accept in its menus as well as the N64's Start, and a pad's accept is A: so until the
+    // game runs (the launcher) it is the pad's A.
+    p.key = async (upDown, a) => {
+      if (!padDriving || padKeys[a[0]] === undefined) {
+        if (padDriving) padUse.keyboard.add(a[0]);
+        return keyboard(upDown, a);
+      }
+      if (a[0] === 'Enter' && upDown === 'down' && !p.gameRunning) p.gameRunning = await started();
+      return padPress(p, upDown, a[0] === 'Enter' && !p.gameRunning ? 'padA' : a[0]);
+    };
+    // A launcher's first press of a new pad can be taken as the switch to the pad (its focus shown), as a player's is,
+    // so A is pressed again, twice at most, while the game hasn't started (no RDRAM) 5 s after.
     p.click = async (x, y) => {
       if (!padDriving) return mouse(x, y);
       const running = await started();
@@ -771,7 +776,7 @@ const boot = async () => {
   await page.navigate(pageUrl);
   await page.run(plan.load ?? [], steps);
   const loaded = (Date.now() - from) / 1000;
-  if (pad) await page.evaluate('plugPads(1)');
+  if (pad) { page.gameRunning = false; await page.evaluate('plugPads(1)'); }
   const first = await page.evaluate('window.__firstPresent ? performance.timeOrigin + window.__firstPresent : null').catch(() => null);
   return { loaded: tenths(loaded), firstPresent: first ? tenths((first - from) / 1000) : null };
 };
@@ -812,7 +817,10 @@ let profiling = false;
 try {
   if (geckoProfileFile) { await page.geckoProfile.start(); profiling = true; }
   firstBoot = await boot();
-  await page.run(freshProfile ? (plan.setup ?? []) : [], steps);
+  // W2 is a click's: a plan's Load ROM by a key becomes a click where recompui's launcher has Load ROM in the plan's
+  // 1256x645.
+  const setup = (plan.setup ?? []).map((step) => chromeBackcheck && step[0] === 'rom' && typeof step[1] === 'string' ? ['rom', 628, 364] : step);
+  await page.run(freshProfile ? setup : [], steps);
   romPresses = page.romPresses;
   await padRun(plan.start ?? []);
   audioBefore = last?.audio ?? null;
