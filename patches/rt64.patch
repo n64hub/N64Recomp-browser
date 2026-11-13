@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web fb507fcb524d80d30cdf64a7d12942f9cafff96b
+rt64: https://github.com/n64hub/rt64-web 1589517cdcdb53aa09530c7e86898aaaf72c96e3
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2276,6 +2276,128 @@ index 60b0fa4..4531833 100644
          bool inProjection(uint32_t transformsIndex, Projection::Type type) const;
          int changeProjection(uint32_t transformsIndex, Projection::Type type);
          bool isEmpty() const;
+diff --git a/src/hle/rt64_framebuffer_storage.cpp b/src/hle/rt64_framebuffer_storage.cpp
+index 8272c02..2121bf9 100644
+--- a/src/hle/rt64_framebuffer_storage.cpp
++++ b/src/hle/rt64_framebuffer_storage.cpp
+@@ -7,7 +7,21 @@
+ #include <cassert>
+ #include <cstring>
+ 
++#if defined(__EMSCRIPTEN__)
++#   include <algorithm>
++#   include <mutex>
++#   include <unordered_map>
++#endif
++
+ namespace RT64 {
++#if defined(__EMSCRIPTEN__)
++    // The bytes each framebuffer (by address and size) was last stored with, in any workload: a store of the same bytes
++    // shares them. Weak, so the bytes go once the last workload holding them is reset.
++    static std::mutex sharedBytesMutex;
++    static std::unordered_map<uint64_t, std::weak_ptr<const std::vector<uint8_t>>> sharedBytes;
++    static size_t sharedBytesPruneAt = 64;
++#endif
++
+     // FramebufferStorage
+ 
+     FramebufferStorage::FramebufferStorage() {
+@@ -20,6 +34,31 @@ namespace RT64 {
+     }
+ 
+     void FramebufferStorage::store(uint32_t fbPairIndex, uint32_t address, const uint8_t *data, uint32_t size) {
++        Handle handle;
++        handle.fbPairIndex = fbPairIndex;
++        handle.address = address;
++        handle.size = size;
++#   if defined(__EMSCRIPTEN__)
++        handle.rdramIndex = 0;
++        {
++            std::scoped_lock<std::mutex> lock(sharedBytesMutex);
++            std::weak_ptr<const std::vector<uint8_t>> &last = sharedBytes[(uint64_t(address) << 32) | size];
++            handle.bytes = last.lock();
++            if ((handle.bytes == nullptr) || (memcmp(handle.bytes->data(), data, size) != 0)) {
++                handle.bytes = std::make_shared<const std::vector<uint8_t>>(data, data + size);
++                last = handle.bytes;
++            }
++
++            // Framebuffers come and go: forget those no workload holds any more once there are many.
++            if (sharedBytes.size() >= sharedBytesPruneAt) {
++                for (auto it = sharedBytes.begin(); it != sharedBytes.end();) {
++                    it = it->second.expired() ? sharedBytes.erase(it) : std::next(it);
++                }
++
++                sharedBytesPruneAt = std::max<size_t>(64, sharedBytes.size() * 2);
++            }
++        }
++#   else
+         uint32_t dstIndex = rdramUsed;
+         rdramUsed += size;
+         if (rdramUsed > rdramData.size()) {
+@@ -28,13 +67,9 @@ namespace RT64 {
+         }
+ 
+         memcpy(rdramData.data() + dstIndex, data, size);
+-
+-        Handle handle;
+-        handle.fbPairIndex = fbPairIndex;
+-        handle.address = address;
+         handle.rdramIndex = dstIndex;
+-        handle.size = size;
+-        handleVector.emplace_back(handle);
++#   endif
++        handleVector.emplace_back(std::move(handle));
+     }
+ 
+     const FramebufferStorage::Handle *FramebufferStorage::get(uint32_t maxFbPairIndex, uint32_t address) const {
+@@ -55,7 +90,11 @@ namespace RT64 {
+     }
+ 
+     const uint8_t *FramebufferStorage::getRDRAM(const Handle &handle) const {
++#   if defined(__EMSCRIPTEN__)
++        return handle.bytes->data();
++#   else
+         assert((handle.rdramIndex + handle.size) <= rdramData.size());
+         return rdramData.data() + handle.rdramIndex;
++#   endif
+     }
+ };
+\ No newline at end of file
+diff --git a/src/hle/rt64_framebuffer_storage.h b/src/hle/rt64_framebuffer_storage.h
+index 5c3c4d2..cba893c 100644
+--- a/src/hle/rt64_framebuffer_storage.h
++++ b/src/hle/rt64_framebuffer_storage.h
+@@ -6,12 +6,19 @@
+ // at the start of a frame. Sometimes it's necessary for the high resolution renderer
+ // to reload the contents from RDRAM in case the resources get resized and discarded.
+ // The storage is the resource it can use to fix that.
++//
++// With Emscripten a framebuffer's bytes that match the ones it last stored, in any workload, are shared with that
++// store rather than copied: every RDRAM check stores every framebuffer RT64 knows into the workload it is in, and the
++// workload queue a page keeps (RT64_GAME_FRAME_WORKLOADS, 64) held 64 copies of each, each workload's at 1.5 times the
++// most it had stored. A game with eight 640x480 framebuffers kept 470 MB of its page's heap in them, and a ninth ran it
++// out of memory. A framebuffer whose RAM changed is still a copy of its own in each workload that stores it.
+ 
+ #pragma once
+ 
+ #include "common/rt64_common.h"
+ 
+ #include <map>
++#include <memory>
+ 
+ namespace RT64 {
+     struct FramebufferStorage {
+@@ -20,6 +27,10 @@ namespace RT64 {
+             uint32_t address;
+             uint32_t rdramIndex;
+             uint32_t size;
++#       if defined(__EMSCRIPTEN__)
++            // The bytes, shared by every handle (in any workload) that stored the same ones at the same address.
++            std::shared_ptr<const std::vector<uint8_t>> bytes;
++#       endif
+         };
+ 
+         uint32_t rdramUsed;
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
 index 87392d0..795a9f9 100644
 --- a/src/hle/rt64_game_frame.cpp
