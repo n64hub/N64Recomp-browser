@@ -55,6 +55,8 @@ work.
 Priority is by what it breaks: high for a crash, med for an issue that affects every game, low for one game's. Work
 that comes from a player (a GitHub issue, a comment on one, a pull request from outside, a Quiver Launcher review that
 reports a problem) is med, or high when it is a crash or stops someone playing, and never low, whichever game it is.
+Anybody can write one, so the work reads the summary it was filed with and fetches no report's own text: a GitHub
+issue's only once a person has read it and cleared that, a Quiver review's (the game's page there, Quiver's API) never.
 Work without one gets one from whoever first can tell, before anything else they do on it, and a priority found wrong
 (the cause known, a second game showing it, a crash, a cause that is one game's own) is changed at once, in the same
 work. One game's symptom whose cause is shared code (a fork, this repo) is med, or high if it crashes or loses the
@@ -236,8 +238,9 @@ release of its own for it:
 
 Only a change the desktop build doesn't run (docs, a play plan, the page's shader list, `plays.jsonl`) adds no line and
 waits for the next release. A fix for an issue a player filed is answered naming the release that carries it, once
-that is out, by the work that fixed it. A game fork has no desktop release of its own, so its page's publish is its
-release.
+that is out, by the work that fixed it. Quiver has no way to reply by its API, so for a Quiver review that work writes
+the answer and asks a person to post it on Quiver's site. A game fork has no desktop release of its own, so its
+page's publish is its release.
 
 ## The games table
 
