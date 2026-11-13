@@ -951,4 +951,9 @@ RecompFrontend d143d0a the graphics thread run the renderer's (RecompFrontend's,
                        the game with its sound started, 0.1-11.7 s of the first 10 s of sound lost on 37 pages of 38
                        (docs/findings.md, Firefox's boot wait and the first sound). Chrome waits for nothing there.
                        Web only
+N64ModernRuntime       ULTRAMODERN_VIS_WAIT_FOR_RENDERER also holds VIs while a graphics task has gone unfinished for
+d405b65                two VIs (list_unread()): the 100 ms stall left a game six VIs behind every list that took about
+                       that long, and Paper Mario's page in Firefox, hidden on a busy host, its lists 50-230 ms each,
+                       freed what one pointed at as its intro handed over to its demo and trapped in its heap allocator
+                       or stopped drawing (docs/findings.md, Memory). Web only
 ```

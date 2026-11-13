@@ -206,6 +206,19 @@ game no VI while the graphics thread has been on one action over 100 ms: in the 
 frames in the wait and played the demo's next scenes clean, and the regular plan played clean in Firefox 3 times in 3
 (waits of 3.7-12.6 s for the boot's, intro's and demo's sections), where it had failed 5 times in 5.
 
+A list that takes about 100 ms does the same in smaller steps, since the 100 ms hold leaves the game six VIs behind
+each one. Paper Mario's page from Pages in Firefox 158 (RTX 2070, 3840x2000 uncapped, ten spinning threads on a
+12-core host), its tab hidden at the end of its intro story, trapped in its heap allocator (`index out of bounds` in
+`_heap_malloc`, the free list corrupt) or stopped drawing for good, the sound still fed, 4-6 s after the hide in 3
+plays of 4, and a test build of it in 3 of 3: hidden there, every list took 50-230 ms, its render to RAM's readbacks waiting on the page's thread, and
+the game freed what the list in hand pointed at as its intro handed over to its attract demo. Visible on the same host
+it came through, but its lists took 60-210 ms for several seconds after the demo's section built. Chrome, hidden,
+came through. N64ModernRuntime d405b65 holds VIs too while a graphics task has gone unfinished for two VIs, as a
+console's RDP would have finished it: the same hidden play came through 3 times in 3, into the demo. Its cost is the
+game's sound wherever lists run long, since its audio runs on the same VIs: visible on that host, the 9 s after the
+demo's 12 s section wait lost 220,000-350,000 sound frames against 23,000-90,000 without the hold (two interleaved
+pairs), the presents the same (medians 102-116 against 97-105).
+
 A page that runs out of heap does so in a burst after a stall, not by leaking. Banjo-Kazooie's page aborted with
 `Aborted(OOM)` in Firefox 158 in 3 of 6 runs of a retest (2026-10-19 21:11-21:56 UTC, uncapped at 3840x2000 on an RTX
 5080, the page from Pages, v0.67.0, and a v0.71.0 build both), at 70, 72 and 123 s; Chrome (throttled 6 times) played
