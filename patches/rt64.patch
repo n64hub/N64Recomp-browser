@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 1589517cdcdb53aa09530c7e86898aaaf72c96e3
+rt64: https://github.com/n64hub/rt64-web 3625c38cfbcc26ec4898145f3b012d5bf41d29a8
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1345,7 +1345,7 @@ index 558f1ee..40a2e09 100644
      };
  };
 diff --git a/src/hle/rt64_application.cpp b/src/hle/rt64_application.cpp
-index 785de27..42eb2e6 100644
+index 785de27..1c18cf8 100644
 --- a/src/hle/rt64_application.cpp
 +++ b/src/hle/rt64_application.cpp
 @@ -16,12 +16,18 @@
@@ -1492,12 +1492,13 @@ index 785de27..42eb2e6 100644
          sharedQueueResources->renderTargetManager.setMultisampling(multisampling);
          sharedQueueResources->renderTargetManager.setUsesHDR(usesHDR);
  
-@@ -455,6 +520,19 @@ namespace RT64 {
+@@ -455,6 +520,20 @@ namespace RT64 {
          // Set up the RDP
          state->rdp->setGBI();
  
 +#   if defined(__EMSCRIPTEN__)
 +        // Where pipelines build in the background (Chrome), the ubershader's are built before the game draws with them.
++        // Elsewhere (Firefox) the same warm-up is done just before the game starts (prepareForGame()).
 +        if (device->getCapabilities().backgroundPipelineBuilds) {
 +            state->warmUpPipelines();
 +        }
@@ -1512,9 +1513,34 @@ index 785de27..42eb2e6 100644
          return SetupResult::Success;
      }
  
-@@ -510,6 +588,12 @@ namespace RT64 {
+@@ -509,7 +588,37 @@ namespace RT64 {
+         }
      }
  
++#   if defined(__EMSCRIPTEN__)
++    // Before the game's code first runs (N64ModernRuntime's ultramodern::renderer::prepare_for_game()). Where the browser
++    // builds pipelines in line with its other GPU work (Firefox), the prebuilt shaders of the list's first section, the
++    // boot, are built here, and the ubershader's state the warm-up draws with, with the game waiting before it makes a
++    // sound. Built at the game's first frames, as they were, they stopped the game with its sound started, for as long
++    // as they took: 0.1-11.7 s of the first 10 s of sound lost, on 37 pages of 38. Built at setup, they would hold the
++    // launcher's first frame as long. The draw of nothing (State::warmUpPipelines()) resolves the layout the pipelines
++    // are built for, the shader cache's round builds the section (RasterShaderCache::prebuildForGame()), and a round trip
++    // on the device waits until the browser has done all of it, so the game's first frames queue behind none of it.
++    // Where pipelines build in the background (Chrome), the warm-up was at setup and the list builds behind the
++    // launcher, so nothing waits here.
++    void Application::prepareForGame() {
++        if (device->getCapabilities().backgroundPipelineBuilds) {
++            return;
++        }
++
++        state->warmUpPipelines();
++        workloadQueue->waitForWorkloadId(state->workloadId);
++        rasterShaderCache->prebuildForGame();
++        RenderWorker worker(device.get(), "Prepare for game", RenderCommandListType::DIRECT);
++        RenderWorkerExecution execution(&worker);
++    }
++#   endif
++
      void Application::updateScreen() {
 +#   if defined(__EMSCRIPTEN__)
 +        if (device->isLost()) {
@@ -1525,7 +1551,7 @@ index 785de27..42eb2e6 100644
          appWindow->sdlCheckFilterInstallation();
          screenApiProfiler.logAndRestart();
          state->updateScreen(core.decodeVI(), false);
-@@ -674,9 +758,17 @@ namespace RT64 {
+@@ -674,9 +783,17 @@ namespace RT64 {
          presentQueue.reset();
  
          // Call the deinit hook if one was attached.
@@ -1546,7 +1572,7 @@ index 785de27..42eb2e6 100644
          }
  
          drawDataUploader.reset();
-@@ -705,6 +797,30 @@ namespace RT64 {
+@@ -705,6 +822,30 @@ namespace RT64 {
          FileDialog::finish();
      }
  
@@ -1578,7 +1604,7 @@ index 785de27..42eb2e6 100644
          if (!appConfig.useConfigurationFile || userPaths.isEmpty()) {
              return false;
 diff --git a/src/hle/rt64_application.h b/src/hle/rt64_application.h
-index 6c83fe0..e20f73b 100644
+index 6c83fe0..1e873a7 100644
 --- a/src/hle/rt64_application.h
 +++ b/src/hle/rt64_application.h
 @@ -90,6 +90,11 @@ namespace RT64 {
@@ -1602,7 +1628,13 @@ index 6c83fe0..e20f73b 100644
          ProfilingTimer dlApiProfiler = ProfilingTimer(120);
          ProfilingTimer screenApiProfiler = ProfilingTimer(120);
  
-@@ -159,6 +166,9 @@ namespace RT64 {
+@@ -156,9 +163,15 @@ namespace RT64 {
+         SetupResult setup(uint32_t threadId);
+         void processDisplayLists(uint8_t *memory, uint32_t dlStartAddress, uint32_t dlEndAddress, bool isHLE);
+         void updateScreen();
++#   if defined(__EMSCRIPTEN__)
++        void prepareForGame();
++#   endif
          void destroyShaderCache();
          void updateMultisampling();
          void end();
@@ -8099,7 +8131,7 @@ index 3b991ff..c17d089 100644
          static std::unique_ptr<RenderPipeline> createPipeline(const PipelineCreation &c);
          static RenderMultisampling generateMultisamplingPattern(uint32_t sampleCount, bool sampleLocationsSupported);
 diff --git a/src/render/rt64_raster_shader_cache.cpp b/src/render/rt64_raster_shader_cache.cpp
-index bf7b669..378cf0c 100644
+index bf7b669..02c2355 100644
 --- a/src/render/rt64_raster_shader_cache.cpp
 +++ b/src/render/rt64_raster_shader_cache.cpp
 @@ -6,6 +6,52 @@
@@ -8180,7 +8212,7 @@ index bf7b669..378cf0c 100644
      }
  
      void RasterShaderCache::setup(RenderDevice *device, RenderShaderFormat shaderFormat, const ShaderLibrary *shaderLibrary, const RenderMultisampling &multisampling) {
-@@ -105,13 +160,486 @@ namespace RT64 {
+@@ -105,13 +160,499 @@ namespace RT64 {
          shaderUber = std::make_unique<RasterShaderUber>(device, shaderFormat, multisampling, shaderLibrary, ubershaderThreadCount);
          usesHDR = shaderLibrary->usesHDR;
  
@@ -8249,12 +8281,12 @@ index bf7b669..378cf0c 100644
 +    // where with them in the boot it never had. So the first frame waits only for its own shaders, the panel the page showed for a whole section before the
 +    // game started is mostly gone, and a level reached after a minute of play is usually built before the game gets
 +    // there. Where building a pipeline holds up the device (Firefox, setup()), anything built behind the game would
-+    // stall its frames, so nothing is: section 0 is built before the game gets past its first frame, a round builds
-+    // every shader of its section not yet built, and the game waits for strays too.
++    // stall its frames, so nothing is: section 0 is built before the game's code first runs (prebuildForGame()), a round
++    // builds every shader of its section not yet built, and the game waits for strays too.
 +    //
-+    // A pipeline is built for the WebGPU layout a draw with its pipeline layout resolved (plume_webgpu.h), so section 0
-+    // waits for the first frame's draws; where pipelines build in the background (Chrome) that is the draw of nothing
-+    // at setup (State::warmUpPipelines()), and the list builds behind the launcher. A round is built on as many threads as the host has cores (2-16), since the
++    // A pipeline is built for the WebGPU layout a draw with its pipeline layout resolved (plume_webgpu.h), so the list
++    // waits for a draw: the draw of nothing (State::warmUpPipelines()), at setup where pipelines build in the background
++    // (Chrome), so that the list builds behind the launcher, and elsewhere just before the game starts. A round is built on as many threads as the host has cores (2-16), since the
 +    // game waits and the browser's GPU process has nothing else to do, largest first: a shader's WGSL size goes with
 +    // its build time, and the largest (370 KB against a median of 65 KB) started last would leave the other threads idle
 +    // while it finished. Rush 2049's 105 took 15.6-16.7 s six at a time in the list's order, and 6.9-7.2 s twelve at a
@@ -8361,9 +8393,6 @@ index bf7b669..378cf0c 100644
 +                    }
 +                }
 +            }
-+            else {
-+                startPrebuildRound(0, lock);
-+            }
 +        }
 +
 +        for (uint32_t t = 0; t < threads; t++) {
@@ -8376,8 +8405,8 @@ index bf7b669..378cf0c 100644
 +                (RT64PrebuiltShaderSectionCount > 1) ? RT64PrebuiltShaderSections[1].name : "(none)", prebuildBootThreads, threads);
 +        }
 +        else {
-+            printf("RT64: %u prebuilt shaders, %u pipelines, in %u sections, and %u learned; the game waiting for the %u of section %s, built %u at a time once the game draws\n",
-+                RT64PrebuiltShaderCount, pipelineCount, RT64PrebuiltShaderSectionCount, uint32_t(prebuildLearned.size()), uint32_t(prebuildRound.size()),
++            printf("RT64: %u prebuilt shaders, %u pipelines, in %u sections, and %u learned; the game waiting for the %u of section %s, built %u at a time before it starts\n",
++                RT64PrebuiltShaderCount, pipelineCount, RT64PrebuiltShaderSectionCount, uint32_t(prebuildLearned.size()), uint32_t(prebuildSections[0].size()),
 +                RT64PrebuiltShaderSections[0].name, threads);
 +        }
 +#   endif
@@ -8489,7 +8518,8 @@ index bf7b669..378cf0c 100644
 +            prebuildRoundSize += roundSize(index, dualSource);
 +        }
 +
-+        // Section 0's is reported once the game draws (getGPUShader()): nothing the launcher draws uses it.
++        // Section 0's is reported once the game is about to draw (prebuildForGame(), getGPUShader()): nothing the
++        // launcher draws uses it.
 +        prebuildRoundHeld = !prebuildRound.empty();
 +        if (prebuildRoundHeld && prebuildDrawn) {
 +            prebuildTimer.reset();
@@ -8648,6 +8678,21 @@ index bf7b669..378cf0c 100644
 +        return held;
 +    }
 +
++    // Where nothing is built behind the game (Firefox), the round of section 0, the boot, before the game's code first
++    // runs (Application::prepareForGame()), so that the game starts once it is built, its first sound included. A page
++    // whose renderer doesn't call it starts that round at the game's first frames instead, for what they want of it.
++    void RasterShaderCache::prebuildForGame() {
++#   if defined(RT64_PREBUILT_SHADERS)
++        if (specializedShaders || (prebuildCount == 0) || prebuildDrawn.exchange(true)) {
++            return;
++        }
++
++        std::unique_lock<std::mutex> lock(prebuildMutex);
++        startPrebuildRound(0, lock);
++        prebuildChanged.wait(lock, [this]() { return !prebuildRoundHeld; });
++#   endif
++    }
++
 +    // A draw asked for a prebuilt shader that isn't built yet.
 +    void RasterShaderCache::wantPrebuild(uint64_t shaderHash) {
 +        std::unique_lock<std::mutex> lock(prebuildMutex);
@@ -8668,7 +8713,7 @@ index bf7b669..378cf0c 100644
          {
              std::unique_lock<std::mutex> queueLock(submissionMutex);
  
-@@ -125,6 +653,28 @@ namespace RT64 {
+@@ -125,6 +666,28 @@ namespace RT64 {
              found = true;
          }
  
@@ -8697,7 +8742,7 @@ index bf7b669..378cf0c 100644
          // Push a new shader compilation to the queue.
          {
              const std::unique_lock<std::mutex> queueLock(descQueueMutex);
-@@ -134,6 +684,42 @@ namespace RT64 {
+@@ -134,6 +697,42 @@ namespace RT64 {
          descQueueChanged.notify_all();
      }
      
@@ -8740,7 +8785,7 @@ index bf7b669..378cf0c 100644
      void RasterShaderCache::waitForAll() {
          {
              std::unique_lock<std::mutex> queueLock(descQueueMutex);
-@@ -165,6 +751,18 @@ namespace RT64 {
+@@ -165,6 +764,18 @@ namespace RT64 {
          const std::unique_lock<std::mutex> lock(GPUShadersMutex);
          auto shaderIt = GPUShaders.find(shaderHash);
          if (shaderIt == GPUShaders.end()) {
@@ -8760,7 +8805,7 @@ index bf7b669..378cf0c 100644
          }
  
 diff --git a/src/render/rt64_raster_shader_cache.h b/src/render/rt64_raster_shader_cache.h
-index 5c40c18..50cb454 100644
+index 5c40c18..8601d46 100644
 --- a/src/render/rt64_raster_shader_cache.h
 +++ b/src/render/rt64_raster_shader_cache.h
 @@ -4,15 +4,24 @@
@@ -8804,7 +8849,7 @@ index 5c40c18..50cb454 100644
          std::mutex GPUShadersMutex;
          std::list<std::unique_ptr<CompilationThread>> compilationThreads;
          uint32_t threadCount;
-@@ -45,12 +55,62 @@ namespace RT64 {
+@@ -45,12 +55,63 @@ namespace RT64 {
          std::unique_ptr<ShaderCompiler> shaderCompiler;
          RenderMultisampling multisampling;
          bool usesHDR = false;
@@ -8862,6 +8907,7 @@ index 5c40c18..50cb454 100644
 +        void wantPrebuild(uint64_t shaderHash);
 +        void reportPrebuild(uint32_t done, uint32_t count, uint64_t sizeDone, uint64_t sizeStarted, uint64_t size);
 +        bool waitForPrebuild();
++        void prebuildForGame();
 +        void learnPrebuild();
 +        void reportMissed(const ShaderDescription &desc);
 +        bool buildMissed();

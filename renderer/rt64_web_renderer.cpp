@@ -128,6 +128,12 @@ namespace {
             app->updateScreen();
         }
 
+        // Before the game's code first runs: RT64 builds what the game's boot draws with there, where the browser builds
+        // pipelines in line with its other GPU work (RT64::Application::prepareForGame()).
+        void prepare_for_game() override {
+            app->prepareForGame();
+        }
+
         void shutdown() override {
             if (app != nullptr) {
                 app->end();
