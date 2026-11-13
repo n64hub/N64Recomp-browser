@@ -62,7 +62,8 @@
 // below that, which changes how Firefox's waits end (docs/playing.md, Uncapped, and the browsers' clocks).
 // --chrome-trace (Chrome only) records a Chrome trace over the play, every thread's JavaScript and wasm stacks sampled
 // (page_driver.mjs's chromeTrace), and writes it to the file, to open in DevTools' Performance panel or
-// ui.perfetto.dev; a wasm frame is named only in a page linked with --profiling-funcs. Sampling costs the page's
+// ui.perfetto.dev; a wasm frame is named only in a page linked with --profiling-funcs. With --fault it covers the
+// faults and not the play, what the page does as a fault comes being the reason to take one. Sampling costs the page's
 // threads, so a traced run's numbers are the trace's, not the page's, and are not recorded.
 // --fault does to the page, once the play is over (a plan's play ends in its level), what a player's browser or the
 // player does to one, then lets the game run by itself 30 s more, and a list (resize,hidden,audio,device,reload) does
@@ -687,7 +688,7 @@ try {
   if (memoryBefore) { await sleep(500); await sample(); }
   audioBefore = last?.audio ?? null;
   await page.evaluate('window.__gaps = []; undefined').catch(() => {});
-  if (chromeTraceFile) await page.chromeTrace.start();
+  if (chromeTraceFile && !faultList.length) await page.chromeTrace.start();
   playing = true;
   hostBefore = hostTimes();
   viewport = await page.viewport();
@@ -697,7 +698,7 @@ try {
   playing = false;
   audioAfter = last?.audio ?? null;
   if (geckoProfileFile && !faultList.length) { profiling = false; await page.geckoProfile.dump(geckoProfileFile); }
-  if (chromeTraceFile) await page.chromeTrace.stop(path.resolve(chromeTraceFile));
+  if (chromeTraceFile && !faultList.length) await page.chromeTrace.stop(path.resolve(chromeTraceFile));
   memoryAfter = page.gpuProcessMemory ? await page.gpuProcessMemory().catch(() => null) : null;
   // And the faults' samples start after it: its 0.3-0.4 s of sound read as a hidden tab's in Firefox.
   if (memoryAfter && faultList.length) { await sleep(500); await sample(); }
@@ -729,6 +730,8 @@ const hostAfter = hostTimes();
 // --fault, once the play is over (in its level): each fault in turn, then 30 s of the game running by itself.
 const playErrors = errors.slice(), playExceptions = exceptions;
 const faultResults = [];
+const tracingFaults = Boolean(chromeTraceFile && faultList.length && !failure);
+if (tracingFaults) await page.chromeTrace.start();
 for (const [i, name] of (failure ? [] : faultList).entries()) {
   const faultResult = { name, at: Math.round(seconds()),
     presentsBefore: median(samples.filter((s) => i ? s.fault === `${i - 1} after` : s.playing).slice(-3).map((s) => s.presents)) };
@@ -801,6 +804,8 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
   for (const text of faultResult.lines) console.log(`  console ${text}`);
   if (faultResult.failed) break;
 }
+if (tracingFaults) await page.chromeTrace.stop(path.resolve(chromeTraceFile)).then(() => log(`chrome trace written to ${chromeTraceFile}`),
+  (e) => log(`no chrome trace: ${e.message}`));
 // A profile of a run with faults runs on through them: what a hidden page's threads do is the reason to take one.
 if (profiling) {
   profiling = false;
