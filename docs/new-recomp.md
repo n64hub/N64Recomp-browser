@@ -37,7 +37,7 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b, 8a fails | W2, W5 fails, W6, W7 |
+| San Francisco Rush 2049 | 2 fails, 8a fails | W2, W5 fails, W6, W7 |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
@@ -76,8 +76,9 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7, W8, W9 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way to play
-them (filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); Turok 2's regular
+What the fails are: Rush 2049's waving start-line banners break into shards on about one frame in six with Frame
+Interpolation on (2, filed); Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way
+to play them (filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); Turok 2's regular
 plan, played on a fresh profile, misses shaders its list lacks (W3);
 Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
 first audio tasks come late (filed), and none after it since the ring's count leaves out the browser's burst, and the desktop
@@ -165,7 +166,10 @@ each. RecompFrontend's `RECOMPINPUT_PADS_IN_ORDER` does that (set before `add_su
 `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED`, `set_single_player_mode(false)` and the game's player count), and the
 game's `get_connected_device_info` reports a controller in port 1, in each port a pad is connected for
 (`get_detected_controller_count`) and in each assigned player's: F-Zero X's, Super Smash Bros.' and Mario Party's
-`main.cpp` are the pattern. Single-player mode, where every pad plays port 1, is for a game of one player only. The
+`main.cpp` are the pattern. A game whose pads become players on their first press (per-pad bindings) can keep that
+and join every connected pad in the order it was plugged in on any pad's first press instead (Rush 2049's
+`RecompFrontend-0009` runtime patch). Single-player mode, where every pad plays port 1, is for a game of one player
+only. The
 page plays it with stand-in pads (W7).
 
 ### 4. Input
