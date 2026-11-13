@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web e38365b11766d8149826547c11c0eaca466624e8
+plume: https://github.com/n64hub/plume-web 0ac34ab9d34db9de0c984dd85d3f7b8b201c6925
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3107,10 +3107,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..28efd9e
+index 0000000..b68180c
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3901 @@
+@@ -0,0 +1,3874 @@
 +//
 +// plume
 +//
@@ -4657,7 +4657,8 @@ index 0000000..28efd9e
 +        // buildInBackground is too, though it is ready at once: a draw that wants it before it is built builds it in
 +        // line, and on Chrome's GPU main thread that held a page's presents for as long (RT64's ubershader, one
 +        // pipeline per depth and coverage state, made at setup: ~1 s the first time a game drew with a third state,
-+        // Ocarina of Time's title 25 s after its boot). Firefox builds those in line too, so it builds each when drawn.
++        // Ocarina of Time's title 25 s after its boot). Firefox builds those in line too, so it builds each when drawn,
++        // or drawn with nothing (WebGPUCommandList::prepareDraw()).
 +        builds = std::make_shared<WebGPURenderPipelineBuilds>();
 +        builds->device = device;
 +        builds->pipeline = this;
@@ -5022,34 +5023,6 @@ index 0000000..28efd9e
 +    // The most presents in flight adaptPresentsInFlight() tries, and what uncapped keeps.
 +    static const uint32_t kMaxPresentsInFlight = 4;
 +
-+    // Keeps whether the page is hidden for other threads and waitOnCaller(), which it wakes when that changes.
-+    static void setHidden(WebGPUPresentState &state, bool hidden) {
-+        if (hidden != state.hidden.exchange(hidden)) {
-+            emscripten_futex_wake(&state.inFlight, INT_MAX);
-+        }
-+    }
-+
-+    // The swap chains' present states, which the page's visibilitychange sets hidden or shown, on the page's thread. A
-+    // present thread waiting in waitOnCaller() as the tab went hidden learned it only from the next isHidden() on the
-+    // page's thread, which it asks for only after its wait, and so waited for Chrome's late onSubmittedWorkDone: Paper
-+    // Mario's page lost 16-32 ms of its music 0.27 s after its tab was hidden (Chrome 155). Registered once and never
-+    // removed, since removing an html5 callback removes every one on the document, SDL's too.
-+    static std::vector<std::weak_ptr<WebGPUPresentState>> visibilityStates;
-+
-+    static bool visibilityChanged(int eventType, const EmscriptenVisibilityChangeEvent *event, void *userData) {
-+        auto expired = std::remove_if(visibilityStates.begin(), visibilityStates.end(), [event](const std::weak_ptr<WebGPUPresentState> &weakState) {
-+            const std::shared_ptr<WebGPUPresentState> state = weakState.lock();
-+            if (state != nullptr) {
-+                setHidden(*state, event->hidden);
-+            }
-+
-+            return (state == nullptr);
-+        });
-+
-+        visibilityStates.erase(expired, visibilityStates.end());
-+        return false;
-+    }
-+
 +    WebGPUSwapChain::WebGPUSwapChain(WebGPUCommandQueue *commandQueue, const RenderSwapChainDesc &desc) {
 +        assert(commandQueue != nullptr);
 +        assert(desc.renderWindow != nullptr);
@@ -5081,17 +5054,6 @@ index 0000000..28efd9e
 +
 +        frameTimer = new WebGPUFrameTimer();
 +        emscripten_request_animation_frame_loop(timeAnimationFrame, frameTimer);
-+
-+        if (emscripten_is_main_browser_thread()) {
-+            static bool visibilityRegistered = false;
-+            if (!visibilityRegistered) {
-+                emscripten_set_visibilitychange_callback(nullptr, false, visibilityChanged);
-+                visibilityRegistered = true;
-+            }
-+
-+            visibilityStates.emplace_back(presentState);
-+            setHidden(*presentState, plume_webgpu_document_hidden() != 0);
-+        }
 +
 +        maxPresentsInFlight = std::max(desc.maxFrameLatency, 2U);
 +        const int presentsInFlightQuery = plume_webgpu_query_number("presents-in-flight");
@@ -5601,11 +5563,14 @@ index 0000000..28efd9e
 +        return (uncappedRate > 0) ? uncappedRate : frameTimer->refreshRate;
 +    }
 +
-+    // On the page's thread it asks the document (as the page's visibilitychange does, visibilityChanged()), and keeps the
-+    // answer for other threads and waitOnCaller().
++    // On the page's thread it asks the document, and keeps the answer for other threads and waitOnCaller(), which it
++    // wakes when the page is hidden.
 +    bool WebGPUSwapChain::isHidden() const {
 +        if (emscripten_is_main_browser_thread()) {
-+            setHidden(*presentState, plume_webgpu_document_hidden() != 0);
++            const bool hidden = (plume_webgpu_document_hidden() != 0);
++            if (hidden != presentState->hidden.exchange(hidden)) {
++                emscripten_futex_wake(&presentState->inFlight, INT_MAX);
++            }
 +        }
 +
 +        return presentState->hidden;
@@ -6039,14 +6004,22 @@ index 0000000..28efd9e
 +
 +        // A draw of nothing records nothing, but resolves the bindings as a draw would, which starts the pipelines waiting
 +        // for that layout (WebGPUGraphicsPipeline) in the background, the bound one included: a renderer draws nothing with
-+        // the sets it draws with to have its pipelines built before its first draw needs them.
++        // the sets it draws with to have its pipelines built before its first draw needs them. Where the device builds
++        // in line (Firefox) nothing builds in the background, so the bound one is built here, as a draw would build it:
++        // the browser then has its shaders compiled, and the pipelines with the same shaders in other states build for
++        // about nothing when drawn. RT64's ubershader (one 245 KB pixel shader) cost 1.4 s of Firefox's GPU process
++        // there, the page's sound lost meanwhile, when the game's first draw with it built it in line instead.
 +        assert((pipeline != nullptr) && (pipeline->type == WebGPUPipeline::Type::Graphics));
 +        WGPUPipelineLayout layout = resolveBindings(graphics, !drawsNothing);
++        const WebGPUGraphicsPipeline *graphicsPipeline = static_cast<const WebGPUGraphicsPipeline *>(pipeline);
 +        if (drawsNothing) {
++            if (!device->capabilities.backgroundPipelineBuilds) {
++                const_cast<WebGPUGraphicsPipeline *>(graphicsPipeline)->get(layout);
++            }
++
 +            return false;
 +        }
 +
-+        const WebGPUGraphicsPipeline *graphicsPipeline = static_cast<const WebGPUGraphicsPipeline *>(pipeline);
 +        setPassPipeline(const_cast<WebGPUGraphicsPipeline *>(graphicsPipeline)->get(layout));
 +        if (graphicsPipeline->desc.stencilEnabled && (!pass.stencilReferenceSet || (pass.stencilReference != graphicsPipeline->desc.stencilReference))) {
 +            wgpuRenderPassEncoderSetStencilReference(renderPass, graphicsPipeline->desc.stencilReference);
@@ -7014,10 +6987,10 @@ index 0000000..28efd9e
 +};
 diff --git a/plume_webgpu.h b/plume_webgpu.h
 new file mode 100644
-index 0000000..52e1fda
+index 0000000..fd34f5f
 --- /dev/null
 +++ b/plume_webgpu.h
-@@ -0,0 +1,781 @@
+@@ -0,0 +1,780 @@
 +//
 +// plume
 +//
@@ -7122,8 +7095,7 @@ index 0000000..52e1fda
 +//   loop of its own on the device's thread, whatever its caller presents at, and reports displayTiming. The loop wakes
 +//   a thread in sleepUntil() at each frame, where a timed sleep on a page's thread ends late (plume_web_waits.h).
 +//   sleepUntil(), waitOnCaller() and isHidden() are the calls another thread may make.
-+// - isHidden() is document.hidden, asked on the page's thread and kept by its visibilitychange, which also ends a
-+//   waitOnCaller() under way as the page goes hidden. While the page is hidden, waitOnCaller() doesn't hold a
++// - isHidden() is document.hidden, asked on the page's thread. While the page is hidden, waitOnCaller() doesn't hold a
 +//   present to the cap on presents in flight: nothing is shown then, and Chrome calls a hidden page's
 +//   onSubmittedWorkDone back late, at times by seconds for the first 5-15 s (an empty submission's callback came back
 +//   0-12 times a second, against 80 shown, RTX 2070), so a caller that waited for it held its game behind it.

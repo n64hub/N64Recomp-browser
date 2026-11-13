@@ -951,9 +951,16 @@ RecompFrontend d143d0a the graphics thread run the renderer's (RecompFrontend's,
                        the game with its sound started, 0.1-11.7 s of the first 10 s of sound lost on 37 pages of 38
                        (docs/findings.md, Firefox's boot wait and the first sound). Chrome waits for nothing there.
                        Web only
-plume e38365b,         WebGPU: the page's visibilitychange sets each swap chain's hidden flag and wakes a present
-rt64 1d789aa           thread waiting in waitOnCaller() for a present in flight. It learned the page was hidden only
-                       from the next isHidden() on the page's thread, which the present thread asks after its wait, so
-                       as a tab went hidden in Chrome the game waited for Chrome's late onSubmittedWorkDone and lost
-                       16-32 ms of sound 0.3 s after (docs/findings.md, A page in a hidden tab). Web only
+N64ModernRuntime       ULTRAMODERN_VIS_WAIT_FOR_RENDERER's stall is two VIs (30 ms), not 100 ms: the 100 ms left a game
+d405b65 497dab9        six VIs behind every list that took about that long, and Paper Mario's page in Firefox, hidden on
+                       a busy host, its lists 50-230 ms each, freed what one pointed at as its intro handed over to its
+                       demo and trapped in its heap allocator or stopped drawing (docs/findings.md, Memory). d405b65
+                       held VIs while a graphics task was unfinished for two VIs, counted in submit_rsp_task and
+                       dp_complete, lines five game forks' runtimes change; 497dab9 puts those back and shortens the
+                       stall instead. Web only
+plume 0ac34ab,         WebGPU: where the device builds pipelines in line (Firefox), a draw of nothing builds the bound
+rt64 77e98da           pipeline for the layout it resolves, as a draw would, so RT64's warm-up in prepareForGame() has
+                       Firefox compile the ubershader's 245 KB shaders before the game starts; it built nothing there,
+                       and the game's first draw with the ubershader built it in line with the game's sound running
+                       (docs/findings.md, Compute pipelines built at their first dispatch). Chrome is as it was
 ```
