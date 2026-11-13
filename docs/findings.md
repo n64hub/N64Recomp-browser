@@ -835,6 +835,21 @@ makes only a few samples a frame more than it plays, and a late frame there ran 
 0.5-0.6 s in 4 of 10 plays, 152-4,072 frames (3-85 ms; the loudest sample 0.04-0.06 where it was logged, the desktop's
 sound there 0.03-0.05): what the thin ring at Dinosaur Planet's start loses (above).
 
+`queued_frames()` leaves out the frames the browser takes from the ring in one go, its audio context's baseLatency
+(0.01 s in Chrome on Windows, 480 frames at 48 kHz, set as the context is made), as SDL_GetQueuedAudioSize leaves out
+its device's buffer, so a game that keeps little queued keeps that much more in the ring (`frontend/audio_output.cpp`).
+Dinosaur Planet's page, three interleaved pairs of first visits with the probe (Chrome, an RTX 5080, 3840x2000
+uncapped, beside other plays): without it the sound ran short after the boot's first 1.4 s in every play, 13-311
+frames, and with it in none. Its first second lost 315-816 frames with it and 58-510 without, the ring's 20 ms lows
+the same frame for frame there: below a VI and the burst the game's `get_frames_remaining` reads 0 either way, so it
+makes all it can, and what runs short is how soon its first audio tasks come, 0.035-0.040 s and 0.5-0.9 s into its
+sound (filed). Super Mario 64's page, five interleaved pairs of Start Game and 12 s with the probe (Chrome, an RTX
+2070, 3840x2000 uncapped, a host 15-39% busy): the ring's median 20 ms low after 2 s was 1,848-1,856 frames with it
+and 1,360-1,376 without. Its sound stops again for a reset about 6 s in, the ring draining as the game makes nothing,
+and the drain cut the last of the logo's sound (loudest sample 0.02-0.06) in 4 of 5 plays without it, 8-160 frames,
+and in 1 of 5 with it, 8. Nothing ran short at 0.5-0.6 s in either build in these plays, and the reload at 3.4 s
+(loudest sample 0.001) lost 4-7 render quanta with it and 6-11 without, the game's own silence in both.
+
 Firefox lost Dinosaur Planet's sound at its boot for the same builds, and for one more (an RTX 2070, 3840x2000 uncapped,
 a new profile, a busy host; a preload that logs each create*Pipeline call and every queue round trip,
 onSubmittedWorkDone polled every 50 ms, over 40 ms). Its GPU process builds every pipeline in line, and plume left
