@@ -44,7 +44,7 @@ items by almost no game when the record began.
 | Mario Party | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Mario Party 2 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Mario Party 3 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
-| Super Smash Bros. | 1 fails, 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W4 fails, W5, W6, W9 |
+| Super Smash Bros. | 2 fails | W2, W5, W6 |
 | Paper Mario | 2 fails, 4a, 4c, 6b | W2, W5, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 4a fails, 5b | W2, W5, W6, W7 |
@@ -76,7 +76,8 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7, W8, W9 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: Smash's HUD and menus stay in the middle 4:3 (1); Paper Mario's file select shows white beside its
+What the fails are: Smash's magnifying bubble, which shows a fighter past the picture's edge, sits at the 4:3
+picture's edge in a wider window (2, filed); Paper Mario's file select shows white beside its
 stage in widescreen, and its opening cutscene at Mario's house flickers between two pictures on the desktop (2, both
 filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok
 2's regular plans, played on a fresh profile, miss shaders their lists lack (W3); Dinosaur Planet's page still loses one
@@ -84,7 +85,7 @@ silence of about 10 ms 0.4 s into its game's sound in Chrome on a first visit, w
 before it shows one, where the desktop build loses 22 ms as its sound starts, and none at the logos since plume-web
 e69d031 (docs/findings.md, Compute pipelines built at their first dispatch), and in Firefox, since plume-web 4381169
 none at its first 3D, 1-2 s at Start Game while Firefox builds RT64's ubershader in line (W5); the Mario Parties keep
-render to RAM on in their desktop builds, and Smash's page keeps the exact copy with no reason given (W4).
+render to RAM on in their desktop builds (W4).
 
 ## A new recomp's list
 
@@ -97,7 +98,9 @@ offers it. The 3D reaches the window's edges at 16:9 and at 21:9, and the HUD is
 and corners, not left in a 4:3 box in the middle: RT64's `gEXSetRectAlign`, `gEXSetViewportAlign` and edge-aligned
 scissors written into the HUD's display list as the game draws each piece (Jet Force Gemini's Screen Corners), or a
 game engine's own hooks (turok-engine's `docs/widescreen.md`). Text that crosses the middle stays whole, not split
-between the two sides. The game culls to its 4:3 view, so its culling is widened to the picture's.
+between the two sides. A scissor set around the HUD covers every scissor the frame's 3D drew with, or RT64 stops
+widening the 3D (Super Smash Bros.' `patches/hud.c`). The game culls to its 4:3 view, so its culling is widened to the
+picture's.
 
 ### 2. A graphics sweep, played past the first level
 
@@ -124,7 +127,8 @@ What it looks for:
   them, since the game's own scissor ends a row before the frame's, its docs/restored-content.md).
 - Tiling: seams or misaligned tiles on walls, ground, sky and the HUD's pieces at high resolution.
 - Widescreen: things culled or the level cut off near the picture's left and right edges (a game can cut its level a
-  second time, at 16:9, as Turok 2 does); full-screen overlays, tints, wipes and fades cut at the 4:3 picture's
+  second time, at 16:9, as Turok 2 does); an off-screen marker (a bubble or an arrow for a character past the edge)
+  placed at the 4:3 picture's edge; full-screen overlays, tints, wipes and fades cut at the 4:3 picture's
   scissor rather than reaching the window's edges (`RT64_SCISSOR_INSIDE_FRAMEBUFFER`, docs/forks.md); rooms seen
   through doors and portals clipped or drawn on walls.
 - Missing draws: text, glyphs, the map's lines or a menu screen that comes up empty.
