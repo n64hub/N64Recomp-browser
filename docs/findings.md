@@ -528,6 +528,20 @@ second while hidden, and with a preload that times animation frames at 240 a sec
 158 plays through it either way, its sound never short: it lowers neither a hidden tab's process nor its page's thread
 (Paper Mario's, below).
 
+But a hidden page presenting nothing left nothing to hold RT64's workload thread to the GPU: only the cap on presents
+in flight does (plume's waitOnCaller()), and Firefox takes whatever a page submits. The workload thread went on drawing
+a frame for every slot of the display's rate, interpolated, for presents that were then skipped: 6 a game frame on an
+uncapped page (360 a second), 2-4 on a 120-240 Hz display. Where the GPU couldn't finish them, Firefox's GPU process
+queued them. Mario Party 1, 2 and 3's pages, uncapped at 3840x2000 on an RTX 2070 that other work kept 84-97% busy,
+grew it from 2.1 GB to 9-11 GB while hidden 30 s, then presented 0-7 a second for 25-60 s after they were shown, 0.8-1.6
+M sound frames short, the memory falling as the queue drained; Rush 2049's grew to 25.6 GB until WebGPU ran out of
+memory and lost the device. On an idle GPU, or capped at 60, they came through. Since rt64 edd5da8 a hidden page draws
+only its game's own frames, which the game reads back and the first frame shown interpolates from. Rush 2049's page
+(main's pins against main's and that, interleaved, Firefox 158, 3840x2000 uncapped, the GPU 85-98% busy beside another
+play): main's GPU process went from 2.2 GB to 21.5 GB while hidden, 16.7 GB of it the GPU's shared memory, and the page
+presented nothing in the 30 s after it was shown, 2.28 M frames short; the build's held 2.07-2.16 GB, lost no sound
+hidden and presented 30, 91 and 116 a second in the 5 s after the show, 9,890 frames short.
+
 What stalls it is Chrome's priority, not the page's work. On Windows, within 2 s of a tab going hidden, Chrome 155
 lowers its renderer process from normal priority (8) to idle (4), unless the tab plays sound;
 `--disable-renderer-backgrounding` doesn't keep it at 8. `play_page.mjs` started Chrome with `--mute-audio`, which
