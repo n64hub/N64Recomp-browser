@@ -207,7 +207,8 @@ work, naming the game, the browser, the time and the curve.
   of its shared canvas texture, KB4490156). nvidia-smi's is the whole GPU's, so a page filling video memory beside
   another shows as the other page's climb and its "Out of Memory". play_page reads the GPU process's private bytes each
   sample, and in Firefox about:memory's split of them at the play's start and end (`gpuProcessMemory`); each read holds
-  Firefox's page 120-200 ms, so a play's gaps start after the first (docs/findings.md, Memory). Which kind of WebGPU
+  Firefox's page and its thread 120-470 ms, its sound too, so a play's gaps and sound start after the first, and a
+  fault's after the second (docs/findings.md, Memory, A page in a hidden tab). Which kind of WebGPU
   work grows it: `tools/gpu_growth.mjs` (its header) plays each kind of a page's calls alone, at the rates
   `--preload tools/webgpu_census.js` reads off the page; whose code made what it grows (D3D12's, a driver's, DXC's,
   Firefox's): `tools/memory_scan.ps1`, unelevated, from outside the process.
