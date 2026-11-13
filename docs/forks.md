@@ -938,4 +938,8 @@ rt64 1589517           with Emscripten a framebuffer's RAM stored into a workloa
                        each of RT64_GAME_FRAME_WORKLOADS's 64 kept its own copies at 1.5 times its most, and Rogue
                        Squadron's eight 640x480 framebuffers took 450 MB of its heap that way and ran it out at its
                        first mission (docs/findings.md, Memory). A desktop build keeps a buffer a workload, as before
+plume a8e74eb,         Vulkan: no descriptor indexing on Mesa's lavapipe (Mesa's vendor ID), so RT64 binds each draw's
+rt64 038d240           textures as on WebGPU: lavapipe miscompiled the raster shaders' non-uniformly indexed texture
+                       array and crashed every recomp's Linux build seconds into its game (docs/findings.md, A desktop
+                       build on Mesa's lavapipe). Desktop only
 ```
