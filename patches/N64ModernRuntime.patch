@@ -1,4 +1,4 @@
-N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web 6264916528648d60bf91be4009b4c6334879c85a
+N64ModernRuntime: https://github.com/n64hub/N64ModernRuntime-web e1c9de2c0b0e697b90789e20eaf4f9d88f6a8ae0
 on upstream cdf5abbd5026fef5c364c676e4667c45e42b6863 (tools/export_patches.sh)
 
 diff --git a/librecomp/CMakeLists.txt b/librecomp/CMakeLists.txt
@@ -734,7 +734,7 @@ index 8c8e5d1..68771e8 100644
      }
  }
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..71ee4d9 100644
+index 43509ba..5ca3087 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -271,6 +271,8 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
@@ -742,7 +742,7 @@ index 43509ba..71ee4d9 100644
      if (direction == 0) {
          if (physical_addr >= recomp::rom_base) {
 +            // Not onto commands of a display list the renderer hasn't read yet (ultramodern's displaylists.cpp).
-+            ultramodern::wait_for_displaylists_read((uint32_t)rdram_address & 0x1FFFFFFF, size);
++            ultramodern::wait_for_displaylists_read(rdram, (uint32_t)rdram_address & 0x1FFFFFFF, size);
              // read cart rom
              recomp::do_rom_read(rdram, rdram_address, physical_addr, size);
  
@@ -1008,10 +1008,10 @@ index 5593172..6d30b26 100644
 +endif()
 diff --git a/ultramodern/include/ultramodern/displaylists.hpp b/ultramodern/include/ultramodern/displaylists.hpp
 new file mode 100644
-index 0000000..fd0af15
+index 0000000..9fdfeb3
 --- /dev/null
 +++ b/ultramodern/include/ultramodern/displaylists.hpp
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,24 @@
 +#ifndef __ULTRAMODERN_DISPLAYLISTS_HPP__
 +#define __ULTRAMODERN_DISPLAYLISTS_HPP__
 +
@@ -1030,8 +1030,9 @@ index 0000000..fd0af15
 +    // The renderer has read the oldest list sent to it.
 +    void displaylist_read();
 +    // Waits, at most 2 s, until the renderer has read every list sent so far if a load to RDRAM at this physical
-+    // address and size would land on commands of one of the last lists it read.
-+    void wait_for_displaylists_read(uint32_t rdram_address, uint32_t size);
++    // address and size would land on commands of one of the last lists it read. A game thread lets the game's threads
++    // of higher priority run meanwhile (displaylists.cpp).
++    void wait_for_displaylists_read(uint8_t* rdram, uint32_t rdram_address, uint32_t size);
 +}
 +
 +#endif
@@ -1178,16 +1179,18 @@ index 3198be0..212234e 100644
  
 diff --git a/ultramodern/src/displaylists.cpp b/ultramodern/src/displaylists.cpp
 new file mode 100644
-index 0000000..be6c588
+index 0000000..959cf00
 --- /dev/null
 +++ b/ultramodern/src/displaylists.cpp
-@@ -0,0 +1,90 @@
+@@ -0,0 +1,111 @@
 +#include <algorithm>
 +#include <atomic>
 +#include <chrono>
++#include <cstdio>
 +#include <thread>
 +
 +#include "ultramodern/displaylists.hpp"
++#include "ultramodern/ultramodern.hpp"
 +
 +// On a console the RSP reads a display list within a few ms of the game sending it, long before the game's next load
 +// from ROM lands, so a game may load over commands its last list runs: one loads its title screen's textures over its
@@ -1198,6 +1201,14 @@ index 0000000..be6c588
 +// onto commands one of the last lists read ran waits until the renderer has read every list sent before it, on
 +// whichever thread the load is (the one that loads over a list needn't be the one that sends it). A load anywhere else,
 +// as a sound's samples, goes at once.
++// A game thread that waits lets the game's threads of higher priority run, as the console's would preempt it: it takes
++// the messages other threads sent (a retrace's) and gives way to a thread they woke, as an OS call does. ultramodern
++// runs one game thread at a time, so a wait that held on to it held the sound thread too: Super Mario 64's page in
++// Chrome went 40-100 ms without sound at its boot and its title, where its loads waited behind the renderer's first
++// frames of each screen, and its ring of 1,200 frames ran dry.
++
++// mesgqueue.cpp's: sends the messages queued by threads that aren't the game's.
++void dequeue_external_messages(uint8_t* rdram);
 +
 +#if ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS
 +
@@ -1227,7 +1238,7 @@ index 0000000..be6c588
 +    reads[0].fetch_add(1, std::memory_order_release);
 +}
 +
-+void ultramodern::wait_for_displaylists_read(uint32_t rdram_address, uint32_t size) {
++void ultramodern::wait_for_displaylists_read(uint8_t* rdram, uint32_t rdram_address, uint32_t size) {
 +    uint32_t sent = lists_sent.load(std::memory_order_relaxed);
 +    uint32_t read = reads[0].load(std::memory_order_acquire);
 +    uint32_t first = rdram_address >> unit_shift;
@@ -1248,14 +1259,25 @@ index 0000000..be6c588
 +
 +    // At most 2 s, after which the lists still unread count as read, so a renderer that stopped reading them (or reads
 +    // fewer than are sent) costs one wait, not one per load.
-+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
++    auto start = std::chrono::steady_clock::now();
++    auto deadline = start + std::chrono::seconds(2);
++    bool game_thread = ultramodern::is_game_thread();
 +    while (reads[0].load(std::memory_order_acquire) < sent) {
 +        if (std::chrono::steady_clock::now() >= deadline) {
 +            lists_sent.store(reads[0].load(std::memory_order_acquire), std::memory_order_relaxed);
-+            return;
++            break;
 +        }
 +
 +        std::this_thread::sleep_for(std::chrono::milliseconds(1));
++        if (game_thread) {
++            dequeue_external_messages(rdram);
++            ultramodern::check_running_queue(rdram);
++        }
++    }
++    // WIP: how long each wait took
++    long long waited = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
++    if (waited >= 5) {
++        printf("displaylists: a load to %08X (%u bytes) waited %lld ms for the renderer\n", rdram_address, size, waited);
 +    }
 +}
 +
@@ -1269,7 +1291,7 @@ index 0000000..be6c588
 +
 +void ultramodern::displaylist_read() {}
 +
-+void ultramodern::wait_for_displaylists_read(uint32_t, uint32_t) {}
++void ultramodern::wait_for_displaylists_read(uint8_t*, uint32_t, uint32_t) {}
 +
 +#endif
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
