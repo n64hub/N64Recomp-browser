@@ -214,7 +214,9 @@ Every game's page, a game fork's or a recomp of the project's own, is checked fo
   its levels and the console's reports of CPU writes to a framebuffer with a copy pending read). Else the exact copy,
   naming what reads it (Majora's Mask's Pictograph Box, Jet Force Gemini's shadows' render targets).
 - **W5.** No sound lost or turned to noise: none short in the boot's first 10 s in Chrome and Firefox
-  (`audioShort`), nor after the tab is hidden and shown again.
+  (`audioShort`), nor after the tab is hidden and shown again. A loss inside the game's own silence (a boot's silent
+  logos) is no sound lost: `tools/audio_probe.js` logs each short render quantum with the loudest sample played
+  before it, 0 there.
 - **W6.** The game finds its save after the page is reloaded and after the browser is closed and opened again, and a
   signed-in player's save reaches the Drive and comes back in another browser (`frontend/save_sync.js`).
 - **W7.** A stand-in pad (`tools/gamepad_probe.js`) drives the launcher, the menus and play, its rumble played; a game
