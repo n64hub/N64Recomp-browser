@@ -728,6 +728,36 @@ another card's plays): 3,061 frames short before, 360 and 49 after, those in the
 build, either way, has three frames of 130-140 ms. A release build's A/B against the page Pages served: 3,642
 frames short there, 617 (13 ms) in the build, all in the game's first 3 s.
 
+What holds those three frames, and the sound left after the fix (Chrome 155, an RTX 2070, 3840x2000 uncapped, a new
+profile, a host 22-56% busy; traces with Dawn's categories started 3 s before the Start Game click, as one started at
+the click held every thread 85-110 ms while V8's profiler started, and a build linked with `--profiling-funcs` to name
+the wasm): the game draws its first 12 workloads into its two framebuffers before it shows either, its first present
+queued 551 ms after the click. RT64_GAME_FRAME_WORKLOADS takes each as an offscreen pass and holds them in frames of
+four (`?frame-log`: `end=held`, 132 ms apart), each ended when the game waits for a free present, while the present
+thread waits in waitForWorkloadId and the page presents nothing; the GPU process's main thread and the page's are idle
+there, and render to RAM's readback waits no longer than later. It comes before the game's first picture, so nothing
+shown is lost, and it is the same with the fix and without: the page Pages served had gaps of 410, 252, 185 and 139 ms
+there with the GPU process compiling in line (92 and 180 ms at the first frames, 278 and 112 ms at the second logo)
+and 32,815 frames short; the build had 123-218 ms gaps, no GPU process task over 50 ms, and 186 (twice), 364+88 and
+452 short in the first second. A worklet that logs each short render quantum found the 452 one silence of 9.4 ms,
+19,200 frames (0.400 s) into the sound, 0.57 s after the click, during the held frames, and nothing else in 12 s. The
+desktop build v0.1.3's boot, recorded with SDL's disk driver, loses 19.7 ms 0.017 s into its sound and 2.0 ms at 0.040
+s, and nothing else, so the page loses less where the game's sound starts than the desktop does.
+
+Firefox lost Dinosaur Planet's sound at its boot for the same builds, and for one more (an RTX 2070, 3840x2000 uncapped,
+a new profile, a busy host; a preload that logs each create*Pipeline call and every queue round trip,
+onSubmittedWorkDone polled every 50 ms, over 40 ms). Its GPU process builds every pipeline in line, and plume left
+Firefox's compute pipelines to their first dispatch. As the first 3D drew, 5-6 s after Start Game, rspProcess and
+rspWorld were built there, the round trips took 200-255 ms, and 2,200-16,600 frames were short (the page Pages served,
+and main's own build, in seven boots). At the game's first frames textureDecode and fbWriteColor were built beside
+RT64's ubershader, one 245 KB pixel shader, which plume builds with createRenderPipeline when first drawn: the round
+trips took 2.2-2.6 s there, nothing was presented for 1-2 s, and 3,500-122,000 frames were short, most in most boots.
+plume-web 4381169 builds Firefox's compute pipelines for their predicted layout too, with createComputePipeline at the
+device's next submission after RT64 makes them, so at the launcher, where its GPU process takes 1.6-1.8 s for the 21
+before any sound plays (each built where it was made, 8 were built twice as later shaders changed their layouts).
+Three interleaved pairs against main's build: nothing short at the first 3D in the build against 2,216-14,690, and
+at Start 103,000-107,000 against 88,000-116,000, which is the ubershader's, the same either way.
+
 ## What the prebuilt lists miss
 
 Each list was recorded from a plan that reaches a level's start and plays a few seconds of it (its header says what
