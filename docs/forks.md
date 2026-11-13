@@ -933,4 +933,9 @@ rt64 fb507fc           dispatch, with createComputePipeline at the device's next
                        Firefox's GPU process compiled it in line, and Dinosaur Planet's render-to-RAM copy and sound
                        waited behind RT64's RSP pipelines as its first 3D drew (docs/findings.md, Compute pipelines
                        built at their first dispatch)
+rt64 1589517           with Emscripten a framebuffer's RAM stored into a workload (every RDRAM check stores every
+                       framebuffer RT64 knows) shares the bytes of its last store, in any workload, when they match:
+                       each of RT64_GAME_FRAME_WORKLOADS's 64 kept its own copies at 1.5 times its most, and Rogue
+                       Squadron's eight 640x480 framebuffers took 450 MB of its heap that way and ran it out at its
+                       first mission (docs/findings.md, Memory). A desktop build keeps a buffer a workload, as before
 ```
