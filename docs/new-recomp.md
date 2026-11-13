@@ -45,7 +45,7 @@ items by almost no game when the record began.
 | Mario Party 2 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Mario Party 3 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Super Smash Bros. | 1 fails, 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W4 fails, W5, W6, W9 |
-| Paper Mario | 1 fails, 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W4 fails, W5, W6, W7, W9 |
+| Paper Mario | 2 fails, 4a, 4c, 6b | W2, W5, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 4a fails, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
@@ -76,14 +76,15 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7, W8, W9 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: Smash's and Paper Mario's HUD and menus stay in the middle 4:3 (1); F-Zero X's, the Mario Parties'
-and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok 2's regular plans, played on a fresh
-profile, miss shaders their lists lack (W3); Dinosaur Planet's page still loses one silence of about 10 ms 0.4 s into
-its game's sound in Chrome on a first visit, while RT64 holds the game's first frames before it shows one, where the
-desktop build loses 22 ms as its sound starts, and none at the logos since plume-web e69d031 (docs/findings.md, Compute
-pipelines built at their first dispatch), and in Firefox, since plume-web 4381169 none at its first 3D, 1-2 s at Start
-Game while Firefox builds RT64's ubershader in line (W5); the Mario Parties keep render to RAM on in their desktop
-builds, and Smash's and Paper Mario's pages keep the exact copy with no reason given (W4).
+What the fails are: Smash's HUD and menus stay in the middle 4:3 (1); Paper Mario's file select shows white beside its
+stage in widescreen, and its opening cutscene at Mario's house flickers between two pictures on the desktop (2, both
+filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok
+2's regular plans, played on a fresh profile, miss shaders their lists lack (W3); Dinosaur Planet's page still loses one
+silence of about 10 ms 0.4 s into its game's sound in Chrome on a first visit, while RT64 holds the game's first frames
+before it shows one, where the desktop build loses 22 ms as its sound starts, and none at the logos since plume-web
+e69d031 (docs/findings.md, Compute pipelines built at their first dispatch), and in Firefox, since plume-web 4381169
+none at its first 3D, 1-2 s at Start Game while Firefox builds RT64's ubershader in line (W5); the Mario Parties keep
+render to RAM on in their desktop builds, and Smash's page keeps the exact copy with no reason given (W4).
 
 ## A new recomp's list
 
