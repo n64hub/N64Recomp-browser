@@ -1300,7 +1300,8 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   `headless/main.cpp` header has the measurements), so a game that never reads its frames on the CPU turns it off
   (RecompFrontend-0004, `set_render_to_ram`), and one that does keeps it on. If it can take a frame one list old (a
   patch of the screen, a row of depth), `set_render_to_ram_late` (rt64 73e9ca0) makes the copy land later instead,
-  and the list stops waiting: Conker's, GoldenEye's, Donkey Kong 64's and Perfect Dark's pages do. It landed when the
+  and the list stops waiting: Conker's, GoldenEye's, Donkey Kong 64's, Perfect Dark's and Beetle Adventure Racing's
+  pages do. It landed when the
   next list started, which waited there for the GPU where the GPU took longer over a frame than the game between lists
   (a phone's, at its lowest clock); since rt64 330f84a it lands at the first VI or list start that finds the GPU done,
   or at the latest where the next list's draws are synced, before that list's RDP is done (docs/phones.md, Conker's Bad
@@ -1314,8 +1315,9 @@ time, at the display's rate (64 Hz): plays.jsonl's lines of that date noted "lap
   build, an interleaved pair, an RTX 2070): WWF No Mercy, whose frames are drawn in several tasks each, went from 226
   presents a second to 268, Rogue Squadron (its fork's write-back off, with the late copy) from 273 to 301, and THPS2
   from 330 to 335, within the noise. Space Station Silicon Valley's late copy measured no faster (148 against 167, with
-  Pages' own two plays at 178 and 157), so it keeps the exact copy, and Beetle Adventure Racing's never got from the
-  menus into a race (docs/game-forks.md). Through the device thread, the main thread checks a
+  Pages' own two plays at 178 and 157), so it keeps the exact copy. Beetle Adventure Racing's went from 217 to 238,
+  and its races from about 30 frames a second to 50-60, once a yield its scheduler asks of a queued graphics task was
+  answered: unanswered, its page never got from the menus into a race with the late copy (docs/game-forks.md). Through the device thread, the main thread checks a
   READBACK buffer at each replay and present once a copy into it is replayed, maps it when the browser has delivered
   the data, and publishes the answer, which `isMapReady()` reads and `map()` waits for without waiting behind the
   main thread's queue; a build without threads would need `-sJSPI` (or ASYNCIFY) to wait in place. A call that waits
@@ -1630,6 +1632,31 @@ RT64 timed them at 60 ("the game reports 60"), so it drew too few frames between
 30.2 frames a second against 55-56 without the copy (headless Chrome with no display, its frames at about 56; set
 `t2-r2r-display`), and at 240 about 113 against 211. Uncapped at 360 the copy still read higher (281-282 against
 226-255) for the reason above. Without the copy RT64 times them at 30, as it does Turok: Dinosaur Hunter's either way.
+
+The copy was counted as a frame of its own. Turok 2 draws each frame in two lists, the second into the framebuffer the
+VI already shows, and that list's exact copy lands in its RAM a VI after the swap. RT64 takes a change to the shown
+framebuffer's RAM with no swap for a frame the CPU drew: it queued a second present of it (`?frame-log`: two `PQ` lines
+a game frame, the old framebuffer's and the new one's) and counted the VIs since the swap as a frame of one
+(`pushFactor`), so every game frame read as two of one VI and logicalRateFromFactors() said 60. rt64 32e204c leaves a
+change to what render to RAM wrote out of both, as with the copy off: Turok 2 at d8f0446 (the exact copy) then read 30
+in its levels, one present a game frame, 53-56 frames drawn a second against 30.2 (set `r2r-screen-copy`). Played from
+Pages at the display's rate with `?present-stats` (set `r2r-rate-survey`), the other pages that keep the exact copy
+time their games right: Dinosaur Planet, Space Station Silicon Valley, Mario Kart 64 and Pokémon Snap at 30 with 45-56
+frames drawn, Jet Force Gemini at 30-38 timed at 30, Paper Mario at 27-30 with 46-56, Majora's Mask at 20 with 54-56,
+Ocarina of Time at 20, 30 and 60 by its scene, Rayman 2, Goin' Quackers and Super Smash Bros. at their 60, Beetle
+Adventure Racing's race at 50-60. Beetle's logos after Start read 30 timed as 60 for 10-20 s with the change too, and
+they are the game's own: its VI swaps between two framebuffers every VI while RT64 takes the two lists of a pair for a
+game frame, so 60 is the screen's rate there. A game at 60 held up by a load reads 60 for one 5 s sample too, its
+frames drawn its game frames, which is no frame lost.
+
+In the A/B (Chrome, 3840x2000, whole GPU turns in pairs, a host 34-63% busy; sets `r2r-screen-copy-*`) the change
+moved only what it fixes. Turok 2 at d8f0446 presented 56.0 a second at the display's rate against 54.8 from Pages,
+which had meanwhile taken Turok 2's copy off, and uncapped 273-285 against Pages' 233-248, the copy's 5-6 ms waits
+now beside the frames a game at 30 needs: there the build's sound was 2,700-42,500 frames short where Pages' was
+whole, which a page at the display's rate isn't (0 short) and Turok 2's page without the copy doesn't pay. Beetle,
+which the change doesn't touch past its logos, read 56.9 against 57.2 and uncapped 204-226 against 173-209. Its
+build's first uncapped play stopped 19 s in on "memory access out of bounds" as the game set up its heap, and the
+replayed series ran whole: Beetle's own fault, not this change, which no game thread reaches.
 
 ## A frame drawn in many workloads
 
