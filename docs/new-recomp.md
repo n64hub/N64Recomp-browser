@@ -90,11 +90,14 @@ browser's burst left out of the ring's count cuts less of the logo's sound at it
 Mario's boot loses sound in both browsers only inside its own silence, which lasts until its intro stage's music, but
 its tab hidden in its intro loses 16-32 ms of that music in Chrome in some plays, as the present thread waits for a
 present in flight (filed), and in Firefox the intro story's own shaders, which RT64 builds a few at a time with the
-game waiting, break up its music for 0.1-0.3 s a dozen times (W5); the Mario Parties' pages in Firefox run 66k-108k sound frames short in their boot's first
-10 s, as its prebuilt shaders are built with the game waiting, and Mario Party 2's 59k in the 30 s after its tab was
-hidden came from the same kind of wait, not from the hidden tab: the 1.4 s its section Minigames13's 34 shaders took
-fell in those 30 s (W5, filed); Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds
-whatever the window does, none more for a drag (6b, filed). In Firefox, where every page's boot section was built
+game waiting, break up its music for 0.1-0.3 s a dozen times (W5); the Mario Parties' pages in Firefox lose
+none in their boot's first 10 s built on v0.200.0 (66k-108k from Pages on v0.184.0, as section boot's shaders were
+built with the game waiting), but on a busy GPU none drew in the 30 s after its tab was hidden and shown again, nor
+did Mario Party 1's page from Pages: Firefox's GPU process grew to 9-11 GB while hidden, 0.8-1.6M frames short after,
+the page back 25-60 s after the show (W5, filed); with the GPU to themselves, from Pages, they came through, Mario
+Party 2's 59k short there the 1.4 s its section Minigames13's 34 shaders took, a later section's wait (W5, filed);
+Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds whatever the window does, none
+more for a drag (6b, filed). In Firefox, where every page's boot section was built
 with its sound started (0.1-11.7 s short in the first 10 s on 37 pages of 38), it is built before the game starts
 since rt64 c5ced59: GoldenEye's page loses 0.8 s there, against 7.9-9.1 s from Pages, which may be play_page.mjs's
 own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s (a later
