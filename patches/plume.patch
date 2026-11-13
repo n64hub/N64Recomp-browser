@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web e69d031efc2b183f3c54ae3fd759765e6d843549
+plume: https://github.com/n64hub/plume-web 61370ddbf9d6eb6079b796e095ec2adcd7a1efa2
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -3094,10 +3094,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..e7de470
+index 0000000..5fc9e6d
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3840 @@
+@@ -0,0 +1,3845 @@
 +//
 +// plume
 +//
@@ -4398,16 +4398,16 @@ index 0000000..e7de470
 +        this->desc.specConstants = nullptr;
 +        self = std::make_shared<WebGPUComputePipeline *>(this);
 +
-+        // Where the device builds in the background (Chrome), it starts building the pipeline now for the layout its
-+        // dispatches will likely resolve to, and again whenever a new binding stage changes that layout (WebGPUShader).
-+        // Built at its first dispatch, Chrome compiled it in line on its GPU main thread, where none of the page's GPU
-+        // work ran for 50-125 ms on a profile's first visit (RT64's texture decode, framebuffer write and RSP pipelines,
-+        // at a game's first frames and first 3D: Dinosaur Planet's page lost sound at its boot's logos to them). A wrong
-+        // guess builds one no dispatch uses, and the dispatch builds the one it needs, as before.
-+        if (!device->capabilities.backgroundPipelineBuilds) {
-+            return;
-+        }
-+
++        // The pipeline is built now for the layout its dispatches will likely resolve to, and again whenever a new
++        // binding stage changes that layout (WebGPUShader), so it isn't built at its first dispatch. Built there, the
++        // browser compiled it in line, with none of the page's GPU work running meanwhile: 50-125 ms each on Chrome's
++        // GPU main thread on a profile's first visit, and in Firefox's GPU process up to 1.7 s of round trips with the
++        // others built beside it (RT64's texture decode, framebuffer write and RSP pipelines, at a game's first frames
++        // and first 3D: Dinosaur Planet's page lost sound at its boot's logos to them in both). Where the device builds
++        // in the background (Chrome) it builds with createComputePipelineAsync; in Firefox, whose GPU process builds
++        // every pipeline in line, with createComputePipeline, which there costs the time where the pipeline is created
++        // (RT64's: at the launcher) instead. A wrong guess builds one no dispatch uses, and the dispatch builds the one
++        // it needs, as before.
 +        const WebGPUShader *shader = static_cast<const WebGPUShader *>(desc.computeShader);
 +        const WebGPUPipelineLayout *pipelineLayout = static_cast<const WebGPUPipelineLayout *>(desc.pipelineLayout);
 +        if ((shader == nullptr) || (pipelineLayout == nullptr) || (pipelineLayout->setBindings.size() != pipelineLayout->descriptorSetCount)) {
@@ -4445,6 +4445,11 @@ index 0000000..e7de470
 +        pipelineDesc.compute.entryPoint = toStringView(computeStage.entryPointName);
 +        pipelineDesc.compute.constantCount = constants.size();
 +        pipelineDesc.compute.constants = constants.data();
++
++        if (!device->capabilities.backgroundPipelineBuilds) {
++            pipelines[layout] = wgpuDeviceCreateComputePipeline(device->device, &pipelineDesc);
++            return;
++        }
 +
 +        WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo = WGPU_CREATE_COMPUTE_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
 +        callbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
@@ -6940,10 +6945,10 @@ index 0000000..e7de470
 +};
 diff --git a/plume_webgpu.h b/plume_webgpu.h
 new file mode 100644
-index 0000000..2a7292e
+index 0000000..6477f05
 --- /dev/null
 +++ b/plume_webgpu.h
-@@ -0,0 +1,775 @@
+@@ -0,0 +1,776 @@
 +//
 +// plume
 +//
@@ -6975,11 +6980,12 @@ index 0000000..2a7292e
 +//   any draw resolved that layout, it waits for the first one to. Behind plume_device_thread.h, createGraphicsPipeline()
 +//   waits for isReady() on the calling thread, which draws with another pipeline meanwhile. A draw with a layout the
 +//   pipeline wasn't built for (a new binding stage changes them all) builds it in place, as any other pipeline is.
-+//   Where the browser builds those off the device (Chrome), a compute pipeline is built with createComputePipelineAsync
-+//   when it is created, for the layout its dispatches will likely resolve to: every binding of its sets bound, with
-+//   what the set layouts don't say (a texture's format and dimension, a sampler's filtering) read from its shader's
-+//   declarations, and again when a new binding stage changes that layout. A dispatch with another layout, or before
-+//   that build is done, builds it in place.
++//   A compute pipeline is built when it is created, for the layout its dispatches will likely resolve to: every binding
++//   of its sets bound, with what the set layouts don't say (a texture's format and dimension, a sampler's filtering)
++//   read from its shader's declarations, and again when a new binding stage changes that layout. Where the browser
++//   builds those off the device (Chrome) it is built with createComputePipelineAsync; in Firefox in line, which costs
++//   the GPU process the build where the pipeline is created (RT64's: at the launcher) and not at its first dispatch. A
++//   dispatch with another layout, or before that build is done, builds it in place.
 +// - Buffer mapping is asynchronous. An UPLOAD buffer keeps a CPU copy: map() returns it and unmap() writes it to the
 +//   GPU, and a buffer left mapped is written in full on every executeCommandLists(), since a persistently mapped
 +//   D3D12-style upload buffer never says what changed. A READBACK buffer that a submitted command list copied into
