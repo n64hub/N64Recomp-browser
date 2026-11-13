@@ -440,8 +440,9 @@ Frame Rate setting's 60 as Display, so the page interpolates the game's 30 to th
 desktop's Enhanced preset (16:9, Full draw distance, MSAA 4, resolution Auto). Render to RAM is off on the page (the
 host's `rt64_context.cpp`): the game's CPU never reads a frame it drew nor draws into one (its fades and pause
 backgrounds are display-list commands, and the loader's unpack blocks in the Z buffer wait for every graphics task
-first), and the desktop keeps it for the host's test tools, which read finished frames from RDRAM. Its list is 82 shaders: the boot (the
-launcher, the logos, the main menu and the career's menus to the level select, 14) and 10 sections (a run on each
+first), and the desktop keeps it for the host's test tools, which read finished frames from RDRAM. Its list is 84 shaders: the boot (the
+launcher, the logos, the main menu and the career's menus to the level select, 16, two of them missed by
+`tools/play_plan_extended.json` from a fresh profile, in the title's demo and in a course) and 10 sections (a run on each
 course of the career's level select), recorded by `tools/shader_plan.json` with the host's `--skip-intro` and
 `--unlock-levels` (the plan's arguments), which knows the front end's screens by a word that moves with each one and a
 run by `gRunActive`. Its BUILDING.md (The web page) and the header of `host/tools/build_web.py` have the rest.
@@ -464,11 +465,12 @@ leaves out the HD text and textures, whose options show only where their pack is
 desktop's defaults, Aspect Ratio and HUD Placement at Expand. Render to RAM keeps the exact copy: the game's CPU reads
 its frames (the pause preview, the title's tile wipe, the mission brief's and reset's still backgrounds) and its level
 loads decompress into the framebuffers, where a copy landing a list late could overwrite the loader's data, and the
-late copy, played clean through the title and the first level's brief, measured no faster in Chrome. Its list is 150 shaders: the boot (the
+late copy, played clean through the title and the first level's brief, measured no faster in Chrome. Its list is 153 shaders: the boot (the
 launcher, the opening and the title, 25) and 32 sections (Smashing Start, reached as a player does, and each level
 from 2 to 32), recorded by `web/shader_plan.json`, which reaches each level by `Module._sssv_web_warp`, the page's way
 into the test control the desktop build reads from an environment variable, and knows the level by `gGameState.level`
-in RDRAM. Its BUILDING.md and the header of `tools/build_web.sh` have the rest.
+in RDRAM. Three of them are what `web/play_plan_extended.json` missed from a fresh profile, in the Swamp of Eternal
+Stench and Something Fishy. Its BUILDING.md and the header of `tools/build_web.sh` have the rest.
 
 `n64hub/RogueSquadron64Recomp-web` is MikeSemicolonD's Rogue Squadron 64 Recompiled, Star Wars: Rogue Squadron (USA
 1.0), GPL-3.0. It is on the game's own forks of rt64 and N64ModernRuntime (N64Recomp inside it), which draw Factor 5's
