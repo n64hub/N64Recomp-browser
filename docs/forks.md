@@ -951,4 +951,9 @@ RecompFrontend d143d0a the graphics thread run the renderer's (RecompFrontend's,
                        the game with its sound started, 0.1-11.7 s of the first 10 s of sound lost on 37 pages of 38
                        (docs/findings.md, Firefox's boot wait and the first sound). Chrome waits for nothing there.
                        Web only
+plume e38365b,         WebGPU: the page's visibilitychange sets each swap chain's hidden flag and wakes a present
+rt64 1d789aa           thread waiting in waitOnCaller() for a present in flight. It learned the page was hidden only
+                       from the next isHidden() on the page's thread, which the present thread asks after its wait, so
+                       as a tab went hidden in Chrome the game waited for Chrome's late onSubmittedWorkDone and lost
+                       16-32 ms of sound 0.3 s after (docs/findings.md, A page in a hidden tab). Web only
 ```
