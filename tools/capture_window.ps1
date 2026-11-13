@@ -23,6 +23,15 @@
 #   <s> drag <ms>             the window's thread held in Windows' move loop for ms, as a drag by the title bar holds
 #                             it, without the mouse: item 6b's check, with -Env SDL_AUDIODRIVER=disk,SDL_DISKAUDIOFILE=<f>
 #                             recording what the game played, a gap a run of zeros (docs/new-recomp.md)
+#   <s> until <addr> <mask> <value> <timeout s> [key]
+#                             waits until the game's 32-bit word at RDRAM address addr (0x800DCE44), anded with mask,
+#                             is value, pressing key every 1.5 s meanwhile if one is given, as a page plan's pressUntil
+#                             does; the plan's later times move on by however long it waited. Unmet by timeout, the
+#                             run ends there as failed (exit 1)
+#   <s> poke <addr> <value>   writes the 32-bit word value at addr, and
+#   <s> or <addr> <bits>      ors bits into it: a cheat that reaches a later level, the way a page plan's n64w does
+#   <s> peek <addr>[,<addr>]  prints the 32-bit words at those addresses, in hex: a saved setting before and after a
+#                             restart (a byte at an address of 4 is the word's top byte, 0x01000000 for 1)
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
 # now and then and one of several frames most times. A burst's and a record's captures are scaled by -Scale (1).
@@ -31,6 +40,8 @@
 # capture saved so far, its captures.tsv line and its flicker.txt lines on disk. Writing costs the captures nothing
 # measurable at 0.25 and takes some CPU at 1 from a large window, which on a busy host can slow them.
 # A key a game reads through SDL comes from the window's messages, so keys reach it with its window behind others.
+# RDRAM is read and written from outside, in the process this started: N64ModernRuntime commits it as one 512 MB region,
+# the start of its allocation, with 0x80000000 at its first byte and each 32-bit word in the host's order.
 #
 # Every capture's time, in milliseconds since 1970, is written to captures.tsv, the clock RT64_FRAME_LOG's game frames
 # are printed with (tools/frame_log.mjs puts the two together). Each series is checked as it is written for frames
@@ -76,6 +87,14 @@ public static class CaptureWindow {
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
     [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint mapType);
     [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int w, int h2, uint flags);
+    [DllImport("kernel32.dll")] public static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+    [DllImport("kernel32.dll")] public static extern bool ReadProcessMemory(IntPtr p, IntPtr a, byte[] b, IntPtr n, out IntPtr done);
+    [DllImport("kernel32.dll")] public static extern bool WriteProcessMemory(IntPtr p, IntPtr a, byte[] b, IntPtr n, out IntPtr done);
+    [DllImport("kernel32.dll")] public static extern IntPtr VirtualQueryEx(IntPtr p, IntPtr a, out MBI m, IntPtr n);
+    [StructLayout(LayoutKind.Sequential)] public struct MBI {
+        public IntPtr BaseAddress, AllocationBase; public uint AllocationProtect; public ushort PartitionId;
+        public IntPtr RegionSize; public uint State, Protect, Type;
+    }
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
     [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
 
@@ -91,6 +110,28 @@ public static class CaptureWindow {
             return true;
         }, IntPtr.Zero);
         return best;
+    }
+
+    // The runtime's RDRAM in process p (opened with VM_READ, VM_WRITE, VM_OPERATION, QUERY_INFORMATION), or zero while
+    // it has none yet: the committed read-write 512 MB at the start of its own allocation.
+    public static IntPtr Rdram(IntPtr p) {
+        long a = 0; MBI m;
+        while (VirtualQueryEx(p, (IntPtr)a, out m, (IntPtr)Marshal.SizeOf(typeof(MBI))) != IntPtr.Zero) {
+            if (m.State == 0x1000 && m.Protect == 0x04 && m.BaseAddress == m.AllocationBase && (long)m.RegionSize == 512L << 20)
+                return m.BaseAddress;
+            a = (long)m.BaseAddress + (long)m.RegionSize;
+        }
+        return IntPtr.Zero;
+    }
+    public static uint Read(IntPtr p, IntPtr rdram, uint addr) {
+        var b = new byte[4]; IntPtr n;
+        if (!ReadProcessMemory(p, rdram + (int)(addr - 0x80000000u), b, (IntPtr)4, out n)) throw new Exception("can't read RDRAM");
+        return BitConverter.ToUInt32(b, 0);
+    }
+    public static void Write(IntPtr p, IntPtr rdram, uint addr, uint v) {
+        IntPtr n;
+        if (!WriteProcessMemory(p, rdram + (int)(addr - 0x80000000u), BitConverter.GetBytes(v), (IntPtr)4, out n))
+            throw new Exception("can't write RDRAM");
     }
 
     // The mean absolute difference of two grey copies.
@@ -337,12 +378,22 @@ while ($hwnd -eq [IntPtr]::Zero -and $clock.Elapsed.TotalSeconds -lt 60 -and -no
 }
 Write-Output ("window after {0:N1}s" -f $clock.Elapsed.TotalSeconds)
 
-$recording = $null; $recorded = 0
+# A number in a plan: decimal, or hex with 0x.
+function Num($s) { if ($s -match '^0x') { [Convert]::ToUInt32($s.Substring(2), 16) } else { [uint32]$s } }
+$script:rdram = [IntPtr]::Zero
+$script:handle = [CaptureWindow]::OpenProcess(0x438, $false, [uint32]$proc.Id)
+function Rdram {
+    if ($script:rdram -eq [IntPtr]::Zero) { $script:rdram = [CaptureWindow]::Rdram($script:handle) }
+    if ($script:rdram -eq [IntPtr]::Zero) { throw "no RDRAM in pid $($proc.Id)" }
+    $script:rdram
+}
+
+$recording = $null; $recorded = 0; $shift = 0.0; $failed = $false
 try {
-    foreach ($line in Get-Content $Plan) {
+    :plan foreach ($line in Get-Content $Plan) {
         if ($line -match '^\s*(#|$)') { continue }
         $p = $line.Trim() -split '\s+'
-        while ($clock.Elapsed.TotalSeconds -lt [double]$p[0] -and -not $proc.HasExited) {
+        while ($clock.Elapsed.TotalSeconds -lt [double]$p[0] + $shift -and -not $proc.HasExited) {
             if ($recording) { Capture $hwnd ($recording + '-' + $recorded.ToString('0000')); $recorded++ }
             else { Start-Sleep -Milliseconds 20 }
         }
@@ -370,7 +421,26 @@ try {
                 Start-Sleep -Milliseconds ([int]$p[2])
                 Send-Key $hwnd 'Escape' 120
                 Write-Output ("{0,6:N1}s drag {1} ms" -f $clock.Elapsed.TotalSeconds, $p[2]) }
-            'end' { break }
+            'until' { $addr = Num $p[2]; $mask = Num $p[3]; $want = Num $p[4]; $began = $clock.Elapsed.TotalSeconds
+                $press = -10.0; $met = $false
+                while (-not $proc.HasExited -and $clock.Elapsed.TotalSeconds - $began -lt [double]$p[5]) {
+                    if (([CaptureWindow]::Read($handle, (Rdram), $addr) -band $mask) -eq $want) { $met = $true; break }
+                    if ($p.Count -gt 6 -and $clock.Elapsed.TotalSeconds - $press -ge 1.5) {
+                        $press = $clock.Elapsed.TotalSeconds; Send-Key $hwnd $p[6] 120 }
+                    if ($recording) { Capture $hwnd ($recording + '-' + $recorded.ToString('0000')); $recorded++ }
+                    else { Start-Sleep -Milliseconds 20 }
+                }
+                $shift += $clock.Elapsed.TotalSeconds - $began
+                Write-Output ("{0,6:N1}s until {1} {2} after {3:N1}s" -f $clock.Elapsed.TotalSeconds, $p[2],
+                    $(if ($met) { 'met' } else { 'NOT met' }), ($clock.Elapsed.TotalSeconds - $began))
+                if (-not $met) { $failed = $true; break plan } }
+            'poke' { [CaptureWindow]::Write($handle, (Rdram), (Num $p[2]), (Num $p[3]))
+                Write-Output ("{0,6:N1}s poke {1} {2}" -f $clock.Elapsed.TotalSeconds, $p[2], $p[3]) }
+            'or' { $addr = Num $p[2]; [CaptureWindow]::Write($handle, (Rdram), $addr, ([CaptureWindow]::Read($handle, (Rdram), $addr) -bor (Num $p[3])))
+                Write-Output ("{0,6:N1}s or {1} {2}" -f $clock.Elapsed.TotalSeconds, $p[2], $p[3]) }
+            'peek' { $words = $p[2] -split ',' | ForEach-Object { '{0}=0x{1:X8}' -f $_, [CaptureWindow]::Read($handle, (Rdram), (Num $_)) }
+                Write-Output ("{0,6:N1}s peek {1}" -f $clock.Elapsed.TotalSeconds, ($words -join ' ')) }
+            'end' { break plan }
             default { throw "unknown plan step: $line" }
         }
     }
@@ -386,3 +456,4 @@ try {
 $script:writer.Errors | ForEach-Object { Write-Output "not saved: $_" }
 Write-Output "$($script:writer.Written) captures; frames unlike both neighbours: $($script:writer.Flicker.Count)"
 $script:writer.Flicker | ForEach-Object { Write-Output "  $_" }
+if ($failed) { exit 1 }
