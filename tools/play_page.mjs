@@ -53,14 +53,14 @@
 // "x+", "y-", "y+", "rx-", ... } for a stick) adds to or changes them for a game whose keys differ. A click in the start
 // steps (Start Game) is a press of the pad's A, which recompui's launcher takes for its focused option, pressed again
 // (twice at most) where the game hasn't started 5 s after, since a launcher can take a new pad's first press as the
-// switch to it; and Enter, RecompFrontend's accept in its menus, is the pad's A until the game runs, its Start after. The setup's
+// switch to it, and clicked as the plan does where three didn't start it (W7 fails); and Enter, RecompFrontend's accept in its menus, is the pad's A until the game runs, its Start after. The setup's
 // Load ROM stays the mouse's: a browser opens a file picker only for a click or a key. A key with no pad button stays
 // the keyboard's and is named in the summary's pad, with the presses that went to the pad and what reached its rumble
 // (padRumbles()). Keys an eval or evalFile step dispatches itself are the keyboard's.
 // --backcheck plays the web port list's W2, W5, W6 and W7 (docs/new-recomp.md) in one visit and prints a verdict line
 // for each ("backcheck W5 pass: ..."), recorded as the run's backcheck. In Chrome: --scale 2, --pad, --fault
 // hidden,reload,reopen and --chrome-flag --disable-audio-output unless given: W2 is Load ROM opening the picker at its
-// first click at 2 device pixels a CSS pixel (a plan's Load ROM by a key clicked where recompui's launcher has it); W5 no sound frame short in the boot's first 10 s of sound (to the sample)
+// first click at 2 device pixels a CSS pixel (not played where the plan's Load ROM is a key); W5 no sound frame short in the boot's first 10 s of sound (to the sample)
 // nor in the 30 s after the hidden tab; W6 the saves kept through the reload and the reopen; W7 the pad driving the
 // start steps and the play to the plan's end. In Firefox: the plan's play replaced by 20 s (--play 20) and --fault
 // hidden, for W5. Play it from Pages on a fresh profile; its note starts "backcheck".
@@ -593,7 +593,7 @@ const padKeys = { Space: 0, ShiftLeft: 2, KeyE: 4, KeyR: 7, KeyQ: 6, Enter: 9, E
 // what went where.
 let padDriving = false;
 const padHeld = new Map();
-const padUse = { presses: 0, launcher: 0, keyboard: new Set(), rumble: null, rumbleCalls: null };
+const padUse = { presses: 0, launcher: 0, launcherRefused: false, keyboard: new Set(), rumble: null, rumbleCalls: null };
 const padState = () => {
   const axes = [0, 0, 0, 0], buttons = Object.fromEntries(Array.from({ length: 17 }, (_, i) => [i, 0]));
   for (const code of padHeld.keys()) {
@@ -645,6 +645,10 @@ const openPage = async () => {
         for (const until = Date.now() + 5000; Date.now() < until; await sleep(250)) if (await started()) return;
         if (tries < 3) log("play_page: the game hadn't started 5 s after the pad's A: pressing it again");
       }
+      // A launcher of the page's own that takes no pad (W7 fails): the plan's click, so the rest is played.
+      padUse.launcherRefused = true;
+      log("play_page: the game didn't start for the pad's A: clicking as the plan does");
+      await mouse(x, y);
     };
   }
   return p;
@@ -782,7 +786,7 @@ const boot = async () => {
 };
 let firstBoot = null;
 // How many presses of Load ROM the setup took to open the file picker (page_driver.mjs's rom step), 3 where none did.
-let romPresses;
+let romPresses, romByKey = false;
 // The steps the pad plays with --pad.
 const padRun = async (stepList) => {
   padDriving = pad;
@@ -817,10 +821,8 @@ let profiling = false;
 try {
   if (geckoProfileFile) { await page.geckoProfile.start(); profiling = true; }
   firstBoot = await boot();
-  // W2 is a click's: a plan's Load ROM by a key becomes a click where recompui's launcher has Load ROM in the plan's
-  // 1256x645.
-  const setup = (plan.setup ?? []).map((step) => chromeBackcheck && step[0] === 'rom' && typeof step[1] === 'string' ? ['rom', 628, 364] : step);
-  await page.run(freshProfile ? setup : [], steps);
+  await page.run(freshProfile ? (plan.setup ?? []) : [], steps);
+  romByKey = (plan.setup ?? []).some((step) => step[0] === 'rom' && typeof step[1] === 'string');
   romPresses = page.romPresses;
   await padRun(plan.start ?? []);
   audioBefore = last?.audio ?? null;
@@ -972,7 +974,7 @@ if (pad) {
 }
 const sampleRate = await page.evaluate('Module.SDL2?.audioContext?.sampleRate ?? null').catch(() => null);
 const ms = (frames) => frames === null || !sampleRate ? '' : ` (${Math.round(frames * 1000 / sampleRate)} ms)`;
-const padSummary = pad ? { presses: padUse.presses, launcher: padUse.launcher, keyboard: [...padUse.keyboard],
+const padSummary = pad ? { presses: padUse.presses, launcher: padUse.launcher, launcherRefused: padUse.launcherRefused, keyboard: [...padUse.keyboard],
   rumble: padUse.rumble, rumbleCalls: padUse.rumbleCalls } : null;
 if (padSummary) console.log(`pad: ${padSummary.presses} presses on the pad, ${padSummary.launcher} of them the launcher's; ` +
   `${padSummary.keyboard.length ? 'keys left on the keyboard ' + padSummary.keyboard.join(' ') : 'no key left on the keyboard'}; ` +
@@ -984,7 +986,8 @@ if (backcheck) {
   const why = (text) => failure ? `${text} (the run failed: ${failure})` : text;
   if (romPresses === undefined && /no file chooser opened|never asked for a file/.test(failure ?? '')) romPresses = 3;
   if (browser === 'chrome') {
-    verdicts.W2 = romPresses === undefined ? ['not played', why('no Load ROM pressed (a kept profile?)')]
+    verdicts.W2 = romByKey ? ['not played', 'the plan presses a key for Load ROM, so no click was played']
+      : romPresses === undefined ? ['not played', why('no Load ROM pressed (a kept profile?)')]
       : romPresses === 1 ? ['pass', `Load ROM opened the picker at its first click at ${scale}x`]
       : ['fails', why(`Load ROM took ${romPresses} presses to open the picker at ${scale}x`)];
   }
@@ -1003,7 +1006,8 @@ if (backcheck) {
       : kept.every((f) => f.savesKept === null) ? ['not played', 'no save file, not even the planted one']
       : ['pass', `${Object.keys(kept[1].savesBefore).map((k) => k.replace('/home/web_user/', '')).join(', ')} kept through the reload and the reopen` +
         (Object.keys(kept[1].savesBefore).every((k) => k.endsWith('/backcheck.bin')) ? " (the planted file only: the plan wrote no save of the game's)" : '')];
-    verdicts.W7 = failure ? ['fails', why('the pad drove the plan')]
+    verdicts.W7 = padUse.launcherRefused ? ['fails', why("the launcher didn't start the game for three presses of the pad's A")]
+      : failure ? ['fails', why('the pad drove the plan')]
       : padUse.keyboard.size ? ['fails', `keys with no pad button: ${[...padUse.keyboard].join(' ')}`]
       : ['pass', `${padUse.presses} presses on the pad drove the launcher (${padUse.launcher}) and the plan; rumble ${padUse.rumble}`];
   }
