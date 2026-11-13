@@ -30,7 +30,8 @@
 #                             run ends there as failed (exit 1)
 #   <s> poke <addr> <value>   writes the 32-bit word value at addr, and
 #   <s> or <addr> <bits>      ors bits into it: a cheat that reaches a later level, the way a page plan's n64w does
-#   <s> peek <addr>[,<addr>]  prints the 32-bit words at those addresses, in hex: a save's record before and after a restart
+#   <s> peek <addr>[,<addr>]  prints the 32-bit words at those addresses, in hex: a saved setting before and after a
+#                             restart (a byte at an address of 4 is the word's top byte, 0x01000000 for 1)
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
 # now and then and one of several frames most times. A burst's and a record's captures are scaled by -Scale (1).
