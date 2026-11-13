@@ -25,15 +25,19 @@
 #                             recording what the game played, a gap a run of zeros (docs/new-recomp.md)
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
-# now and then and one of several frames most times. A burst's and a record's captures are kept in memory until the
-# end, scaled by -Scale (1): 0.5 keeps a minute of them in about 3 GB.
+# now and then and one of several frames most times. A burst's and a record's captures are scaled by -Scale (1).
+# Every capture is written as it comes, off the plan's thread (CaptureWriter below), so the plan's thread only
+# captures: a capture waits in memory only until it is saved, and a run ended early (a GPU turn's --max) leaves every
+# capture saved so far, its captures.tsv line and its flicker.txt lines on disk. Writing costs the captures nothing
+# measurable at 0.25 and takes some CPU at 1 from a large window, which on a busy host can slow them.
 # A key a game reads through SDL comes from the window's messages, so keys reach it with its window behind others.
 #
 # Every capture's time, in milliseconds since 1970, is written to captures.tsv, the clock RT64_FRAME_LOG's game frames
-# are printed with (tools/frame_log.mjs puts the two together). At the end each series is checked for frames unlike both
-# of their neighbours: the mean difference of a 160x90 grey copy of the frame to each neighbour, against the
-# neighbours' to each other. Those are printed and written to flicker.txt, as "<series>-<n> <to before>/<to after> vs
-# <before to after>"; a steady pan reads as no flicker, a frame unlike both of its neighbours does.
+# are printed with (tools/frame_log.mjs puts the two together). Each series is checked as it is written for frames
+# unlike both of their neighbours: the mean difference of a 160x90 grey copy of the frame to each neighbour, against
+# the neighbours' to each other. Those are written to flicker.txt as they are found, and printed at the end, as
+# "<series>-<n> <to before>/<to after> vs <before to after>"; a steady pan reads as no flicker, a frame unlike both of
+# its neighbours does.
 param(
     [Parameter(Mandatory)][string]$Exe, [Parameter(Mandatory)][string]$WorkDir, [Parameter(Mandatory)][string]$Plan,
     [Parameter(Mandatory)][string]$OutDir, [string]$ExeArgs = '', [string[]]$Env = @(), [double]$Scale = 1,
@@ -46,11 +50,19 @@ Add-Type -AssemblyName System.Drawing
 [System.Drawing.Bitmap]::new(1, 1).Dispose()
 $drawing = [AppDomain]::CurrentDomain.GetAssemblies() | Where-Object {
     $_.GetName().Name -match '^System\.(Drawing|Private\.Windows)' -and $_.Location } | ForEach-Object { $_.Location }
+$drawing += 'System.Collections', 'System.Collections.Concurrent', 'System.IO.Compression', 'System.Threading',
+    'System.Threading.Thread', 'System.Threading.Tasks'
 Add-Type -ReferencedAssemblies $drawing -TypeDefinition @"
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 public static class CaptureWindow {
     public delegate bool EnumProc(IntPtr h, IntPtr l);
     [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
@@ -81,35 +93,176 @@ public static class CaptureWindow {
         return best;
     }
 
-    // A 160x90 grey copy of a capture.
-    public static float[] Small(Bitmap bmp) {
-        using (var s = new Bitmap(160, 90, PixelFormat.Format32bppArgb)) {
-            using (var g = Graphics.FromImage(s)) {
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
-                g.DrawImage(bmp, 0, 0, 160, 90);
-            }
-
-            var data = s.LockBits(new Rectangle(0, 0, 160, 90), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-            var bytes = new byte[data.Stride * 90];
-            Marshal.Copy(data.Scan0, bytes, 0, bytes.Length);
-            s.UnlockBits(data);
-            var v = new float[160 * 90];
-            for (int y = 0; y < 90; y++) {
-                for (int x = 0; x < 160; x++) {
-                    int i = y * data.Stride + x * 4;
-                    v[y * 160 + x] = 0.114f * bytes[i] + 0.587f * bytes[i + 1] + 0.299f * bytes[i + 2];
-                }
-            }
-
-            return v;
-        }
-    }
-
     // The mean absolute difference of two grey copies.
     public static double Diff(float[] a, float[] b) {
         double t = 0;
         for (int i = 0; i < a.Length; i++) t += Math.Abs(a[i] - b[i]);
         return t / a.Length;
+    }
+}
+
+// Writes the captures handed to it off the plan's thread: each one's PNG and grey copy on up to three threads of the
+// pool at once (one can't keep up with a full-size 1600x1200 series, and the game recorded needs the other cores),
+// then on a thread of its own, in order, its captures.tsv line and, for a series (a name ending -<4 digits>), the
+// flicker check of the frame before it, which needs only the series' last two grey copies. Each line is flushed as it
+// is written, so what is on disk holds if the run is ended. None of it touches GDI+: with PNGs saved by GDI+ beside
+// it, the plan's captures took a sixth longer and now and then one stalled for 15-20 s, so a capture's pixels are
+// copied out on the plan's thread and encoded here.
+public sealed class CaptureWriter {
+    sealed class Item {
+        public string Name, Key; public byte[] Px; public int W, H, Stride; public long Ms; public double S;
+        public Task<float[]> Work;
+    }
+    static readonly TaskScheduler encoders = new ConcurrentExclusiveSchedulerPair(TaskScheduler.Default, 3).ConcurrentScheduler;
+    sealed class Series { public string Name; public float[] Before, Last; }
+    readonly BlockingCollection<Item> queue = new BlockingCollection<Item>();
+    readonly Dictionary<string, Series> series = new Dictionary<string, Series>();
+    readonly string dir;
+    readonly StreamWriter tsv, flicker;
+    readonly Thread thread;
+    public readonly List<string> Flicker = new List<string>();
+    public readonly List<string> Errors = new List<string>();
+    public int Written;
+
+    public CaptureWriter(string dir) {
+        this.dir = dir;
+        tsv = new StreamWriter(Path.Combine(dir, "captures.tsv"), true) { AutoFlush = true };
+        flicker = new StreamWriter(Path.Combine(dir, "flicker.txt"), false) { AutoFlush = true };
+        thread = new Thread(Run) { IsBackground = true, Name = "capture writer" };
+        thread.Start();
+    }
+
+    // Takes the capture's pixels (32 bpp BGRA) and disposes of the bitmap.
+    public void Add(string name, Bitmap bmp, long ms, double s) {
+        var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadOnly,
+            PixelFormat.Format32bppArgb);
+        var px = new byte[data.Stride * bmp.Height];
+        Marshal.Copy(data.Scan0, px, 0, px.Length);
+        bmp.UnlockBits(data);
+        var c = new Item { Name = name, Px = px, W = bmp.Width, H = bmp.Height, Stride = data.Stride, Ms = ms, S = s };
+        bmp.Dispose();
+        int dash = name.Length - 5;
+        if (dash >= 0 && name[dash] == '-' && IsDigits(name, dash + 1)) c.Key = name.Substring(0, dash);
+        c.Work = Task.Factory.StartNew(() => {
+            Png(Path.Combine(dir, c.Name + ".png"), c);
+            var small = c.Key == null ? null : Small(c);
+            c.Px = null;
+            return small;
+        }, CancellationToken.None, TaskCreationOptions.None, encoders);
+        queue.Add(c);
+    }
+
+    public int Pending { get { return queue.Count; } }
+
+    // Writes what is queued and stops the thread.
+    public void Finish() {
+        queue.CompleteAdding();
+        thread.Join();
+        tsv.Dispose(); flicker.Dispose();
+    }
+
+    void Run() {
+        foreach (var c in queue.GetConsumingEnumerable()) {
+            try {
+                var small = c.Work.GetAwaiter().GetResult();
+                tsv.WriteLine(String.Format("{0}\t{1}\t{2:N3}", c.Name, c.Ms, c.S));
+                Written++;
+                if (small != null) Check(c.Key, c.Name, small);
+            } catch (Exception e) {
+                Errors.Add(c.Name + ": " + e.Message);
+            }
+        }
+    }
+
+    // A 160x90 grey copy of a capture, each of its pixels the mean of the capture's pixels that fall in it, over black.
+    static float[] Small(Item c) {
+        var v = new float[160 * 90];
+        var n = new int[160 * 90];
+        for (int y = 0; y < c.H; y++) {
+            int row = y * 90 / c.H * 160;
+            for (int x = 0; x < c.W; x++) {
+                int i = y * c.Stride + x * 4, j = row + x * 160 / c.W;
+                v[j] += (0.114f * c.Px[i] + 0.587f * c.Px[i + 1] + 0.299f * c.Px[i + 2]) * c.Px[i + 3] / 255f;
+                n[j]++;
+            }
+        }
+
+        for (int j = 0; j < v.Length; j++) if (n[j] > 0) v[j] /= n[j];
+        return v;
+    }
+
+    // An RGBA PNG of the capture, each row filtered by Sub (the pixel to its left) and deflated at the fastest level.
+    static void Png(string path, Item c) {
+        var raw = new MemoryStream();
+        using (var z = new ZLibStream(raw, CompressionLevel.Fastest, true)) {
+            var line = new byte[1 + c.W * 4];
+            line[0] = 1;
+            for (int y = 0; y < c.H; y++) {
+                for (int x = 0; x < c.W; x++) {
+                    int i = y * c.Stride + x * 4, o = 1 + x * 4;
+                    line[o] = c.Px[i + 2]; line[o + 1] = c.Px[i + 1]; line[o + 2] = c.Px[i]; line[o + 3] = c.Px[i + 3];
+                }
+
+                for (int o = line.Length - 1; o > 4; o--) line[o] -= line[o - 4];
+                z.Write(line, 0, line.Length);
+            }
+        }
+
+        var head = new byte[13];
+        Big(head, 0, c.W); Big(head, 4, c.H); head[8] = 8; head[9] = 6;
+        using (var f = File.Create(path)) {
+            f.Write(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }, 0, 8);
+            Chunk(f, "IHDR", head, 13);
+            Chunk(f, "IDAT", raw.GetBuffer(), (int)raw.Length);
+            Chunk(f, "IEND", new byte[0], 0);
+        }
+    }
+
+    static void Big(byte[] b, int at, int v) {
+        b[at] = (byte)(v >> 24); b[at + 1] = (byte)(v >> 16); b[at + 2] = (byte)(v >> 8); b[at + 3] = (byte)v;
+    }
+
+    static readonly uint[] crcs = Crcs();
+    static uint[] Crcs() {
+        var t = new uint[256];
+        for (uint n = 0; n < 256; n++) {
+            uint k = n;
+            for (int i = 0; i < 8; i++) k = (k & 1) != 0 ? 0xEDB88320u ^ (k >> 1) : k >> 1;
+            t[n] = k;
+        }
+
+        return t;
+    }
+
+    static void Chunk(Stream f, string type, byte[] data, int length) {
+        var b = new byte[8 + length + 4];
+        Big(b, 0, length);
+        for (int i = 0; i < 4; i++) b[4 + i] = (byte)type[i];
+        Array.Copy(data, 0, b, 8, length);
+        uint crc = 0xFFFFFFFFu;
+        for (int i = 4; i < 8 + length; i++) crc = crcs[(crc ^ b[i]) & 0xFF] ^ (crc >> 8);
+        Big(b, 8 + length, (int)(crc ^ 0xFFFFFFFFu));
+        f.Write(b, 0, b.Length);
+    }
+
+    static bool IsDigits(string s, int from) {
+        for (int i = from; i < s.Length; i++) if (s[i] < '0' || s[i] > '9') return false;
+        return true;
+    }
+
+    // The series' last frame against the one before it and this one.
+    void Check(string key, string name, float[] next) {
+        Series s;
+        if (!series.TryGetValue(key, out s)) { s = new Series(); series[key] = s; }
+        if (s.Before != null) {
+            double before = CaptureWindow.Diff(s.Last, s.Before), after = CaptureWindow.Diff(s.Last, next);
+            double apart = CaptureWindow.Diff(s.Before, next);
+            if (Math.Min(before, after) > 1.5 * apart + 0.7) {
+                string line = String.Format("{0} {1:N1}/{2:N1} vs {3:N1}", s.Name, before, after, apart);
+                Flicker.Add(line); flicker.WriteLine(line);
+            }
+        }
+        s.Before = s.Last; s.Last = next; s.Name = name;
     }
 }
 "@
@@ -132,10 +285,9 @@ function Send-Key($hwnd, $name, $ms) {
     [void][CaptureWindow]::PostMessage($hwnd, 0x101, [IntPtr]$vk, [IntPtr]([long]$l -bor 0xC0000000L))
 }
 
-# Captures the window's client area (the game's picture, without the title bar and frame PrintWindow draws too). A
-# shot is saved at once; a series' captures (a burst's, a record's) are kept in memory, scaled, until the end so they
-# aren't slowed by saving.
-$script:captures = New-Object System.Collections.ArrayList
+# Captures the window's client area (the game's picture, without the title bar and frame PrintWindow draws too) and
+# hands it to the writer.
+$script:writer = New-Object CaptureWriter $OutDir
 function Capture($hwnd, $name) {
     $c = New-Object CaptureWindow+RECT; $wr = New-Object CaptureWindow+RECT; $o = New-Object CaptureWindow+POINT
     [void][CaptureWindow]::GetClientRect($hwnd, [ref]$c)
@@ -156,16 +308,7 @@ function Capture($hwnd, $name) {
     $g.DrawImage($window, (New-Object System.Drawing.Rectangle 0, 0, $sw, $sh), ($o.X - $wr.L), ($o.Y - $wr.T), $w, $h,
         [System.Drawing.GraphicsUnit]::Pixel)
     $g.Dispose(); $window.Dispose()
-    $capture = @($name, $bmp, [DateTimeOffset]::Now.ToUnixTimeMilliseconds(), $script:clock.Elapsed.TotalSeconds)
-    if (-not $series) { Save $capture }
-    [void]$script:captures.Add($capture)
-}
-
-function Save($capture) {
-    if ($capture[1] -eq $null) { return }
-    $capture[1].Save((Join-Path $OutDir "$($capture[0]).png"), [System.Drawing.Imaging.ImageFormat]::Png)
-    Add-Content -Path (Join-Path $OutDir 'captures.tsv') -Value ("{0}`t{1}`t{2:N3}" -f $capture[0], $capture[2], $capture[3])
-    if ($capture[0] -notmatch '-\d{4}$') { $capture[1].Dispose(); $capture[1] = $null }
+    $script:writer.Add($name, $bmp, [DateTimeOffset]::Now.ToUnixTimeMilliseconds(), $script:clock.Elapsed.TotalSeconds)
 }
 
 $psi = New-Object System.Diagnostics.ProcessStartInfo $Exe
@@ -235,23 +378,11 @@ try {
     if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force; Write-Output "stopped pid $($proc.Id)" }
     [void][System.Threading.Tasks.Task]::WaitAll($copies, 5000)
     $outFile.Dispose(); $errFile.Dispose()
+    $pending = $script:writer.Pending
+    if ($pending -gt 0) { Write-Output "writing the last $pending captures" }
+    $script:writer.Finish()
 }
 
-foreach ($c in $script:captures) { Save $c }
-
-$flicker = @()
-$series = $script:captures | Where-Object { $_[0] -match '-\d{4}$' } | Group-Object { $_[0] -replace '-\d{4}$', '' }
-foreach ($s in $series) {
-    $small = @($s.Group | ForEach-Object { ,[CaptureWindow]::Small($_[1]) })
-    for ($i = 1; $i -lt $small.Count - 1; $i++) {
-        $before = [CaptureWindow]::Diff($small[$i], $small[$i - 1]); $after = [CaptureWindow]::Diff($small[$i], $small[$i + 1])
-        $apart = [CaptureWindow]::Diff($small[$i - 1], $small[$i + 1])
-        if ([Math]::Min($before, $after) -gt 1.5 * $apart + 0.7) {
-            $flicker += "{0} {1:N1}/{2:N1} vs {3:N1}" -f $s.Group[$i][0], $before, $after, $apart
-        }
-    }
-}
-foreach ($c in $script:captures) { if ($c[1] -ne $null) { $c[1].Dispose() } }
-Set-Content -Path (Join-Path $OutDir 'flicker.txt') -Value $flicker
-Write-Output "$($script:captures.Count) captures; frames unlike both neighbours: $($flicker.Count)"
-$flicker | ForEach-Object { Write-Output "  $_" }
+$script:writer.Errors | ForEach-Object { Write-Output "not saved: $_" }
+Write-Output "$($script:writer.Written) captures; frames unlike both neighbours: $($script:writer.Flicker.Count)"
+$script:writer.Flicker | ForEach-Object { Write-Output "  $_" }
