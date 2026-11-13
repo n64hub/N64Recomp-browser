@@ -539,8 +539,9 @@ memory and lost the device. On an idle GPU, or capped at 60, they came through. 
 only its game's own frames, which the game reads back and the first frame shown interpolates from. Rush 2049's page
 (main's pins against main's and that, interleaved, Firefox 158, 3840x2000 uncapped, the GPU 85-98% busy beside another
 play): main's GPU process went from 2.2 GB to 21.5 GB while hidden, 16.7 GB of it the GPU's shared memory, and the page
-presented nothing in the 30 s after it was shown, 2.28 M frames short; the build's held 2.07-2.16 GB, lost no sound
-hidden and presented 30, 91 and 116 a second in the 5 s after the show, 9,890 frames short.
+presented nothing in the 30 s after it was shown, 2.28 M frames short; the build's held 2.07-2.16 GB in one play and
+2.43 GB in another, lost no sound hidden and was back at 30-110 presents a second within 5-10 s of the show, 9,890 and
+2,339 frames short. In Chrome (`--disable-audio-output`) the build lost none hidden and came back at 124, 412 short.
 
 What stalls it is Chrome's priority, not the page's work. On Windows, within 2 s of a tab going hidden, Chrome 155
 lowers its renderer process from normal priority (8) to idle (4), unless the tab plays sound;
