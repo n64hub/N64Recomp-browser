@@ -523,7 +523,10 @@ framebuffer), each of which takes one a list old. Its depth fog's read of the Z-
 asks a graphics task to yield to an audio task, and at the next VI takes one still unanswered for a hung RSP and sends
 itself the RSP's and RDP's done (`_uvScDlistRecover`): with the copy a list late a list waits for RT64 longer, so the
 page never got from the menus into a race and Chrome's ran out of memory, until the runtime answered a yield asked of
-a queued graphics task (`ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`, docs/forks.md). The copy's wait held the game:
+a queued graphics task (`ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`, docs/forks.md). A pin older than the fix's
+(N64Recomp-browser v0.192.0) has the recover send its done while RT64 still reads the list, the game writes its next
+list over it, and in Firefox the page stopped drawing at the pause menu's New Track, a ROM load waiting 2 s on the list
+before RT64 walked out of RDRAM, then ran out of memory. The copy's wait held the game:
 against the exact copy, in Chrome at 3840x2000 (an RTX 2070), its races ran at 50-60 frames a second where they had
 run at about 30 (`?uncapped=240&present-stats`, 231 presents a second against 217), and uncapped it presented 238
 against 217. Its list is 261 shaders: the boot (the launcher, the Controller
