@@ -784,7 +784,9 @@ is where the Intelligent Systems logo gives way to the intro's stage, a map load
 to 2 logical processors (`play_page.mjs --affinity 2`) it fell to 276 in one play and ran dry for 4 quanta in another,
 the game catching up to 2,900-3,600 after. That play lost 1,376 frames at 0.02, 2.0, 6.9 and 9.26 s, each where the
 loudest sample played was 0. The desktop build v0.1.9's boot, recorded with SDL's disk driver, is silent until the
-same music and has no run of zeros of 1 ms or more in the 9 s after it starts.
+same music and has no run of zeros of 1 ms or more in the 9 s after it starts. Firefox 158 lost 94,848 frames in the
+boot, nearly all in its first 3 s as a section's shaders were built with the game waiting (2.2 s), every one in the
+silence too.
 
 Firefox lost Dinosaur Planet's sound at its boot for the same builds, and for one more (an RTX 2070, 3840x2000 uncapped,
 a new profile, a busy host; a preload that logs each create*Pipeline call and every queue round trip,
