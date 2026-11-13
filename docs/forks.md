@@ -927,4 +927,10 @@ rt64 32e204c           the RAM of the framebuffer a VI shows changed to what ren
                        swap, made each game frame two, the second of one VI, so RT64 timed its levels at 30 as 60 and
                        drew nothing between them (docs/findings.md, A game at 30, uncapped). Each framebuffer says
                        whether its RAM hash is render to RAM's or the CPU's (Framebuffer::RAMHashCopied)
+plume 4381169,         WebGPU: in Firefox too a compute pipeline is built for its predicted layout before its first
+rt64 fb507fc           dispatch, with createComputePipeline at the device's next submission after it is made (RT64's: at
+                       the launcher), since a shader made after it can change that layout; built at its first dispatch,
+                       Firefox's GPU process compiled it in line, and Dinosaur Planet's render-to-RAM copy and sound
+                       waited behind RT64's RSP pipelines as its first 3D drew (docs/findings.md, Compute pipelines
+                       built at their first dispatch)
 ```
