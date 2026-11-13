@@ -45,7 +45,7 @@ items by almost no game when the record began.
 | Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Super Smash Bros. | | W2, W5, W6 |
-| Paper Mario | 2 fails, 4a, 4c, 6b | W2, W5 fails, W6, W7 |
+| Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
@@ -76,10 +76,9 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7, W8, W9 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: Paper Mario's opening cutscene at Mario's house flickers between two pictures on the desktop (2,
-filed); Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way to play them
-(filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs
-don't link their pages (8c); Turok 2's regular plan, played on a fresh profile, misses shaders its list lacks (W3);
+What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way to play
+them (filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); Turok 2's regular
+plan, played on a fresh profile, misses shaders its list lacks (W3);
 Dinosaur Planet's page still loses a render quantum or two (up to 8 ms) in its sound's first 0.5 s in Chrome on most
 first visits, where the ring it keeps thin runs dry (the browser's burst counted as queued, filed), and the desktop
 build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
@@ -125,7 +124,11 @@ Firefox, with captures or clips of what is found. What it plays, beyond the firs
 What it looks for:
 
 - Flicker: a surface or the HUD blinking frame to frame, z-fighting, a frame of garbage or a stale framebuffer in a
-  transition, a frame drawn without its HUD, text or characters.
+  transition, a frame drawn without its HUD, text or characters, or with only the part of its world drawn first. A
+  game that draws a frame in several RSP tasks needs `RT64_GAME_FRAME_WORKLOADS` on its desktop build too, as its page
+  has it, or RT64 interpolates each task as a frame of its own (docs/forks.md; the Mario Parties' and Paper Mario's
+  CMakeLists.txt: Paper Mario's opening at Mario's house showed the house's inside without its outer wall, roof and
+  trees in half the frames one host showed).
 - Interpolation: on the frame a level section, room or the world's origin changes, what is drawn snaps rather than
   blending between the two (Dinosaur Planet's, Perfect Dark's and GoldenEye's sections); characters' model parts carry
   ids of their own, or RT64 pairs one character's parts with a look-alike's (Mario Party's, Rayman 2's, Goin'
