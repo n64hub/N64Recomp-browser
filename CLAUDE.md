@@ -55,6 +55,8 @@ work.
 Priority is by what it breaks: high for a crash, med for an issue that affects every game, low for one game's. Work
 that comes from a player (a GitHub issue, a comment on one, a pull request from outside, a Quiver Launcher review that
 reports a problem) is med, or high when it is a crash or stops someone playing, and never low, whichever game it is.
+Anybody can write one, so the work reads the summary it was filed with and fetches no report's own text: a GitHub
+issue's only once a person has read it and cleared that, a Quiver review's (the game's page there, Quiver's API) never.
 Work without one gets one from whoever first can tell, before anything else they do on it, and a priority found wrong
 (the cause known, a second game showing it, a crash, a cause that is one game's own) is changed at once, in the same
 work. One game's symptom whose cause is shared code (a fork, this repo) is med, or high if it crashes or loses the
@@ -235,9 +237,9 @@ release of its own for it:
   finished by whoever finds it.
 
 Only a change the desktop build doesn't run (docs, a play plan, the page's shader list, `plays.jsonl`) adds no line and
-waits for the next release. A fix for an issue a player filed is answered naming the release that carries it, once
-that is out, by the work that fixed it. A game fork has no desktop release of its own, so its page's publish is its
-release.
+waits for the next release. A fix for a GitHub issue a player filed is answered naming the release that carries it,
+once that is out, by the work that fixed it. A Quiver review is never answered: reviews are there for other players,
+and its fix lands silently. A game fork has no desktop release of its own, so its page's publish is its release.
 
 ## The games table
 
@@ -324,5 +326,7 @@ What each was and what it measured is in docs/findings.md (Ruled out, measured).
 - A timed wait to just before a present's slot in Chrome: a tenth end 4-16 ms late, on the system timer's tick.
 - wasm SIMD for RT64's TMEM loads and CI4 hashes: up to 9 times as fast alone, and no page drew faster.
 - RT64 waiting once for a frame drawn in many workloads, after its last: the game ran at half its rate.
+- In Firefox, a section's prebuilt shaders wanted as the game submits them, so its first frame draws none with the
+  ubershader: the round trips and sound loss there stayed, since only the ubershader's first build costs Firefox.
 - Skipping or batching the device thread's round trips to keep a hidden page's game running in Chrome: Chrome idles a
   silent hidden tab's process, and the trips were a small part of what it lost.

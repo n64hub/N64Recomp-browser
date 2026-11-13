@@ -761,6 +761,21 @@ and 32,815 frames short; the build had 123-218 ms gaps, no GPU process task over
 desktop build v0.1.3's boot, recorded with SDL's disk driver, loses 19.7 ms 0.017 s into its sound and 2.0 ms at 0.040
 s, and nothing else, so the page loses less where the game's sound starts than the desktop does.
 
+The hold doesn't hold the sound. A build on rt64 1589517 with two switches of an experiment's own, one that leaves a
+frame of offscreen passes alone unheld and a log of how long the game's graphics thread waits for a free present
+(updateScreen's advanceToNextPresent), played in three interleaved pairs of first visits (Chrome 155, an RTX 2070,
+3840x2000 uncapped, beside other plays on the GPU): held, the game waited 10-13 ms at most after the click, three
+frames ending `end=held`; unheld, never 5 ms; and the sound ran short in two plays of each, 364 frames each held and
+364 and 285 unheld, every time in the sound's first 0.03-0.23 s. A preload that patches the worklet's processor logged
+each short render quantum and the ring's lowest fill in each 20 ms: Dinosaur Planet keeps its ring thin, lowest at
+80-300 frames (2-6 ms) through the whole boot, as its osAiGetLength reads the frames queued less a VI's worth, and
+the losses are a quantum or two each where it reached 10-120. A worklet that starts only once the ring holds two VIs
+(1,600 frames) lost 49, 0 and 49 against 107, 0 and 403 started at once, its fill the same frame for frame after the
+start: the game makes that much less sound in its next frames. The same probe on Pages' pages of Super Mario 64 and
+Paper Mario, whose rings sit at 1,000-1,500 frames, found larger losses of another kind, runs of empty quanta where
+the game made nothing for 40-100 ms: Super Mario 64 5,792 and 10,272 frames short in its boot's first 0.6 s and at 3.5
+s, Paper Mario 612 and 1,016 at 0.016 s and 9.3 s.
+
 Firefox lost Dinosaur Planet's sound at its boot for the same builds, and for one more (an RTX 2070, 3840x2000 uncapped,
 a new profile, a busy host; a preload that logs each create*Pipeline call and every queue round trip,
 onSubmittedWorkDone polled every 50 ms, over 40 ms). Its GPU process builds every pipeline in line, and plume left
@@ -774,6 +789,20 @@ device's next submission after RT64 makes them, so at the launcher, where its GP
 before any sound plays (each built where it was made, 8 were built twice as later shaders changed their layouts).
 Three interleaved pairs against main's build: nothing short at the first 3D in the build against 2,216-14,690, and
 at Start 103,000-107,000 against 88,000-116,000, which is the ubershader's, the same either way.
+
+In Firefox only the ubershader's first build costs: once its 245 KB module has been built for one depth and coverage
+state, the others are built for about nothing. A section's first frame draws the shaders the list has for it with the
+ubershader, since its round is built, the game waiting, only before the next frame (rt64's RasterShaderCache), and
+each state that frame draws with is built in line where none was. Super Mario 64's castle grounds, the first section
+after the boot, built two states that way (z:always again for a new layout, z:less) ahead of its 30 shaders. A test
+build of rt64 that wanted the list's shaders as the game submitted them, so that the round was built before that
+frame drew, drew nothing with the ubershader there, and read the same: 1.6 and 1.4 s round trips there and
+96,848 and 82,216 frames short, against Pages' 1.5 and 1.2 s and 83,032 and 72,248 (two interleaved pairs of its
+regular plan, Firefox, 3840x2000 uncapped, new profiles, an RTX 2070 on a busy host; plays.jsonl, notes "the
+pipeline probe preloaded"). The first build is the one at the game's first frame, beside section boot's: Dinosaur
+Planet's 6 boot shaders were built in 0.4-0.6 s and the round trip there took 1.4-4.2 s, Super Mario 64's 27 with
+two states 3.2-3.7 s. RT64 skips its warm-up draw of nothing at setup (State::warmUpPipelines()) where pipelines
+don't build in the background, so in Firefox nothing builds the ubershader before the game's first frame does.
 
 ## What the prebuilt lists miss
 
@@ -2010,6 +2039,11 @@ The measurements behind rules CLAUDE.md and the other docs state without them.
 ## Ruled out, measured
 
 What CLAUDE.md's Ruled out rests on.
+
+- In Firefox, a frame's prebuilt shaders wanted as the game submits them, so a section's round is built before its
+  first frame draws instead of that frame drawing them with the ubershader (Compute pipelines built at their first
+  dispatch): Super Mario 64's castle grounds drew no ubershader and read the same round trips and sound loss as
+  Pages' page, which built two of its states there, since only the ubershader's first build costs Firefox.
 
 - RT64's workload thread waiting for a frame's workloads once, after its last, not after each, for a frame drawn in many
   workloads (A frame drawn in many workloads): on v0.143.0 it took Tile Driver from 45 presents a second to 75-77, and

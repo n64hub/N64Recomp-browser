@@ -39,13 +39,13 @@ items by almost no game when the record began.
 |---|---|---|
 | San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b, 8a fails | W2, W5, W6, W7 |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
-| Super Mario 64 | 2 fails, 4c | W2, W5, W6, W7 |
+| Super Mario 64 | 2 fails, 4c | W2, W5 fails, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
 | Mario Party | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Mario Party 2 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Mario Party 3 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
 | Super Smash Bros. | 2 fails | W2, W5, W6 |
-| Paper Mario | 2 fails, 4a, 4c, 6b | W2, W5, W6, W7 |
+| Paper Mario | 2 fails, 4a, 4c, 6b | W2, W5 fails, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
@@ -82,12 +82,14 @@ its opening cutscene at Mario's house flickers between two pictures on the deskt
 title screen leaves the top line of its picture undrawn, black on the page and flickering dark red on the desktop
 (2, filed), and its 4c has been played with the keyboard only, its pads waiting for a way to play them (filed);
 F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok
-2's regular plans, played on a fresh profile, miss shaders their lists lack (W3); Dinosaur Planet's page still loses one
-silence of about 10 ms 0.4 s into its game's sound in Chrome on a first visit, while RT64 holds the game's first frames
-before it shows one, where the desktop build loses 22 ms as its sound starts, and none at the logos since plume-web
-e69d031 (docs/findings.md, Compute pipelines built at their first dispatch), and in Firefox, since plume-web 4381169
-none at its first 3D, 1-2 s at Start Game while Firefox builds RT64's ubershader in line (W5); the Mario Parties keep
-render to RAM on in their desktop builds (W4).
+2's regular plans, played on a fresh profile, miss shaders their lists lack (W3); Dinosaur Planet's page still loses a
+render quantum or two (up to 8 ms) in its sound's first 0.5 s in Chrome on most first visits, where the ring it keeps
+thin runs dry (the browser's burst counted as queued, filed), and the desktop build loses 22 ms as its sound starts,
+none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines built at their first dispatch), and in
+Firefox, since plume-web 4381169 none at its first 3D, 1-2 s at Start Game while Firefox builds RT64's ubershader in
+line; Super Mario 64's page in Chrome loses 120-214 ms in its boot's first 0.6 s and at 3.5 s, and Paper Mario's 13-21
+ms at 9.3 s, its game making no sound there (both filed; W5); the Mario Parties keep render to RAM on in their desktop
+builds (W4).
 
 ## A new recomp's list
 
