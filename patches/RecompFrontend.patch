@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web 369e60680674cc3f30b2cfead2c0f05330079408
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web d143d0a0d44eab911a4c3a542d38236cbb3d9881
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
@@ -687,10 +687,21 @@ index 4dce8e0..dd78891 100644
  
  target_compile_options(recompui PRIVATE
 diff --git a/recompui/include/recompui/renderer.h b/recompui/include/recompui/renderer.h
-index 33f79ab..878d0f4 100644
+index 33f79ab..0c88281 100644
 --- a/recompui/include/recompui/renderer.h
 +++ b/recompui/include/recompui/renderer.h
-@@ -45,6 +45,15 @@ namespace recompui {
+@@ -29,6 +29,10 @@ namespace recompui {
+             void send_dl(const OSTask *task) override;
+             void send_dummy_workload(uint32_t fb_address) override;
+             void update_screen() override;
++#ifdef __EMSCRIPTEN__
++            // RT64 builds what the game's boot draws with before the game starts (RT64::Application::prepareForGame()).
++            void prepare_for_game() override;
++#endif
+             void shutdown() override;
+             uint32_t get_display_framerate() const override;
+             float get_resolution_scale() const override;
+@@ -45,6 +49,15 @@ namespace recompui {
  
          std::unique_ptr<ultramodern::renderer::RendererContext> create_render_context(uint8_t *rdram, ultramodern::renderer::WindowHandle window_handle, ultramodern::renderer::PresentationMode presentation_mode, bool developer_mode);
  
@@ -961,7 +972,7 @@ index e99229a..d732a2b 100644
  #include "RmlUi/Core/StreamMemory.h"
  #include "RmlUi/../../Source/Core/DocumentHeader.h"
 diff --git a/recompui/src/renderer/rt64_render_context.cpp b/recompui/src/renderer/rt64_render_context.cpp
-index a7954c7..e8bbc15 100644
+index a7954c7..640a8cd 100644
 --- a/recompui/src/renderer/rt64_render_context.cpp
 +++ b/recompui/src/renderer/rt64_render_context.cpp
 @@ -20,6 +20,8 @@ using namespace recompui;
@@ -1061,7 +1072,20 @@ index a7954c7..e8bbc15 100644
      app->state->fullSync();
      app->state->listProcessEnd();
  }
-@@ -498,6 +539,14 @@ std::unique_ptr<ultramodern::renderer::RendererContext> renderer::create_render_
+@@ -360,6 +401,12 @@ void renderer::RT64Context::update_screen() {
+     app->updateScreen();
+ }
+ 
++#ifdef __EMSCRIPTEN__
++void renderer::RT64Context::prepare_for_game() {
++    app->prepareForGame();
++}
++#endif
++
+ void renderer::RT64Context::shutdown() {
+     if (app != nullptr) {
+         app->end();
+@@ -498,6 +545,14 @@ std::unique_ptr<ultramodern::renderer::RendererContext> renderer::create_render_
      return std::make_unique<renderer::RT64Context>(rdram, window_handle, presentation_mode, developer_mode);
  }
  

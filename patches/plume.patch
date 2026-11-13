@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web 438116983bab90b44411c825fe5e3465d7cd36c6
+plume: https://github.com/n64hub/plume-web 0ac34ab9d34db9de0c984dd85d3f7b8b201c6925
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2872,7 +2872,7 @@ index 9dcfedf..b352bb6 100644
          uint64_t maxTextureSize = 0;
  
 diff --git a/plume_vulkan.cpp b/plume_vulkan.cpp
-index f1dd503..4f8a64c 100644
+index f1dd503..48526ea 100644
 --- a/plume_vulkan.cpp
 +++ b/plume_vulkan.cpp
 @@ -3076,13 +3076,26 @@ namespace plume {
@@ -2949,6 +2949,19 @@ index f1dd503..4f8a64c 100644
      }
  
      void VulkanCommandList::copyBufferRegion(RenderBufferReference dstBuffer, RenderBufferReference srcBuffer, uint64_t size) {
+@@ -4126,7 +4143,11 @@ namespace plume {
+         capabilities.sampleLocations = (sampleLocationProperties.sampleLocationSampleCounts != 0);
+         capabilities.resolveRegion = true;
+         capabilities.resolveModes = false;
+-        capabilities.descriptorIndexing = descriptorIndexingSupported;
++        // Mesa's lavapipe (Mesa's vendor ID, Vulkan on the CPU) reports descriptor indexing but miscompiles a fragment
++        // shader's non-uniformly indexed texture array (Mesa 25.2 to 26.2): its loop over the lanes' indices took the
++        // set's address from a lane that held 0 for it, read a descriptor near address 0 and crashed the program.
++        // Without the capability a renderer binds its textures per draw, as it does on WebGPU, and never indexes one.
++        capabilities.descriptorIndexing = descriptorIndexingSupported && (uint32_t(description.vendor) != VK_VENDOR_ID_MESA);
+         capabilities.scalarBlockLayout = scalarBlockLayoutSupported;
+         capabilities.bufferDeviceAddress = bufferDeviceAddressSupported;
+         capabilities.samplerMirrorClampToEdge = supportedOptionalExtensions.find(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME) != supportedOptionalExtensions.end();
 diff --git a/plume_web_waits.h b/plume_web_waits.h
 new file mode 100644
 index 0000000..23df721
@@ -3094,10 +3107,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..ba4f1e5
+index 0000000..b68180c
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3865 @@
+@@ -0,0 +1,3874 @@
 +//
 +// plume
 +//
@@ -4644,7 +4657,8 @@ index 0000000..ba4f1e5
 +        // buildInBackground is too, though it is ready at once: a draw that wants it before it is built builds it in
 +        // line, and on Chrome's GPU main thread that held a page's presents for as long (RT64's ubershader, one
 +        // pipeline per depth and coverage state, made at setup: ~1 s the first time a game drew with a third state,
-+        // Ocarina of Time's title 25 s after its boot). Firefox builds those in line too, so it builds each when drawn.
++        // Ocarina of Time's title 25 s after its boot). Firefox builds those in line too, so it builds each when drawn,
++        // or drawn with nothing (WebGPUCommandList::prepareDraw()).
 +        builds = std::make_shared<WebGPURenderPipelineBuilds>();
 +        builds->device = device;
 +        builds->pipeline = this;
@@ -5990,14 +6004,22 @@ index 0000000..ba4f1e5
 +
 +        // A draw of nothing records nothing, but resolves the bindings as a draw would, which starts the pipelines waiting
 +        // for that layout (WebGPUGraphicsPipeline) in the background, the bound one included: a renderer draws nothing with
-+        // the sets it draws with to have its pipelines built before its first draw needs them.
++        // the sets it draws with to have its pipelines built before its first draw needs them. Where the device builds
++        // in line (Firefox) nothing builds in the background, so the bound one is built here, as a draw would build it:
++        // the browser then has its shaders compiled, and the pipelines with the same shaders in other states build for
++        // about nothing when drawn. RT64's ubershader (one 245 KB pixel shader) cost 1.4 s of Firefox's GPU process
++        // there, the page's sound lost meanwhile, when the game's first draw with it built it in line instead.
 +        assert((pipeline != nullptr) && (pipeline->type == WebGPUPipeline::Type::Graphics));
 +        WGPUPipelineLayout layout = resolveBindings(graphics, !drawsNothing);
++        const WebGPUGraphicsPipeline *graphicsPipeline = static_cast<const WebGPUGraphicsPipeline *>(pipeline);
 +        if (drawsNothing) {
++            if (!device->capabilities.backgroundPipelineBuilds) {
++                const_cast<WebGPUGraphicsPipeline *>(graphicsPipeline)->get(layout);
++            }
++
 +            return false;
 +        }
 +
-+        const WebGPUGraphicsPipeline *graphicsPipeline = static_cast<const WebGPUGraphicsPipeline *>(pipeline);
 +        setPassPipeline(const_cast<WebGPUGraphicsPipeline *>(graphicsPipeline)->get(layout));
 +        if (graphicsPipeline->desc.stencilEnabled && (!pass.stencilReferenceSet || (pass.stencilReference != graphicsPipeline->desc.stencilReference))) {
 +            wgpuRenderPassEncoderSetStencilReference(renderPass, graphicsPipeline->desc.stencilReference);
