@@ -189,6 +189,11 @@ work, naming the game, the browser, the time and the curve.
 - Whether timed waits off its thread end on time all through a play: `--preload tools/wait_probe.js` logs, each
   second, a worker's shortest of three 100 us waits (`waitprobe <ms>`), what plume and the VI thread measure once as
   the page starts (docs/findings.md, A host that holds Chrome's presents).
+- What holds its GPU work as it boots or reaches somewhere new: `--preload tools/pipeline_probe.js` logs each shader
+  module and pipeline the page makes (`pipeprobe <s> render|compute`, with its modules, depth, blend and cull state)
+  and each queue round trip of 200 ms or more (`pipeprobe <s> roundtrip <ms>`): a pipeline Firefox's GPU process
+  builds in line shows as a long round trip right after its line (docs/findings.md, Compute pipelines built at their
+  first dispatch).
 - How much of its heap a page has taken, and what ran it out: `--preload tools/heap_probe.js` logs the heap's break
   and length each second (`heap <s> sbrk <MB> len <MB>`) and, before an `Aborted(OOM)`, the request's size and the
   stack that made it (`heapoom`) (docs/findings.md, Memory). With `--query ?heapwalk` it also walks dlmalloc's chunks

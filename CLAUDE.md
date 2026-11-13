@@ -324,5 +324,7 @@ What each was and what it measured is in docs/findings.md (Ruled out, measured).
 - A timed wait to just before a present's slot in Chrome: a tenth end 4-16 ms late, on the system timer's tick.
 - wasm SIMD for RT64's TMEM loads and CI4 hashes: up to 9 times as fast alone, and no page drew faster.
 - RT64 waiting once for a frame drawn in many workloads, after its last: the game ran at half its rate.
+- In Firefox, a section's prebuilt shaders wanted as the game submits them, so its first frame draws none with the
+  ubershader: the round trips and sound loss there stayed, since only the ubershader's first build costs Firefox.
 - Skipping or batching the device thread's round trips to keep a hidden page's game running in Chrome: Chrome idles a
   silent hidden tab's process, and the trips were a small part of what it lost.

@@ -775,6 +775,20 @@ before any sound plays (each built where it was made, 8 were built twice as late
 Three interleaved pairs against main's build: nothing short at the first 3D in the build against 2,216-14,690, and
 at Start 103,000-107,000 against 88,000-116,000, which is the ubershader's, the same either way.
 
+In Firefox only the ubershader's first build costs: once its 245 KB module has been built for one depth and coverage
+state, the others are built for about nothing. A section's first frame draws the shaders the list has for it with the
+ubershader, since its round is built, the game waiting, only before the next frame (rt64's RasterShaderCache), and
+each state that frame draws with is built in line where none was. Super Mario 64's castle grounds, the first section
+after the boot, built two states that way (z:always again for a new layout, z:less) ahead of its 30 shaders. A test
+build of rt64 that wanted the list's shaders as the game submitted them, so that the round was built before that
+frame drew, drew nothing with the ubershader there, and read the same: 1.6 and 1.4 s round trips there and
+96,848 and 82,216 frames short, against Pages' 1.5 and 1.2 s and 83,032 and 72,248 (two interleaved pairs of its
+regular plan, Firefox, 3840x2000 uncapped, new profiles, an RTX 2070 on a busy host; plays.jsonl, notes "the
+pipeline probe preloaded"). The first build is the one at the game's first frame, beside section boot's: Dinosaur
+Planet's 6 boot shaders were built in 0.4-0.6 s and the round trip there took 1.4-4.2 s, Super Mario 64's 27 with
+two states 3.2-3.7 s. RT64 skips its warm-up draw of nothing at setup (State::warmUpPipelines()) where pipelines
+don't build in the background, so in Firefox nothing builds the ubershader before the game's first frame does.
+
 ## What the prebuilt lists miss
 
 Each list was recorded from a plan that reaches a level's start and plays a few seconds of it (its header says what
@@ -2010,6 +2024,11 @@ The measurements behind rules CLAUDE.md and the other docs state without them.
 ## Ruled out, measured
 
 What CLAUDE.md's Ruled out rests on.
+
+- In Firefox, a frame's prebuilt shaders wanted as the game submits them, so a section's round is built before its
+  first frame draws instead of that frame drawing them with the ubershader (Compute pipelines built at their first
+  dispatch): Super Mario 64's castle grounds drew no ubershader and read the same round trips and sound loss as
+  Pages' page, which built two of its states there, since only the ubershader's first build costs Firefox.
 
 - RT64's workload thread waiting for a frame's workloads once, after its last, not after each, for a frame drawn in many
   workloads (A frame drawn in many workloads): on v0.143.0 it took Tile Driver from 45 presents a second to 75-77, and
