@@ -65,3 +65,10 @@ function recompAudioOpen(ring, samples, frames, channels) {
   }).catch((error) => console.error('Audio output: ' + error));
   return context.sampleRate;
 }
+
+// The frames the browser renders from the ring in one go, which queued_frames() leaves out (audio_output.cpp): the
+// context's baseLatency, which Chrome sets as it makes the context (0.01 s on Windows), before it first plays.
+function recompAudioBrowserFrames() {
+  const context = Module['SDL2'].audioContext;
+  return Math.round((context.baseLatency || 0) * context.sampleRate);
+}
