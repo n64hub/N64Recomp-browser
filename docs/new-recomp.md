@@ -41,9 +41,9 @@ items by almost no game when the record began.
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
-| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W3 fails, W5 fails, W6, W7, W8 |
-| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W3 fails, W5 fails, W6, W7, W8 |
-| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W3 fails, W5 fails, W6, W7, W8 |
+| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
+| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
+| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Super Smash Bros. | 2 fails | W2, W5, W6 |
 | Paper Mario | 2 fails, 4a, 4c, 6b | W2, W5 fails, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
@@ -79,19 +79,19 @@ items by almost no game when the record began.
 What the fails are: Smash's magnifying bubble, which shows a fighter past the picture's edge, sits at the 4:3 picture's
 edge in a wider window (2, filed); Paper Mario's file select shows white beside its stage in widescreen, and its opening
 cutscene at Mario's house flickers between two pictures on the desktop (2, both filed); Super Mario 64's 4c has been
-played with the keyboard only, its pads waiting for a way to play them (filed); F-Zero X's, the Mario
-Parties' and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok 2's regular plans, played on a
-fresh profile, miss shaders their lists lack (W3; the Mario Parties' 3, 2 and 10, all in section 0); Dinosaur Planet's
-page still loses a render quantum or two (up to 8 ms) in its sound's first 0.5 s in Chrome on most first visits, where
-the ring it keeps thin runs dry (the browser's burst counted as queued, filed), and the desktop build loses 22 ms as its
-sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines built at their first
-dispatch), and in Firefox, since plume-web 4381169 none at its first 3D, 1-2 s at Start Game while Firefox builds RT64's
-ubershader in line; Super Mario 64's page in Chrome loses 120-214 ms in its boot's first 0.6 s and at 3.5 s, and Paper
-Mario's 13-21 ms at 9.3 s, its game making no sound there (both filed; W5); the Mario Parties' pages in Firefox run
-66k-108k sound frames short in their boot's first 10 s, as its prebuilt shaders are built with the game waiting, and
-Mario Party 2's 59k in the 30 s after its tab was hidden came from the same kind of wait, not from the hidden tab: the
-1.4 s its section Minigames13's 34 shaders took fell in those 30 s (W5, filed); Mario Party 1's and 2's desktop
-builds drop about 22 ms of sound every few seconds whatever the window does, none more for a drag (6b, filed).
+played with the keyboard only, its pads waiting for a way to play them (filed); F-Zero X's, the Mario Parties' and
+Turok 2's READMEs don't link their pages (8c); Turok 2's regular plan, played on a fresh profile, misses
+shaders its list lacks (W3); Dinosaur Planet's page still loses a render quantum or two (up to 8 ms) in its sound's
+first 0.5 s in Chrome on most first visits, where the ring it keeps thin runs dry (the browser's burst counted as
+queued, filed), and the desktop build loses 22 ms as its sound starts, none at the logos since plume-web e69d031
+(docs/findings.md, Compute pipelines built at their first dispatch), and in Firefox, since plume-web 4381169 none at its
+first 3D, 1-2 s at Start Game while Firefox builds RT64's ubershader in line; Super Mario 64's page in Chrome loses
+120-214 ms in its boot's first 0.6 s and at 3.5 s, and Paper Mario's 13-21 ms at 9.3 s, its game making no sound there
+(both filed; W5); the Mario Parties' pages in Firefox run 66k-108k sound frames short in their boot's first 10 s, as its
+prebuilt shaders are built with the game waiting, and Mario Party 2's 59k in the 30 s after its tab was hidden came from
+the same kind of wait, not from the hidden tab: the 1.4 s its section Minigames13's 34 shaders took fell in those 30 s
+(W5, filed); Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds whatever the window
+does, none more for a drag (6b, filed).
 
 ## A new recomp's list
 
