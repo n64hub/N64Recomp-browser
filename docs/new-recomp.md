@@ -40,7 +40,7 @@ items by almost no game when the record began.
 | San Francisco Rush 2049 | 8a fails | W5 fails, W6 |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
-| F-Zero X | 4c | W6 |
+| F-Zero X | 4c | W5 fails, W6 |
 | Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
 | Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
@@ -77,7 +77,10 @@ items by almost no game when the record began.
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
 What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way
-to play them (filed); the Mario Parties' READMEs don't link their pages (8c);
+to play them (filed); the Mario Parties' READMEs don't link their pages (8c); F-Zero X's page in Firefox loses
+none in its boot's first 10 s built on v0.201.0 but inside its own silence (0.6-2.5 s from Pages on v0.184.0, as
+section boot's shaders were built with the game waiting), and 2.4 s in the 2.6 s its first race's section takes to
+build 45 shaders, a later section's wait (W5; docs/findings.md, Firefox's boot wait and the first sound);
 Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
 first audio tasks come late (filed), and none after it since the ring's count leaves out the browser's burst, and the desktop
 build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
