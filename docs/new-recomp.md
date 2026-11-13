@@ -47,7 +47,7 @@ items by almost no game when the record began.
 | Super Smash Bros. | 1 fails, 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W4 fails, W5, W6, W9 |
 | Paper Mario | 1 fails, 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W4 fails, W5, W6, W7, W9 |
 | Rayman 2 | | W2, W5, W6, W7 |
-| Donald Duck: Goin' Quackers | 2, 5a, 5b, 6b | W2, W5, W6, W7 |
+| Donald Duck: Goin' Quackers | 2, 4a fails, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
 | Turok: Dinosaur Hunter | 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W8, W9 |
 | Turok 2: Seeds of Evil | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8c fails | W2, W3 fails, W5, W6, W7, W8, W9 |
