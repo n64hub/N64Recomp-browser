@@ -26,9 +26,10 @@
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
 # now and then and one of several frames most times. A burst's and a record's captures are scaled by -Scale (1).
-# Every capture is written as it comes, by a thread of its own, so the plan's thread only captures: a capture waits
-# in memory only until it is saved, and a run ended early (a GPU turn's --max) leaves every capture saved so far, its
-# captures.tsv line and its flicker.txt lines on disk.
+# Every capture is written as it comes, off the plan's thread (CaptureWriter below), so the plan's thread only
+# captures: a capture waits in memory only until it is saved, and a run ended early (a GPU turn's --max) leaves every
+# capture saved so far, its captures.tsv line and its flicker.txt lines on disk. Writing costs the captures nothing
+# measurable at 0.25 and takes some CPU at 1 from a large window, which on a busy host can slow them.
 # A key a game reads through SDL comes from the window's messages, so keys reach it with its window behind others.
 #
 # Every capture's time, in milliseconds since 1970, is written to captures.tsv, the clock RT64_FRAME_LOG's game frames
@@ -50,7 +51,7 @@ Add-Type -AssemblyName System.Drawing
 $drawing = [AppDomain]::CurrentDomain.GetAssemblies() | Where-Object {
     $_.GetName().Name -match '^System\.(Drawing|Private\.Windows)' -and $_.Location } | ForEach-Object { $_.Location }
 $drawing += 'System.Collections', 'System.Collections.Concurrent', 'System.IO.Compression', 'System.Threading',
-    'System.Threading.Thread'
+    'System.Threading.Thread', 'System.Threading.Tasks'
 Add-Type -ReferencedAssemblies $drawing -TypeDefinition @"
 using System;
 using System.Collections.Concurrent;
@@ -61,6 +62,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 public static class CaptureWindow {
     public delegate bool EnumProc(IntPtr h, IntPtr l);
     [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
@@ -99,13 +101,19 @@ public static class CaptureWindow {
     }
 }
 
-// Writes the captures queued to it on a thread of its own, in order: each one's PNG, its captures.tsv line, and for a
-// series (a name ending -<4 digits>) the flicker check of the frame before it, which needs only the series' last two
-// grey copies. Each line is flushed as it is written, so what is on disk holds if the run is ended. The writer never
-// touches GDI+: with a PNG saved by GDI+ on this thread, the plan's thread's captures took a sixth longer and now and
-// then one stalled for 15-20 s, so a capture's pixels are copied out on the plan's thread and the PNG is encoded here.
+// Writes the captures handed to it off the plan's thread: each one's PNG and grey copy on up to three threads of the
+// pool at once (one can't keep up with a full-size 1600x1200 series, and the game recorded needs the other cores),
+// then on a thread of its own, in order, its captures.tsv line and, for a series (a name ending -<4 digits>), the
+// flicker check of the frame before it, which needs only the series' last two grey copies. Each line is flushed as it
+// is written, so what is on disk holds if the run is ended. None of it touches GDI+: with PNGs saved by GDI+ beside
+// it, the plan's captures took a sixth longer and now and then one stalled for 15-20 s, so a capture's pixels are
+// copied out on the plan's thread and encoded here.
 public sealed class CaptureWriter {
-    sealed class Item { public string Name; public byte[] Px; public int W, H, Stride; public long Ms; public double S; }
+    sealed class Item {
+        public string Name, Key; public byte[] Px; public int W, H, Stride; public long Ms; public double S;
+        public Task<float[]> Work;
+    }
+    static readonly TaskScheduler encoders = new ConcurrentExclusiveSchedulerPair(TaskScheduler.Default, 3).ConcurrentScheduler;
     sealed class Series { public string Name; public float[] Before, Last; }
     readonly BlockingCollection<Item> queue = new BlockingCollection<Item>();
     readonly Dictionary<string, Series> series = new Dictionary<string, Series>();
@@ -120,7 +128,7 @@ public sealed class CaptureWriter {
         this.dir = dir;
         tsv = new StreamWriter(Path.Combine(dir, "captures.tsv"), true) { AutoFlush = true };
         flicker = new StreamWriter(Path.Combine(dir, "flicker.txt"), false) { AutoFlush = true };
-        thread = new Thread(Run) { IsBackground = true, Name = "capture writer", Priority = ThreadPriority.BelowNormal };
+        thread = new Thread(Run) { IsBackground = true, Name = "capture writer" };
         thread.Start();
     }
 
@@ -131,8 +139,17 @@ public sealed class CaptureWriter {
         var px = new byte[data.Stride * bmp.Height];
         Marshal.Copy(data.Scan0, px, 0, px.Length);
         bmp.UnlockBits(data);
-        queue.Add(new Item { Name = name, Px = px, W = bmp.Width, H = bmp.Height, Stride = data.Stride, Ms = ms, S = s });
+        var c = new Item { Name = name, Px = px, W = bmp.Width, H = bmp.Height, Stride = data.Stride, Ms = ms, S = s };
         bmp.Dispose();
+        int dash = name.Length - 5;
+        if (dash >= 0 && name[dash] == '-' && IsDigits(name, dash + 1)) c.Key = name.Substring(0, dash);
+        c.Work = Task.Factory.StartNew(() => {
+            Png(Path.Combine(dir, c.Name + ".png"), c);
+            var small = c.Key == null ? null : Small(c);
+            c.Px = null;
+            return small;
+        }, CancellationToken.None, TaskCreationOptions.None, encoders);
+        queue.Add(c);
     }
 
     public int Pending { get { return queue.Count; } }
@@ -147,12 +164,10 @@ public sealed class CaptureWriter {
     void Run() {
         foreach (var c in queue.GetConsumingEnumerable()) {
             try {
-                Png(Path.Combine(dir, c.Name + ".png"), c);
+                var small = c.Work.GetAwaiter().GetResult();
                 tsv.WriteLine(String.Format("{0}\t{1}\t{2:N3}", c.Name, c.Ms, c.S));
                 Written++;
-                int dash = c.Name.Length - 5;
-                if (dash >= 0 && c.Name[dash] == '-' && IsDigits(c.Name, dash + 1))
-                    Check(c.Name.Substring(0, dash), c.Name, Small(c));
+                if (small != null) Check(c.Key, c.Name, small);
             } catch (Exception e) {
                 Errors.Add(c.Name + ": " + e.Message);
             }
