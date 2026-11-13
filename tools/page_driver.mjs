@@ -284,7 +284,7 @@ const storedFile = (size) => `(() => {
 })()`;
 
 // RDRAM in the wasm heap, found by the boot globals every game has at 0x80000300: osTvType, osRomBase and osMemSize.
-const rdramHelpers = `(() => {
+export const rdramHelpers = `(() => {
   if (window.n64r) return;
   let base = null;
   const find = () => {

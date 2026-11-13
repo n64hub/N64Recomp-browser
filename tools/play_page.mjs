@@ -89,11 +89,12 @@
 // and resumes it, and reload loads the page again over the browser's warm cache and service worker (a page from Pages:
 // a build dir is served uncached) and runs the plan's load and start steps, its setup's ROM kept: a player's way back
 // from a lost device, after one; reopen closes the browser and starts it again on the same profile, then boots the
-// page as reload does: a player's next visit. Both compare the game's save files (HOME/.config/<program id>/saves/,
+// page as reload does: a player's next visit. Both compare the game's save files (<the program's folder>/saves/,
 // those frontend/save_sync.js syncs) as they were 2.5 s before (persistent_home.js writes HOME back every 2 s) with what
 // the page holds at its launcher after: savesKept is true where each is there with the same bytes, false where one
 // isn't, and null where there were none. Since a plan of 2-3 minutes seldom saves, the first of them first plants
-// saves/backcheck.bin (64 random bytes) in each program's folder in HOME/.config, which the same write back keeps, so
+// saves/backcheck.bin (64 random bytes) in each folder in HOME that holds a stored ROM (the program's, where the runtime
+// keeps saves/), which the same write back keeps, so
 // the check always has a file: savesKept then says the storage kept it, and a save of the game's own beside it says the
 // game's. For each it prints and records (in "faults") the presents a second before it (the last
 // 3 samples), during and after, the WebGPU errors, exceptions and sound frames short after, the console's first 10
@@ -191,7 +192,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
-import { browserExecutable, firefoxUncappedRate, missingPlanFiles, open, option, serve, sleep } from './page_driver.mjs';
+import { browserExecutable, firefoxUncappedRate, missingPlanFiles, open, option, rdramHelpers, serve, sleep } from './page_driver.mjs';
 
 const args = process.argv.slice(2);
 const headed = args.includes('--headed');
@@ -622,11 +623,23 @@ const openPage = async () => {
       }
       return padPress(p, upDown, a[0]);
     };
+    // A launcher's first press of a new pad can be taken as the switch to the pad (its focus shown), as a player's is,
+    // so A is pressed again, twice at most, while the game hasn't started (no RDRAM) 5 s after.
+    const started = async () => {
+      try { await p.evaluate(rdramHelpers); return await p.evaluate('(() => { try { n64r(0x80000300); return true; } catch { return false; } })()'); }
+      catch { return false; }
+    };
     p.click = async (x, y) => {
       if (!padDriving) return mouse(x, y);
-      padUse.launcher++;
-      await padPress(p, 'down', 'padA');
-      await padPress(p, 'up', 'padA');
+      const running = await started();
+      for (let tries = 1; tries <= 3; tries++) {
+        padUse.launcher++;
+        await padPress(p, 'down', 'padA');
+        await padPress(p, 'up', 'padA');
+        if (running) return;
+        for (const until = Date.now() + 5000; Date.now() < until; await sleep(250)) if (await started()) return;
+        if (tries < 3) log("play_page: the game hadn't started 5 s after the pad's A: pressing it again");
+      }
     };
   }
   return p;
@@ -770,11 +783,9 @@ const padRun = async (stepList) => {
   padDriving = pad;
   try { await page.run(stepList, steps); } finally { padDriving = false; }
 };
-// The game's save files (HOME/.config/<program id>/saves/, as save_sync.js takes them) by path, each its size and an
-// FNV-1a hash of its bytes; null with no FS.
-const savesNow = () => page.evaluate(`(() => {
-  if (typeof FS === 'undefined') return null;
-  const saves = {};
+// The files in HOME (/home/web_user), each [path, size], for the saves and the folders that hold a stored ROM.
+const homeFiles = `(() => {
+  const files = [];
   const walk = (dir) => {
     for (const name of FS.readdir(dir)) {
       if (name === '.' || name === '..') continue;
@@ -782,16 +793,21 @@ const savesNow = () => page.evaluate(`(() => {
       let st;
       try { st = FS.stat(p); } catch { continue; }
       if (FS.isDir(st.mode)) walk(p);
-      else if (/\/saves\//.test(p) && !/\.(temp|bak)$/.test(p) && st.size < (1 << 20)) {
-        let h = 0x811c9dc5;
-        for (const b of FS.readFile(p)) h = Math.imul(h ^ b, 16777619) >>> 0;
-        saves[p] = st.size + ' ' + h.toString(16);
-      }
+      else files.push([p, st.size]);
     }
   };
-  try { walk('/home/web_user/.config'); } catch {}
-  return saves;
-})()`).catch(() => null);
+  walk('/home/web_user');
+  return files;
+})()`;
+// The game's save files (<the program's folder>/saves/, as save_sync.js takes them) by path, each its size and an FNV-1a
+// hash of its bytes; null where they can't be read.
+const savesNow = () => page.evaluate(`${homeFiles}.filter(([p, size]) => p.includes('/saves/') && !p.endsWith('.temp') &&
+  !p.endsWith('.bak') && size < (1 << 20)).reduce((saves, [p, size]) => {
+    let h = 0x811c9dc5;
+    for (const b of FS.readFile(p)) h = Math.imul(h ^ b, 16777619) >>> 0;
+    saves[p] = size + ' ' + h.toString(16);
+    return saves;
+  }, {})`).catch((error) => { log(`the saves couldn't be read: ${error.message}`); return null; });
 let profiling = false;
 try {
   if (geckoProfileFile) { await page.geckoProfile.start(); profiling = true; }
@@ -875,16 +891,13 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
       await page.evaluate(`${audioContext}?.resume()`);
     } else if (name === 'reload' || name === 'reopen') {
       if (!planted) {
-        planted = await page.evaluate(`(() => {
-          const config = '/home/web_user/.config', planted = [];
-          for (const id of FS.readdir(config).filter((n) => n !== '.' && n !== '..')) {
-            if (!FS.isDir(FS.stat(config + '/' + id).mode)) continue;
-            FS.mkdirTree(config + '/' + id + '/saves');
-            FS.writeFile(config + '/' + id + '/saves/backcheck.bin', crypto.getRandomValues(new Uint8Array(64)));
-            planted.push(id);
-          }
-          return planted;
-        })()`).catch((error) => `none: ${error.message}`);
+        // Beside the stored ROM (4 MB or more): the program's folder, where the runtime keeps saves/.
+        planted = await page.evaluate(`[...new Set(${homeFiles}.filter(([p, size]) => size >= (4 << 20) && !p.includes('/saves/'))
+          .map(([p]) => p.slice(0, p.lastIndexOf('/'))))].map((dir) => {
+            FS.mkdirTree(dir + '/saves');
+            FS.writeFile(dir + '/saves/backcheck.bin', crypto.getRandomValues(new Uint8Array(64)));
+            return dir;
+          })`).catch((error) => `none: ${error.message}`);
         log(`planted saves/backcheck.bin in ${JSON.stringify(planted)}`);
       }
       await sleep(2500);
@@ -980,7 +993,7 @@ if (backcheck) {
       : kept.some((f) => f.savesKept === false) ? ['fails', kept.filter((f) => f.savesKept === false).map((f) => `the ${f.name} lost ` +
         Object.keys(f.savesBefore).filter((k) => f.savesAfter?.[k] !== f.savesBefore[k]).join(', ')).join('; ')]
       : kept.every((f) => f.savesKept === null) ? ['not played', 'no save file, not even the planted one']
-      : ['pass', `${Object.keys(kept[1].savesBefore).map((k) => k.replace(/^\/home\/web_user\/\.config\//, '')).join(', ')} kept through the reload and the reopen` +
+      : ['pass', `${Object.keys(kept[1].savesBefore).map((k) => k.replace('/home/web_user/', '')).join(', ')} kept through the reload and the reopen` +
         (Object.keys(kept[1].savesBefore).every((k) => k.endsWith('/backcheck.bin')) ? " (the planted file only: the plan wrote no save of the game's)" : '')];
     verdicts.W7 = failure ? ['fails', why('the pad drove the plan')]
       : padUse.keyboard.size ? ['fails', `keys with no pad button: ${[...padUse.keyboard].join(' ')}`]
