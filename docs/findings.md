@@ -217,8 +217,8 @@ came through. Held after two VIs on one action, as a console's RDP would have fi
 497dab9, a stall of 30 ms), the same hidden play came through 3 times in 3, into the demo, and so did d405b65's hold
 while a graphics task was unfinished for two VIs, which it replaced. Its cost is the game's sound wherever lists run
 long, since its audio runs on the same VIs: visible on that host, the 9 s after the demo's 12 s section wait lost
-220,000-350,000 sound frames with d405b65's hold against 23,000-90,000 without it (two interleaved pairs), the presents
-the same (medians 102-116 against 97-105).
+220,000-350,000 sound frames with either hold against 23,000-160,000 without (two interleaved pairs of each), the
+presents the same (medians 102-120 against 97-123).
 
 A page that runs out of heap does so in a burst after a stall, not by leaking. Banjo-Kazooie's page aborted with
 `Aborted(OOM)` in Firefox 158 in 3 of 6 runs of a retest (2026-10-19 21:11-21:56 UTC, uncapped at 3840x2000 on an RTX
