@@ -49,8 +49,8 @@ items by almost no game when the record began.
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
-| Turok: Dinosaur Hunter | 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W8, W9 |
-| Turok 2: Seeds of Evil | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8c fails | W2, W3 fails, W5, W6, W7, W8, W9 |
+| Turok: Dinosaur Hunter | 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W9 |
+| Turok 2: Seeds of Evil | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8c fails | W2, W3 fails, W5, W6, W7, W9 |
 | Turok 3: Shadow of Oblivion | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W8, W9 |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
@@ -246,8 +246,10 @@ Every game's page, a game fork's or a recomp of the project's own, is checked fo
 - **W7.** A stand-in pad (`tools/gamepad_probe.js`) drives the launcher, the menus and play, its rumble played; a game
   of several players has a pads plan that plugs a pad a port (Super Smash Bros.' `tools/play_plan_pads.json`, item 3).
 - **W8.** A regular plan (docs/playing.md, Plans) that reaches a level as a player does and plays a minute or more in
-  it, and a shader list recorded on two or three levels or more besides the plan's, its header naming them. An
-  extended plan is no part of it: a game gets one when a card first needs a longer play.
+  it, and a shader list recorded on what it plays. The levels past the plan's go into the list when a card's play
+  reaches them, never as work of their own: a shader the list misses costs Firefox 0.2-0.3 s once, Chrome draws it
+  with the ubershader until it is built, and the page remembers it (docs/porting.md, Prebuilt shader lists). An
+  extended plan is no part of it either: a game gets one when a card first needs a longer play.
 - **W9.** A long play, over 3 minutes of the game's busiest screens at 3840 wide, in Chrome and in Firefox, without
   running out of memory or a "memory access out of bounds".
 - **W10.** Firefox played on its own and from Pages: black frames, white edges, traps and freezes have turned up there
