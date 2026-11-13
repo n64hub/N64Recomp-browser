@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 9e6bddec69f302c785084e869bdcf9022d2f1511
+rt64: https://github.com/n64hub/rt64-web c5ced597fc37dbbc8207250d00c854ae906ecb13
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -8131,7 +8131,7 @@ index 3b991ff..c17d089 100644
          static std::unique_ptr<RenderPipeline> createPipeline(const PipelineCreation &c);
          static RenderMultisampling generateMultisamplingPattern(uint32_t sampleCount, bool sampleLocationsSupported);
 diff --git a/src/render/rt64_raster_shader_cache.cpp b/src/render/rt64_raster_shader_cache.cpp
-index bf7b669..02c2355 100644
+index bf7b669..28f7205 100644
 --- a/src/render/rt64_raster_shader_cache.cpp
 +++ b/src/render/rt64_raster_shader_cache.cpp
 @@ -6,6 +6,52 @@
@@ -8212,7 +8212,7 @@ index bf7b669..02c2355 100644
      }
  
      void RasterShaderCache::setup(RenderDevice *device, RenderShaderFormat shaderFormat, const ShaderLibrary *shaderLibrary, const RenderMultisampling &multisampling) {
-@@ -105,13 +160,499 @@ namespace RT64 {
+@@ -105,13 +160,501 @@ namespace RT64 {
          shaderUber = std::make_unique<RasterShaderUber>(device, shaderFormat, multisampling, shaderLibrary, ubershaderThreadCount);
          usesHDR = shaderLibrary->usesHDR;
  
@@ -8405,7 +8405,9 @@ index bf7b669..02c2355 100644
 +                (RT64PrebuiltShaderSectionCount > 1) ? RT64PrebuiltShaderSections[1].name : "(none)", prebuildBootThreads, threads);
 +        }
 +        else {
-+            printf("RT64: %u prebuilt shaders, %u pipelines, in %u sections, and %u learned; the game waiting for the %u of section %s, built %u at a time before it starts\n",
++            // The pages' play plans wait for this line's "once the game draws", Firefox's word that the list is set up,
++            // so it stays as it was when the round began at the game's first frames (prebuildForGame()).
++            printf("RT64: %u prebuilt shaders, %u pipelines, in %u sections, and %u learned; the game waiting for the %u of section %s, built %u at a time once the game draws\n",
 +                RT64PrebuiltShaderCount, pipelineCount, RT64PrebuiltShaderSectionCount, uint32_t(prebuildLearned.size()), uint32_t(prebuildSections[0].size()),
 +                RT64PrebuiltShaderSections[0].name, threads);
 +        }
@@ -8713,7 +8715,7 @@ index bf7b669..02c2355 100644
          {
              std::unique_lock<std::mutex> queueLock(submissionMutex);
  
-@@ -125,6 +666,28 @@ namespace RT64 {
+@@ -125,6 +668,28 @@ namespace RT64 {
              found = true;
          }
  
@@ -8742,7 +8744,7 @@ index bf7b669..02c2355 100644
          // Push a new shader compilation to the queue.
          {
              const std::unique_lock<std::mutex> queueLock(descQueueMutex);
-@@ -134,6 +697,42 @@ namespace RT64 {
+@@ -134,6 +699,42 @@ namespace RT64 {
          descQueueChanged.notify_all();
      }
      
@@ -8785,7 +8787,7 @@ index bf7b669..02c2355 100644
      void RasterShaderCache::waitForAll() {
          {
              std::unique_lock<std::mutex> queueLock(descQueueMutex);
-@@ -165,6 +764,18 @@ namespace RT64 {
+@@ -165,6 +766,18 @@ namespace RT64 {
          const std::unique_lock<std::mutex> lock(GPUShadersMutex);
          auto shaderIt = GPUShaders.find(shaderHash);
          if (shaderIt == GPUShaders.end()) {
