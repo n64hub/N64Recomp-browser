@@ -206,6 +206,20 @@ game no VI while the graphics thread has been on one action over 100 ms: in the 
 frames in the wait and played the demo's next scenes clean, and the regular plan played clean in Firefox 3 times in 3
 (waits of 3.7-12.6 s for the boot's, intro's and demo's sections), where it had failed 5 times in 5.
 
+A list that takes about 100 ms does the same in smaller steps, since the 100 ms hold leaves the game six VIs behind
+each one. Paper Mario's page from Pages in Firefox 158 (RTX 2070, 3840x2000 uncapped, ten spinning threads on a
+12-core host), its tab hidden at the end of its intro story, trapped in its heap allocator (`index out of bounds` in
+`_heap_malloc`, the free list corrupt) or stopped drawing for good, the sound still fed, 4-6 s after the hide in 3
+plays of 4, and a test build of it in 3 of 3: hidden there, every list took 50-230 ms, its render to RAM's readbacks waiting on the page's thread, and
+the game freed what the list in hand pointed at as its intro handed over to its attract demo. Visible on the same host
+it came through, but its lists took 60-210 ms for several seconds after the demo's section built. Chrome, hidden,
+came through. Held after two VIs on one action, as a console's RDP would have finished a list (N64ModernRuntime
+497dab9, a stall of 30 ms), the same hidden play came through 3 times in 3, into the demo, and so did d405b65's hold
+while a graphics task was unfinished for two VIs, which it replaced. Its cost is the game's sound wherever lists run
+long, since its audio runs on the same VIs: visible on that host, the 9 s after the demo's 12 s section wait lost
+220,000-350,000 sound frames with either hold against 23,000-160,000 without (two interleaved pairs of each), the
+presents the same (medians 102-120 against 97-123).
+
 A page that runs out of heap does so in a burst after a stall, not by leaking. Banjo-Kazooie's page aborted with
 `Aborted(OOM)` in Firefox 158 in 3 of 6 runs of a retest (2026-10-19 21:11-21:56 UTC, uncapped at 3840x2000 on an RTX
 5080, the page from Pages, v0.67.0, and a v0.71.0 build both), at 70, 72 and 123 s; Chrome (throttled 6 times) played
@@ -511,7 +525,8 @@ Mario Kart 64 run lost 149,016 in one 5 s while hidden, and another Star Fox 64 
 second for the 30 s it was played after, its presents done 60-650 ms late with the GPU 9-21% busy and 7.5 of its 8 GB
 in use by other pages (Pages' build under the same load came back at 60). On an idle host Pages' kept 60 presents a
 second while hidden, and with a preload that times animation frames at 240 a second both came back at 221-225. Firefox
-158 plays through it either way, its sound never short (on a busier host not always: Paper Mario's, below).
+158 plays through it either way, its sound never short: it lowers neither a hidden tab's process nor its page's thread
+(Paper Mario's, below).
 
 What stalls it is Chrome's priority, not the page's work. On Windows, within 2 s of a tab going hidden, Chrome 155
 lowers its renderer process from normal priority (8) to idle (4), unless the tab plays sound;
@@ -562,16 +577,25 @@ hidden` with `tools/audio_probe.js`, whose `pagestall` lines say when the page's
   the tab was hidden, counted as the hidden tab's, and as the play started, counted as the play's. A sample after each
   report now ends the one it fell in, which neither counts, and the play's sound is read as it ends, not after the
   faults. With it out, Firefox lost 0, 164 and 56 frames while hidden in three plays and kept every one of its processes
-  at normal priority (8) throughout, but on a host 47% busy its page's thread answered only every 100-270 ms while hidden
-  and 51,464-77,180 frames ran short a 5 s (filed). As the tab came back, the page's thread was busy 130-220 ms and
-  9,792 frames ran short in one play, none in two.
+  at normal priority (8) throughout. As the tab came back, the page's thread was busy 130-220 ms and 9,792 frames ran
+  short in one play, none in two. On a host 47% busy, 51,464-77,180 frames ran short in two of the hidden 5 s, the
+  page's thread answering only every 100-270 ms: that was the attract demo's section, not the hide. As the intro story
+  hands over to the demo, Firefox builds its 151 prebuilt shaders on the page's thread with the game waiting (Firefox's
+  boot wait and the first sound, a later section's wait), and there it fell inside the hidden 30 s. On a stand-in for a
+  busy host (10 spinner threads on 12 cores, another application's browser holding 64-92% of the GPU) the wait took
+  10.8-11.2 s and ran 190,624-240,000 frames short in each 5 s of it, the tab visible (one play) or hidden (two).
+  Nor is it Firefox's priority: a poller of every Firefox thread's base priority (Windows' `ProcessThread`) found the
+  page's process at normal and its main thread at 8 through every hide, its sound heard (`media.volume_scale` 0.0001,
+  -80 dB) or not (0, `play_page.mjs`'s), so a muted play measures what a player's does, unlike Chrome's
+  `--mute-audio`. Mario Kart 64's page, hidden in a race on the same stand-in, lost nothing while hidden and its
+  page's thread answered all through. Paper Mario's page there stopped in 3 of 4 hidden plays at that hand-over to the
+  demo, a corrupt heap in the game (filed); visible, in Chrome, and with Firefox's sound never started
+  (`media.cubeb.force_null_context`, under which the page's AudioContext stays suspended) it came through.
 - Chrome (`--chrome-flag --disable-audio-output`) lost 784 frames (16 ms) of the music 0.27 s after the tab was hidden
-  in one play of two, none in the other, and the page's thread answered all through, so it isn't Chrome's priority
-  drop above. Where the present thread is waiting for a present in flight as the tab goes hidden, plume learns the page
-  is hidden only from a publish the next present queues (plume's isHidden()), and the game waits for a free present
-  until Chrome's late callback comes (filed). Both Chrome plays lost 1,632-2,260 frames 80.6 s into the sound, where
-  the loudest sample before it was 0-0.04: the game's own quiet, as at its boot (Compute pipelines built at their
-  first dispatch).
+  in one play of two, none in the other, the probe seeing no stall of the page's thread (it reports one past 60 ms), so
+  it isn't Chrome's priority drop above: Chrome's own work at the hide, below. Both Chrome plays lost 1,632-2,260
+  frames 80.6 s into the sound, where the loudest sample before it was 0-0.04: the game's own quiet, as at its boot
+  (Compute pipelines built at their first dispatch).
 - What Firefox lost after the tab came back in the play that filed this, a dozen rounds of `building N prebuilt shaders
   for section (none), the game waiting`, is the intro story's own shaders, none missing from the list. Of the 64 the
   story draws in 110 s by itself, 36 are the boot section's and 28 the intro section's, which the list records from
@@ -581,6 +605,22 @@ hidden` with `tools/audio_probe.js`, whose `pagestall` lines say when the page's
   builds before the game's first frame, they would cost about as much once and on every visit, a player who presses
   Start included, as Paper Mario's sections cost Firefox 0.06-0.16 s a shader (demo's 62 in 3.6-9.8 s, new_game's 151
   in 5.7-13.8 s; plays.jsonl), 2-4 s more at the boot.
+
+What Chrome loses as the tab goes hidden is its own work on the page's thread, which runs the game's WebGPU calls.
+Paper Mario's and Mario Kart 64's pages, each hidden three times a play (`--play 20 --fault hidden,hidden,hidden`, the
+probe, Chrome 155, an RTX 2070, 3840x2000 uncapped, new profiles, another Chrome on the GPU outside the turns), lost
+sound 0.17-0.35 s after the hide in 14 hides of 30, 256-1,699 audible frames each (5-35 ms; once 4,464, out to 1.7 s
+after it), and nothing more in the 30 s hidden. A trace of one hide (`--chrome-trace`, which with `--fault` covers the
+faults) has the page's thread in Blink's own handling of it (blink.mojom.PageBroadcast, native code, no JavaScript)
+for 38 ms from 13 ms after the last animation frame, the page's visibilitychange listeners after it (under 1 ms), and
+then the device thread's backlog in one 60 ms task, the game's render passes, submissions and buffer writes. Visible,
+the page's thread ran no task over 26 ms; hidden, its tasks came about half as often and up to 40-60 ms long, for all
+30 s. So the game's WebGPU calls waited about 100 ms at the hide, and its sound ring holds about 1,500 frames (31 ms).
+Waking plume's present wait from visibilitychange, where the present thread might have waited for a present in flight
+whose callback Chrome makes late once the page is hidden (a test build of both pages, interleaved with Pages'), lost
+as much as Pages in as many hides: Paper Mario 4 of 9 hides (464-1,384 frames, and the 4,464) against 4 of 9
+(732-1,308), Mario Kart 64 3 of 6 (256-1,207) against 3 of 6 (570-1,699). Chrome's work comes before
+visibilitychange fires, so the page can't see it coming, and plume's wait wasn't what held the game.
 
 ## A host that holds Chrome's presents
 
@@ -843,7 +883,15 @@ uncapped, beside other plays): without it the sound ran short after the boot's f
 frames, and with it in none. Its first second lost 315-816 frames with it and 58-510 without, the ring's 20 ms lows
 the same frame for frame there: below a VI and the burst the game's `get_frames_remaining` reads 0 either way, so it
 makes all it can, and what runs short is how soon its first audio tasks come, 0.035-0.040 s and 0.5-0.9 s into its
-sound (filed). Super Mario 64's page, five interleaved pairs of Start Game and 12 s with the probe (Chrome, an RTX
+sound. Nothing a player hears is in them: the probe's loudest sample in each 20 ms of the page Pages served (Chrome
+155, an RTX 2070, 3840x2000 uncapped, two first visits, Start Game; a host 61-99% busy, others' plays beside it) is 0
+until the logo's sound starts, with a sample of 0.018, and 0.001-0.008 through the rest of the first second, a fade-in
+at -40 to -60 dBFS. The game's sound starts with zeros, so a ring that runs dry there runs dry in that silence and
+only starts the logo's sound later, nothing cut: 0.23 s later in one visit, where the ring stayed at 0 from 0.032 s to
+0.26 s, the host's load holding the game's next frames. The rest, 58 frames at 0.47 s in one visit and 452 at 0.65 s
+in the other, fell where the loudest sample was 0.003-0.005. The desktop build's zeros at 0.017 s and 0.040 s
+(above) are the same silence, which a recording can't tell from a loss, so what the game's first audio tasks wait for
+was left unmeasured. Super Mario 64's page, five interleaved pairs of Start Game and 12 s with the probe (Chrome, an RTX
 2070, 3840x2000 uncapped, a host 15-39% busy): the ring's median 20 ms low after 2 s was 1,848-1,856 frames with it
 and 1,360-1,376 without. Its sound stops again for a reset about 6 s in, the ring draining as the game makes nothing,
 and the drain cut the last of the logo's sound (loudest sample 0.02-0.06) in 4 of 5 plays without it, 8-160 frames,
@@ -876,8 +924,19 @@ regular plan, Firefox, 3840x2000 uncapped, new profiles, an RTX 2070 on a busy h
 pipeline probe preloaded"). The first build is the one at the game's first frame, beside section boot's: Dinosaur
 Planet's 6 boot shaders were built in 0.4-0.6 s and the round trip there took 1.4-4.2 s, Super Mario 64's 27 with
 two states 3.2-3.7 s. RT64 skips its warm-up draw of nothing at setup (State::warmUpPipelines()) where pipelines
-don't build in the background, so in Firefox nothing built the ubershader before the game's first frame did, until
-rt64 c5ced59 did that draw just before the game starts (Firefox's boot wait and the first sound, below).
+don't build in the background, so in Firefox nothing built the ubershader before the game's first frame did. rt64
+c5ced59 does that draw just before the game starts (Firefox's boot wait and the first sound, below), but in Firefox it
+built nothing: a draw of nothing resolves the layout, which starts builds only where they run in the background, and
+plume built a pipeline in line only when something was drawn with it. The probe showed it on v0.198.0: Dinosaur
+Planet's ubershader was built at its menu, 25 s after section boot's 6 shaders, with a 1.4-1.7 s round trip and 71,285
+and 83,295 frames short in those 5 s; Super Mario 64's at the castle grounds' first frame, beside its 30 shaders, a
+2.4-2.6 s wait and 99,520 and 114,912 short. plume-web 0ac34ab builds the bound pipeline at a draw of nothing where
+the device builds in line, so the warm-up builds the ubershader's first state with section boot, the game waiting
+before its sound starts (section boot's wait 1.1 and 2.3 s against 0.5 and 0.4 s in Dinosaur Planet, 2.3 and 3.3 s
+against 1.9 and 1.5 s in Super Mario 64), and its other states are built for about nothing later. Dinosaur Planet's
+menu then lost 2,244 and 1,187 frames, and Super Mario 64's castle grounds waited 1.7 and 1.9 s and lost 74,712 and
+89,952, the section's own 30 shaders (two interleaved pairs a game, Firefox, 3840x2000 uncapped, new profiles, an RTX
+2070 on a busy host; plays.jsonl, notes "the warm-up's draw of nothing builds the ubershader").
 
 ## Firefox's boot wait and the first sound
 
