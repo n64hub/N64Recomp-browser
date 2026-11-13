@@ -592,12 +592,10 @@ hidden` with `tools/audio_probe.js`, whose `pagestall` lines say when the page's
   demo, a corrupt heap in the game (filed); visible, in Chrome, and with Firefox's sound never started
   (`media.cubeb.force_null_context`, under which the page's AudioContext stays suspended) it came through.
 - Chrome (`--chrome-flag --disable-audio-output`) lost 784 frames (16 ms) of the music 0.27 s after the tab was hidden
-  in one play of two, none in the other, and the page's thread answered all through, so it isn't Chrome's priority
-  drop above. Where the present thread is waiting for a present in flight as the tab goes hidden, plume learns the page
-  is hidden only from a publish the next present queues (plume's isHidden()), and the game waits for a free present
-  until Chrome's late callback comes (filed). Both Chrome plays lost 1,632-2,260 frames 80.6 s into the sound, where
-  the loudest sample before it was 0-0.04: the game's own quiet, as at its boot (Compute pipelines built at their
-  first dispatch).
+  in one play of two, none in the other, the probe seeing no stall of the page's thread (it reports one past 60 ms), so
+  it isn't Chrome's priority drop above: Chrome's own work at the hide, below. Both Chrome plays lost 1,632-2,260
+  frames 80.6 s into the sound, where the loudest sample before it was 0-0.04: the game's own quiet, as at its boot
+  (Compute pipelines built at their first dispatch).
 - What Firefox lost after the tab came back in the play that filed this, a dozen rounds of `building N prebuilt shaders
   for section (none), the game waiting`, is the intro story's own shaders, none missing from the list. Of the 64 the
   story draws in 110 s by itself, 36 are the boot section's and 28 the intro section's, which the list records from
@@ -607,6 +605,22 @@ hidden` with `tools/audio_probe.js`, whose `pagestall` lines say when the page's
   builds before the game's first frame, they would cost about as much once and on every visit, a player who presses
   Start included, as Paper Mario's sections cost Firefox 0.06-0.16 s a shader (demo's 62 in 3.6-9.8 s, new_game's 151
   in 5.7-13.8 s; plays.jsonl), 2-4 s more at the boot.
+
+What Chrome loses as the tab goes hidden is its own work on the page's thread, which runs the game's WebGPU calls.
+Paper Mario's and Mario Kart 64's pages, each hidden three times a play (`--play 20 --fault hidden,hidden,hidden`, the
+probe, Chrome 155, an RTX 2070, 3840x2000 uncapped, new profiles, another Chrome on the GPU outside the turns), lost
+sound 0.17-0.35 s after the hide in 14 hides of 30, 256-1,699 audible frames each (5-35 ms; once 4,464, out to 1.7 s
+after it), and nothing more in the 30 s hidden. A trace of one hide (`--chrome-trace`, which with `--fault` covers the
+faults) has the page's thread in Blink's own handling of it (blink.mojom.PageBroadcast, native code, no JavaScript)
+for 38 ms from 13 ms after the last animation frame, the page's visibilitychange listeners after it (under 1 ms), and
+then the device thread's backlog in one 60 ms task, the game's render passes, submissions and buffer writes. Visible,
+the page's thread ran no task over 26 ms; hidden, its tasks came about half as often and up to 40-60 ms long, for all
+30 s. So the game's WebGPU calls waited about 100 ms at the hide, and its sound ring holds about 1,500 frames (31 ms).
+Waking plume's present wait from visibilitychange, where the present thread might have waited for a present in flight
+whose callback Chrome makes late once the page is hidden (a test build of both pages, interleaved with Pages'), lost
+as much as Pages in as many hides: Paper Mario 4 of 9 hides (464-1,384 frames, and the 4,464) against 4 of 9
+(732-1,308), Mario Kart 64 3 of 6 (256-1,207) against 3 of 6 (570-1,699). Chrome's work comes before
+visibilitychange fires, so the page can't see it coming, and plume's wait wasn't what held the game.
 
 ## A host that holds Chrome's presents
 

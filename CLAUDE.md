@@ -330,3 +330,5 @@ What each was and what it measured is in docs/findings.md (Ruled out, measured).
   ubershader: the round trips and sound loss there stayed, since only the ubershader's first build costs Firefox.
 - Skipping or batching the device thread's round trips to keep a hidden page's game running in Chrome: Chrome idles a
   silent hidden tab's process, and the trips were a small part of what it lost.
+- Waking plume's present wait from visibilitychange for the 5-35 ms of sound Chrome loses as a tab goes hidden:
+  Chrome's own work at the hide holds the page's thread first, and a test build lost as much as Pages.
