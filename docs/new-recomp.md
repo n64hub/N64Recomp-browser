@@ -68,12 +68,12 @@ items by almost no game when the record began.
 | Star Wars Episode I: Racer | | W2, W5, W6, W7, W9 |
 | Pokémon Snap | | W2, W5, W6, W7 |
 | Rush 2: Extreme Racing USA | | W2, W5, W6, W7 |
-| 1080° Snowboarding | | W2, W5, W6, W7, W8, W9 |
-| Space Station Silicon Valley | | W2, W5, W6, W7, W8, W9 |
-| Tony Hawk's Pro Skater 2 | | W2, W5, W6, W7, W8, W9 |
+| 1080° Snowboarding | | W2, W5, W6, W7, W9 |
+| Space Station Silicon Valley | | W2, W5, W6, W7, W9 |
+| Tony Hawk's Pro Skater 2 | | W2, W5, W6, W7, W9 |
 | Star Wars: Rogue Squadron | | W2, W5, W6, W7, W9 |
-| Beetle Adventure Racing! | | W2, W5, W6, W7, W8, W9 |
-| Turok: Rage Wars | | W2, W5, W6, W7, W8, W9 |
+| Beetle Adventure Racing! | | W2, W5, W6, W7, W9 |
+| Turok: Rage Wars | | W2, W5, W6, W7, W9 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
 What the fails are: Rush 2049's waving start-line banners break into shards on about one frame in six with Frame
@@ -242,8 +242,9 @@ Every game's page, a game fork's or a recomp of the project's own, is checked fo
   signed-in player's save reaches the Drive and comes back in another browser (`frontend/save_sync.js`).
 - **W7.** A stand-in pad (`tools/gamepad_probe.js`) drives the launcher, the menus and play, its rumble played; a game
   of several players has a pads plan that plugs a pad a port (Super Smash Bros.' `tools/play_plan_pads.json`, item 3).
-- **W8.** A regular plan and an extended one (docs/playing.md, Plans): the regular plan reaches a level as a player
-  does and plays a minute or more in it, and the extended plan's misses are in the shader list.
+- **W8.** A regular plan (docs/playing.md, Plans) that reaches a level as a player does and plays a minute or more in
+  it, and a shader list recorded on two or three levels or more besides the plan's, its header naming them. An
+  extended plan is no part of it: a game gets one when a card first needs a longer play.
 - **W9.** A long play, over 3 minutes of the game's busiest screens at 3840 wide, in Chrome and in Firefox, without
   running out of memory or a "memory access out of bounds".
 - **W10.** Firefox played on its own and from Pages: black frames, white edges, traps and freezes have turned up there

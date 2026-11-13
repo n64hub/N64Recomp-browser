@@ -511,7 +511,8 @@ Mario Kart 64 run lost 149,016 in one 5 s while hidden, and another Star Fox 64 
 second for the 30 s it was played after, its presents done 60-650 ms late with the GPU 9-21% busy and 7.5 of its 8 GB
 in use by other pages (Pages' build under the same load came back at 60). On an idle host Pages' kept 60 presents a
 second while hidden, and with a preload that times animation frames at 240 a second both came back at 221-225. Firefox
-158 plays through it either way, its sound never short (on a busier host not always: Paper Mario's, below).
+158 plays through it either way, its sound never short: it lowers neither a hidden tab's process nor its page's thread
+(Paper Mario's, below).
 
 What stalls it is Chrome's priority, not the page's work. On Windows, within 2 s of a tab going hidden, Chrome 155
 lowers its renderer process from normal priority (8) to idle (4), unless the tab plays sound;
@@ -562,9 +563,20 @@ hidden` with `tools/audio_probe.js`, whose `pagestall` lines say when the page's
   the tab was hidden, counted as the hidden tab's, and as the play started, counted as the play's. A sample after each
   report now ends the one it fell in, which neither counts, and the play's sound is read as it ends, not after the
   faults. With it out, Firefox lost 0, 164 and 56 frames while hidden in three plays and kept every one of its processes
-  at normal priority (8) throughout, but on a host 47% busy its page's thread answered only every 100-270 ms while hidden
-  and 51,464-77,180 frames ran short a 5 s (filed). As the tab came back, the page's thread was busy 130-220 ms and
-  9,792 frames ran short in one play, none in two.
+  at normal priority (8) throughout. As the tab came back, the page's thread was busy 130-220 ms and 9,792 frames ran
+  short in one play, none in two. On a host 47% busy, 51,464-77,180 frames ran short in two of the hidden 5 s, the
+  page's thread answering only every 100-270 ms: that was the attract demo's section, not the hide. As the intro story
+  hands over to the demo, Firefox builds its 151 prebuilt shaders on the page's thread with the game waiting (Firefox's
+  boot wait and the first sound, a later section's wait), and there it fell inside the hidden 30 s. On a stand-in for a
+  busy host (10 spinner threads on 12 cores, another application's browser holding 64-92% of the GPU) the wait took
+  10.8-11.2 s and ran 190,624-240,000 frames short in each 5 s of it, the tab visible (one play) or hidden (two).
+  Nor is it Firefox's priority: a poller of every Firefox thread's base priority (Windows' `ProcessThread`) found the
+  page's process at normal and its main thread at 8 through every hide, its sound heard (`media.volume_scale` 0.0001,
+  -80 dB) or not (0, `play_page.mjs`'s), so a muted play measures what a player's does, unlike Chrome's
+  `--mute-audio`. Mario Kart 64's page, hidden in a race on the same stand-in, lost nothing while hidden and its
+  page's thread answered all through. Paper Mario's page there stopped in 3 of 4 hidden plays at that hand-over to the
+  demo, a corrupt heap in the game (filed); visible, in Chrome, and with Firefox's sound never started
+  (`media.cubeb.force_null_context`, under which the page's AudioContext stays suspended) it came through.
 - Chrome (`--chrome-flag --disable-audio-output`) lost 784 frames (16 ms) of the music 0.27 s after the tab was hidden
   in one play of two, none in the other, and the page's thread answered all through, so it isn't Chrome's priority
   drop above. Where the present thread is waiting for a present in flight as the tab goes hidden, plume learns the page

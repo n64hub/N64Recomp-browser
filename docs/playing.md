@@ -30,10 +30,11 @@ options; `docs/findings.md` has what was measured this way.
 ## Plans
 
 - A game's `tools/play_plan.json` (DKR-R's, Snap's and Rush 2's in `web/`) is its regular play, 2-3 minutes with
-  every timeout counted, and every play of the game is by it unless a card needs more. Its
-  `play_plan_extended.json` beside it starts the same and goes on to two or three more levels in 5 minutes or less,
-  played only when a change needs a longer play (one to a level or screen only it reaches). The shaders an extended play
-  misses go into the game's list, in the same work. Each plan's header says what it plays.
+  every timeout counted, and every play of the game is by it unless a card needs more. A change that needs a longer
+  play (one to a level or screen only it reaches) is played by the game's `play_plan_extended.json` beside it, which
+  the card writes if the game has none: it starts the same and goes on to two or three more levels in 5 minutes or
+  less. The shaders an extended play misses go into the game's list, in the same work. Each plan's header says what it
+  plays.
 - A plan reaches a level as a player does (the menus where quick, the survey's warp or stage start where not; its
   header says which) and plays a minute or more in its levels, the whole run 2-5 minutes (Which browser, how long). A
   walk sways out and back by as much each way about a spot it was played to and looked at: a blind walk in one
