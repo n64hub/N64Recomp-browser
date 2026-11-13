@@ -37,7 +37,7 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 2 fails, 8a fails | W2, W5 fails, W6, W7 |
+| San Francisco Rush 2049 | 8a fails | W2, W5 fails, W6, W7 |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
 | F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
@@ -76,8 +76,7 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7, W9 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: Rush 2049's waving start-line banners break into shards on about one frame in six with Frame
-Interpolation on (2, filed); Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way
+What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way
 to play them (filed); F-Zero X's, the Mario Parties' and Turok 2's READMEs don't link their pages (8c); Turok 2's regular
 plan, played on a fresh profile, misses shaders its list lacks (W3);
 Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
@@ -138,7 +137,11 @@ What it looks for:
 - Interpolation: on the frame a level section, room or the world's origin changes, what is drawn snaps rather than
   blending between the two (Dinosaur Planet's, Perfect Dark's and GoldenEye's sections); characters' model parts carry
   ids of their own, or RT64 pairs one character's parts with a look-alike's (Mario Party's, Rayman 2's, Goin'
-  Quackers'); 2D (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
+  Quackers'); a keyframed animation drawn without ids (flags, cloth, water) holds together in the frames drawn between
+  the game's: the rt64 fork's automatic vertex interpolation pairs two frames' vertices by their order, so a game that
+  plays one by switching meshes whose vertices aren't in the same order needs those draws in a group with an id
+  (Rush 2049's start-line flags broke into shards about one drawn frame in six, its src/node_interpolation.cpp); 2D
+  (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
 - Letterboxes: black bars or a black row where the picture should reach the window, at odd window heights too, and
   the picture's last row and column filled at any window size (Turok 3's cutscene bars stopped a column short at
   1280x720, RT64's anchoring, docs/forks.md; Dinosaur Planet's a row short, with a grey strip of an old frame under
