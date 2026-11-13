@@ -237,10 +237,9 @@ release of its own for it:
   finished by whoever finds it.
 
 Only a change the desktop build doesn't run (docs, a play plan, the page's shader list, `plays.jsonl`) adds no line and
-waits for the next release. A fix for an issue a player filed is answered naming the release that carries it, once
-that is out, by the work that fixed it. Quiver has no way to reply by its API, so for a Quiver review that work writes
-the answer and asks a person to post it on Quiver's site. A game fork has no desktop release of its own, so its
-page's publish is its release.
+waits for the next release. A fix for a GitHub issue a player filed is answered naming the release that carries it,
+once that is out, by the work that fixed it. A Quiver review is never answered: reviews are there for other players,
+and its fix lands silently. A game fork has no desktop release of its own, so its page's publish is its release.
 
 ## The games table
 
