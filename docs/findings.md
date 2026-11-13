@@ -843,7 +843,15 @@ uncapped, beside other plays): without it the sound ran short after the boot's f
 frames, and with it in none. Its first second lost 315-816 frames with it and 58-510 without, the ring's 20 ms lows
 the same frame for frame there: below a VI and the burst the game's `get_frames_remaining` reads 0 either way, so it
 makes all it can, and what runs short is how soon its first audio tasks come, 0.035-0.040 s and 0.5-0.9 s into its
-sound (filed). Super Mario 64's page, five interleaved pairs of Start Game and 12 s with the probe (Chrome, an RTX
+sound. Nothing a player hears is in them: the probe's loudest sample in each 20 ms of the page Pages served (Chrome
+155, an RTX 2070, 3840x2000 uncapped, two first visits, Start Game; a host 61-99% busy, others' plays beside it) is 0
+until the logo's sound starts, with a sample of 0.018, and 0.001-0.008 through the rest of the first second, a fade-in
+at -40 to -60 dBFS. The game's sound starts with zeros, so a ring that runs dry there runs dry in that silence and
+only starts the logo's sound later, nothing cut: 0.23 s later in one visit, where the ring stayed at 0 from 0.032 s to
+0.26 s, the host's load holding the game's next frames. The rest, 58 frames at 0.47 s in one visit and 452 at 0.65 s
+in the other, fell where the loudest sample was 0.003-0.005. The desktop build's zeros at 0.017 s and 0.040 s
+(above) are the same silence, which a recording can't tell from a loss, so what the game's first audio tasks wait for
+was left unmeasured. Super Mario 64's page, five interleaved pairs of Start Game and 12 s with the probe (Chrome, an RTX
 2070, 3840x2000 uncapped, a host 15-39% busy): the ring's median 20 ms low after 2 s was 1,848-1,856 frames with it
 and 1,360-1,376 without. Its sound stops again for a reset about 6 s in, the ring draining as the game makes nothing,
 and the drain cut the last of the logo's sound (loudest sample 0.02-0.06) in 4 of 5 plays without it, 8-160 frames,
