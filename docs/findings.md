@@ -298,6 +298,23 @@ Racing's builds were clean, at 725, 781 and 1086 MB. An upload buffer of 16 MB o
 memory on the device thread: with a copy on the calling side too, both would be in the heap at its unmap, and the
 break keeps the peak.
 
+The 64 workloads also kept 64 copies of every framebuffer's RAM, before rt64 1589517. Each RDRAM check stores the
+RAM of every framebuffer RT64 knows into the workload it is in (FramebufferStorage, which a workload reads to load a
+framebuffer from RAM again), and each workload kept its storage at 1.5 times the most it had held. Star Wars: Rogue
+Squadron's page from Pages (main 98b75c5) aborted with `Aborted(OOM)` 0.4 s after its first mission, Ambush at Mos
+Eisley, loaded, 220-234 s into the fork's extended plan, in Chrome and in Firefox, at 3840x2000 and at 1256x645
+alike (its regular plan plays the second mission and never reached it). A walk of dlmalloc's chunks (`heap_probe.js`
+with `?heapwalk`, Chrome uncapped at 3840x2000 on an RTX 2070, a busy host) named it: from 20 s in, 62 chunks of
+7,372,800 bytes, 450 MB beside RDRAM's 512 MB, each pointed at from its own entry of a 64-entry array of 3040-byte
+workloads, that size being 1.5 times eight of the game's 640x480 16-bit framebuffers. The break held at 1369 MB
+through the chapter's crawl, and the mission's load grew five of those to 14.7 MB (sixteen framebuffers) and the
+heap ran out. With a framebuffer's bytes that match its last store shared between the workloads that stored them,
+the same build played the extended plan through the mission to its end in both browsers, no 7 MB chunk in its heap,
+the break at 924 MB through the crawl (from 1369) and 963 MB at most in the mission in Chrome, 955 MB in Firefox,
+with no WebGPU error or exception, and its regular plan's A/B in Chrome read 314 presents a second against Pages'
+316. Diddy Kong Racing's, two pairs, read 310 and 314 against 324 and 317, its Firefox smoke play clean
+(plays.jsonl, notes "the framebuffer storage shared between workloads").
+
 Perfect Dark's mission targets reach 1854x960 where its passes draw 1286x660 (2.1x the pixels) through RT64's own
 code, the desktop build's included. Measured at 1256x645 on rt64-web d19fdcc with every `RenderTarget::resize` logged
 with its caller: the page's regular plan in headless Chrome, and the Windows desktop build in a 1256x645 window on an
