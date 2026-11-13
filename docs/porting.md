@@ -41,8 +41,9 @@ builds it: a game's `rt64_shaders.txt` (its header says what was played and what
   Conker, Wave Race 64, Banjo-Tooie, Pilotwings 64, Mario Kart 64).
 - Chrome builds the whole list behind the launcher and the game from a draw of nothing at setup (rt64 977ddca), and a
   frame that wants 4 or more unbuilt shaders of a section holds the game for those under "Preparing graphics" (rt64
-  950188f). Firefox builds nothing behind the game: it waits for the boot section before the first frame and for a
-  section when the game gets there. A shader the list misses draws with the ubershader in Chrome until it is built
+  950188f). Firefox builds nothing behind the game: it builds the boot section before the game's code first runs, so
+  before its first sound (rt64 3625c38, through N64ModernRuntime's `prepare_for_game`, N64ModernRuntime e9d688a), and
+  waits for a section when the game gets there. A shader the list misses draws with the ubershader in Chrome until it is built
   behind the game, while Firefox builds it before the next frame, the game waiting (0.2-0.3 s a shader, rt64
   b52d78f), and the page remembers it (`localStorage`) and builds it with its section next visit. `play_page.mjs`
   prints each miss and records them (`shaderMisses`), so a long play on a fresh profile counts what a list lacks
