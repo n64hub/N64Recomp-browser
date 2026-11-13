@@ -77,8 +77,8 @@ items by almost no game when the record began.
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
 What the fails are: Smash's magnifying bubble, which shows a fighter past the picture's edge, sits at the 4:3 picture's
-edge in a wider window (2, filed); Paper Mario's file select shows white beside its stage in widescreen, and its opening
-cutscene at Mario's house flickers between two pictures on the desktop (2, both filed); Super Mario 64's 4c has been
+edge in a wider window (2, filed); Paper Mario's opening cutscene at Mario's house flickers between two pictures on the
+desktop (2, filed); Super Mario 64's 4c has been
 played with the keyboard only, its pads waiting for a way to play them (filed); F-Zero X's, the Mario Parties' and
 Turok 2's READMEs don't link their pages (8c); Turok 2's regular plan, played on a fresh profile, misses
 shaders its list lacks (W3); Dinosaur Planet's page still loses a render quantum or two (up to 8 ms) in its sound's
@@ -139,7 +139,11 @@ What it looks for:
   second time, at 16:9, as Turok 2 does); an off-screen marker (a bubble or an arrow for a character past the edge)
   placed at the 4:3 picture's edge; full-screen overlays, tints, wipes and fades cut at the 4:3 picture's
   scissor rather than reaching the window's edges (`RT64_SCISSOR_INSIDE_FRAMEBUFFER`, docs/forks.md); rooms seen
-  through doors and portals clipped or drawn on walls.
+  through doors and portals clipped or drawn on walls; beside a menu's or title's 4:3 picture, a picture made for the
+  4:3 frame repeated across the window, or sides never cleared that keep an old frame (Paper Mario's title and file
+  select showed copies of a framed painting with white between them, and its black beside a 4:3 frame was never drawn:
+  RT64 drops an extended fill whose right side, before it is moved from its origin, is left of its left side, its
+  patches/widescreen.c).
 - Missing draws: text, glyphs, the map's lines or a menu screen that comes up empty.
 
 ### 3. Every controller its own port
