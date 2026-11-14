@@ -38,8 +38,9 @@
 #                             whose fields later steps give as <name>+<offset> (survey+0x28) wherever an address goes,
 #                             as [<address>]+<offset> is a field of the struct the word at address points to
 #                             The plan's later times move on by the wait; not found by timeout, the run fails there.
-#                             With a key, it presses it every 1.5 s meanwhile: Enter on a launcher's Start Game, which
-#                             a busy host can take seconds to be ready for, until the game's patches are in RDRAM
+#                             With a key, it presses it every 1.5 s meanwhile. A launcher takes Enter for the option
+#                             under the pointer, wherever that is, and ignores a click posted to its window, so a game
+#                             is best started with -ExeArgs --boot (RecompFrontend's: the stored ROM, no launcher)
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
 # now and then and one of several frames most times. A burst's and a record's captures are scaled by -Scale (1).
