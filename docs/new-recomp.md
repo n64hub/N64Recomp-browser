@@ -40,21 +40,21 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 4c fails, 8a fails | W5 fails, W6 |
-| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
-| Super Mario 64 | | W2, W5 fails, W6, W7 |
-| F-Zero X | | W6 |
-| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Super Smash Bros. | | W2, W5, W6 |
-| Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
-| Rayman 2 | | W2, W5, W6, W7 |
-| Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
-| Dinosaur Planet | | W2, W5 fails, W7 |
-| Turok: Dinosaur Hunter | 5a | W2, W5, W6, W7 |
-| Turok 2: Seeds of Evil | 2 fails, 4c, 5a | W2, W5, W6, W7 |
-| Turok 3: Shadow of Oblivion | 4c, 5a | W2, W5, W6, W7 |
+| San Francisco Rush 2049 | 4c fails, 8a fails | W5 fails, W6's Drive |
+| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W5 fails, W6's Drive, W9 |
+| Super Mario 64 | | W5 fails, W6's Drive |
+| F-Zero X | | W6's Drive |
+| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Super Smash Bros. | | W5 fails, W6's Drive |
+| Paper Mario | 4a, 4c, 6b | W5 fails, W6's Drive |
+| Rayman 2 | | W5 fails, W6's Drive |
+| Donald Duck: Goin' Quackers | 2, 5b | W5 fails, W6's Drive |
+| Dinosaur Planet | | W5 fails |
+| Turok: Dinosaur Hunter | 5a | W5 fails, W6's Drive |
+| Turok 2: Seeds of Evil | 2 fails, 4c, 5a | W5 fails, W6's Drive |
+| Turok 3: Shadow of Oblivion | 4c, 5a | W5 fails, W6's Drive |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
@@ -130,6 +130,18 @@ own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s w
 section's wait, which W5 doesn't count (docs/findings.md, Firefox's boot wait and the first sound). Rush 2049
 still fails W5 after its tab is hidden and shown again, with no section's wait near it: 412 frames short in Chrome
 and 2,339-12,259 in Firefox in its plays on v0.201.0 (filed).
+The own recomps' backcheck of W2, W5, W6 and W7 (`--backcheck`, from Pages built on v0.184.0, Dinosaur Planet's on
+v0.190.0 and the Turoks' on v0.186.0-v0.187.0): every page opened Load ROM at its first click at 2x (W2) and kept its
+saves, the game's own and a file planted in `saves/`, through a reload and the browser closed and opened again (W6,
+whose Drive half, a signed-in player's, is played by hand and left), and the stand-in pad drove every launcher and
+plan, Super Mario 64's rumble reaching it 67 times (W7; the Turoks' plans needed `padKeys` for their own pad layout,
+Left Ctrl, Tab, E and Q their pad's right trigger, North and shoulders). Every page lost sound in Chrome's boot's
+first 10 s, 79-710 ms, counted without asking whether the game was silent there (filed), and in Firefox's 0.3-10 s,
+its boot section's shaders built with the game waiting, which rt64 c5ced59 builds before the game starts; after the
+tab was hidden 30 s, Chrome's pages lost 0-972 ms (Turok 3 972, Super Smash Bros. 193, Mario Party 3 167, Dinosaur
+Planet 94), and Firefox's 1.1-6.4 s on Rush 2049, Mario Party 2 and 3, Donald Duck, Dinosaur Planet and Turok 3, whose
+Pages predate rt64 edd5da8 (the Mario Parties built on v0.201.0 lost none there; W5, which F-Zero X and Mario Party 2
+pass on v0.201.0, above).
 
 ## A new recomp's list
 
@@ -262,7 +274,11 @@ The web port list, every item of it.
 
 ## The web port list
 
-Every game's page, a game fork's or a recomp of the project's own, is checked for each.
+Every game's page, a game fork's or a recomp of the project's own, is checked for each. W2, W5, W6 and W7 are one
+short play a browser: `bash tools/play_pages.sh <rush-2049-recomp checkout> chrome <game> --backcheck`, and again with
+`firefox` (`play_page.mjs --backcheck`, its header), from Pages on a fresh profile, which prints a verdict for each and
+records the run in `plays.jsonl`. Firefox's play is W5's alone; a save reaching the Drive (W6) is a signed-in
+player's, played by hand.
 
 - **W1.** It draws at the display's rate and the canvas's size whatever the recomp's desktop build defaults to
   (Framerate Display, resolution Auto: the README's The recomp's own code): played uncapped in Chrome, it presents
