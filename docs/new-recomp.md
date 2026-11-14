@@ -50,8 +50,8 @@ items by almost no game when the record began.
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
 | Turok: Dinosaur Hunter | 4c, 5a | W2, W5, W6, W7 |
-| Turok 2: Seeds of Evil | 3, 4c, 5a | W2, W5, W6, W7 |
-| Turok 3: Shadow of Oblivion | 3, 4c, 5a | W2, W5, W6, W7 |
+| Turok 2: Seeds of Evil | 4c, 5a | W2, W5, W6, W7 |
+| Turok 3: Shadow of Oblivion | 4c, 5a | W2, W5, W6, W7 |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
@@ -77,7 +77,10 @@ items by almost no game when the record began.
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
 What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way
-to play them (filed); the Mario Parties' READMEs don't link their pages (8c); F-Zero X's page in Firefox loses
+to play them (filed), and the Turoks' the same (a key added on the Controls tab was kept across a quit and a restart
+and walked the player forward); the Turoks' 5a is unplayed: none of the three writes its Controller Pak before a save
+point in a level (`saves/controllerpak_0.mpk` stays absent through their boots, intros and attract demos, and
+turok-engine writes the pak only on a change), and no save point was reached near Turok 1's or Turok 2's start; the Mario Parties' READMEs don't link their pages (8c); F-Zero X's page in Firefox loses
 none in its boot's first 10 s built on v0.201.0 but inside its own silence (0.6-2.5 s from Pages on v0.184.0, as
 section boot's shaders were built with the game waiting), and 2.4 s in the 2.6 s its first race's section takes to
 build 45 shaders, a later section's wait (W5; docs/findings.md, Firefox's boot wait and the first sound);
