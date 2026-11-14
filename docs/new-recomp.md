@@ -41,9 +41,9 @@ items by almost no game when the record began.
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
 | F-Zero X | 4c | W5 fails, W6 |
-| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
+| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
 | Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
-| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
+| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
 | Super Smash Bros. | | W2, W5, W6 |
 | Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
@@ -97,11 +97,13 @@ its tab hidden in its intro loses 16-32 ms of that music in Chrome in some plays
 present in flight (filed), and in Firefox the intro story's own shaders, which RT64 builds a few at a time with the
 game waiting, break up its music for 0.1-0.3 s a dozen times (W5); the Mario Parties' pages in Firefox lose
 none in their boot's first 10 s built on v0.200.0 (66k-108k from Pages on v0.184.0, as section boot's shaders were
-built with the game waiting), but on a busy GPU none drew in the 30 s after its tab was hidden and shown again, nor
-did Mario Party 1's page from Pages: Firefox's GPU process grew to 9-11 GB while hidden, 0.8-1.6M frames short after,
-the page back 25-60 s after the show, the frames interpolated for presents a hidden page skips, which rt64 edd5da8
-no longer draws (W5, its replay filed); with the GPU to themselves, from Pages, they came through, Mario
-Party 2's 59k short there the 1.4 s its section Minigames13's 34 shaders took, a later section's wait (W5, filed);
+built with the game waiting), and built on v0.201.0 each came through its tab hidden 30 s and shown again on a GPU
+94-96% busy, Firefox's GPU process at 2.0-2.3 GB while hidden and the page back within 5 s, none short after but
+Mario Party 3's 132 frames in 1 play of 2, where that play lost thousands before the hide too; on v0.200.0, and from
+Pages on v0.184.0 until their pins move, none drew for 25-60 s after the show on a busy GPU, Firefox's GPU process
+grown to 9-11 GB while hidden by the frames interpolated for presents a hidden page skips, which rt64 edd5da8 no
+longer draws; with the GPU to themselves, from Pages, they came through, but Mario Party 2's 59k short there the
+1.4 s its section Minigames13's 34 shaders took, a later section's wait (W5, filed);
 Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds whatever the window does, none
 more for a drag (6b, filed). In Firefox, where every page's boot section was built
 with its sound started (0.1-11.7 s short in the first 10 s on 37 pages of 38), it is built before the game starts
