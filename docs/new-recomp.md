@@ -50,7 +50,7 @@ items by almost no game when the record began.
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
 | Turok: Dinosaur Hunter | 5a | W2, W5, W6, W7 |
-| Turok 2: Seeds of Evil | 4c fails, 5a | W2, W5, W6, W7 |
+| Turok 2: Seeds of Evil | 2 fails, 4c fails, 5a | W2, W5, W6, W7 |
 | Turok 3: Shadow of Oblivion | 4c fails, 5a | W2, W5, W6, W7 |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
@@ -84,7 +84,8 @@ move up one, since RecompFrontend orders the pads by SDL's instance id, a new on
 Bros., F-Zero X, Perfect Dark, the Mario Parties and Turok 2 and 3 fail it. Where every pad plays port 1 that passes,
 so Super Mario 64 and Turok: Dinosaur Hunter, whose keyboard half was played (a key added on the Controls tab kept
 across a quit and a restart, walking the Turoks' player forward), pass 4c, and Paper Mario's keyboard half is left;
-the Turoks' 5a is unplayed: none of the three writes its Controller Pak before a save
+Turok 2's desktop build drops its map from some of the frames Frame Interpolation adds at Manual 120 while the player
+moves, 5-13 of 75-80 captures, with `RT64_GAME_FRAME_WORKLOADS` on or off and none at Original (filed); the Turoks' 5a is unplayed: none of the three writes its Controller Pak before a save
 point in a level (`saves/controllerpak_0.mpk` stays absent through their boots, intros and attract demos, and
 turok-engine writes the pak only on a change), and no save point was reached near Turok 1's or Turok 2's start; the Mario Parties' READMEs don't link their pages (8c); F-Zero X's page in Firefox loses
 none in its boot's first 10 s built on v0.201.0 but inside its own silence (0.6-2.5 s from Pages on v0.184.0, as
@@ -148,17 +149,21 @@ What it looks for:
 - Flicker: a surface or the HUD blinking frame to frame, z-fighting, a frame of garbage or a stale framebuffer in a
   transition, a frame drawn without its HUD, text or characters, or with only the part of its world drawn first. A
   game that draws a frame in several RSP tasks needs `RT64_GAME_FRAME_WORKLOADS` on its desktop build too, as its page
-  has it, or RT64 interpolates each task as a frame of its own (docs/forks.md; the Mario Parties' and Paper Mario's
-  CMakeLists.txt: Paper Mario's opening at Mario's house showed the house's inside without its outer wall, roof and
-  trees in half the frames one host showed).
+  has it, or RT64 interpolates each task as a frame of its own (docs/forks.md; the Mario Parties', Paper Mario's and
+  Turok 1's and 2's CMakeLists.txt: Paper Mario's opening at Mario's house showed the house's inside without its outer
+  wall, roof and trees in half the frames one host showed; Turok 1's and 2's map is a task of its own after the
+  level's). A page opened with `?frame-log` and read by `tools/frame_log.mjs`
+  tells: a frame drawn in several tasks reads as `drawn=2` or more, frame after frame, where the game draws it so. The
+  other own recomps drew each frame in one through their play plans, a frame or two at a screen change aside.
 - Interpolation: on the frame a level section, room or the world's origin changes, what is drawn snaps rather than
   blending between the two (Dinosaur Planet's, Perfect Dark's and GoldenEye's sections); characters' model parts carry
   ids of their own, or RT64 pairs one character's parts with a look-alike's (Mario Party's, Rayman 2's, Goin'
   Quackers'); a keyframed animation drawn without ids (flags, cloth, water) holds together in the frames drawn between
   the game's: the rt64 fork's automatic vertex interpolation pairs two frames' vertices by their order, so a game that
   plays one by switching meshes whose vertices aren't in the same order needs those draws in a group with an id
-  (Rush 2049's start-line flags broke into shards about one drawn frame in six, its src/node_interpolation.cpp); 2D
-  (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
+  (Rush 2049's start-line flags broke into shards about one drawn frame in six, its src/node_interpolation.cpp; no
+  other game's regular plan showed it, docs/findings.md, Keyframed meshes under the automatic vertex interpolation);
+  2D (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
 - Letterboxes: black bars or a black row where the picture should reach the window, at odd window heights too, and
   the picture's last row and column filled at any window size (Turok 3's cutscene bars stopped a column short at
   1280x720, RT64's anchoring, docs/forks.md; Dinosaur Planet's a row short, with a grey strip of an old frame under

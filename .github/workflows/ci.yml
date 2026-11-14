@@ -2,9 +2,9 @@
 # game, so nothing links into a page and nothing draws: a recomp's own CI and runs do that.
 #
 # A change to nothing but docs (*.md), plays.jsonl, the games' page (site/) and the tools that play, serve and publish
-# pages, which CI never runs, skips every job but changes: they report as skipped, not failed, except on a push to main
-# when what a page is built from has changed since the newest tag (the tag job). A tag builds everything. The changes
-# job also checks that What's new (site/news.html) has an entry for every game in README.md's Games table.
+# pages (the probes a play preloads, tools/*_probe.js, among them), which CI never runs, skips every job but changes:
+# they report as skipped, not failed, except on a push to main when what a page is built from has changed since the
+# newest tag (the tag job). A tag builds everything. The changes job also checks that What's new (site/news.html) has an entry for every game in README.md's Games table.
 # A green push to main that changes what a page is built from is tagged as the next release (the tag job). The compiles go through ccache (the
 # emscripten job, frontend/build_speed.cmake), so a PR whose forks, patches/ and sources are main's mostly hits; the
 # cache a PR saves is its own, main's is every PR's.
@@ -68,7 +68,7 @@ jobs:
           fi
           echo "$files"
           code=false
-          if grep -qvE '\.md$|^tools/(page_driver\.mjs|play_page\.mjs|play_phone\.mjs|phone_turn\.mjs|record_shaders\.mjs|publish_(pages?|site)\.sh|serve_site\.mjs|wasm_offset\.mjs)$|^plays\.jsonl$|^site/' <<< "$files"
+          if grep -qvE '\.md$|^tools/(page_driver\.mjs|play_page\.mjs|play_phone\.mjs|phone_turn\.mjs|record_shaders\.mjs|publish_(pages?|site)\.sh|serve_site\.mjs|wasm_offset\.mjs|[a-z_]+_probe\.js)$|^plays\.jsonl$|^site/' <<< "$files"
           then code=true
           elif [[ "$GITHUB_EVENT_NAME" == push ]]; then
             # The same newest tag as the tag job's, and a tag that can't be found or fetched builds everything.
