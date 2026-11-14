@@ -981,4 +981,9 @@ RecompFrontend 9fc3d68 RECOMPINPUT_RECONNECT_PLAYERS: a controller plugged in ag
                        reconnect_player_controller): a player kept the SDL controller that went and read nothing until
                        players were assigned again. Rush 2049's runtime patch RecompFrontend-0004 did the same; this
                        sits apart from its lines, so it still applies over this until Rush 2049 drops it
+RecompFrontend 74eb087 a pad plugged in again rumbles itself: a joystick found its gamepad as the k-th of its name in
+                       the browser's order for the k-th joystick of the name by instance id, so one plugged in again
+                       at a lower place than an older pad of its model found that pad's gamepad, and both players'
+                       rumble went to one pad; the rank is now taken among the gamepads and joysticks no connected
+                       joystick has matched yet. Web only
 ```
