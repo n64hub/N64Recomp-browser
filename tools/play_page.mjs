@@ -60,10 +60,11 @@
 // --backcheck plays the web port list's W2, W5, W6 and W7 (docs/new-recomp.md) in one visit and prints a verdict line
 // for each ("backcheck W5 pass: ..."), recorded as the run's backcheck. In Chrome: --scale 2, --pad, --fault
 // hidden,reload,reopen and --chrome-flag --disable-audio-output unless given: W2 is Load ROM opening the picker at its
-// first click at 2 device pixels a CSS pixel (not played where the plan's Load ROM is a key); W5 no sound frame short in the boot's first 10 s of sound (to the sample)
-// nor in the 30 s after the hidden tab; W6 the saves kept through the reload and the reopen; W7 the pad driving the
-// start steps and the play to the plan's end. In Firefox: the plan's play replaced by 20 s (--play 20) and --fault
-// hidden, for W5. Play it from Pages on a fresh profile; its note starts "backcheck".
+// first click at 2 device pixels a CSS pixel (not played where the plan's Load ROM is a key); W5 no sound frame short in
+// the boot's first 10 s of sound (tools/audio_probe.js, preloaded in both browsers, counts them to the quantum and
+// leaves out as the game's own silence one with nothing played in the 20 ms before it, the run's bootShortSilent) nor in
+// the 30 s after the hidden tab; W6 the saves kept through the reload and the reopen; W7 the pad driving the start steps
+// and the play to the plan's end. In Firefox: the plan's play replaced by 20 s (--play 20) and --fault hidden, for W5. Play it from Pages on a fresh profile; its note starts "backcheck".
 // --firefox-pref (Firefox only, repeated for more) sets one of Firefox's prefs in the profile before it starts, its value
 // JSON where it parses (true, 0) and a string otherwise: a compositor path to try on a laptop's screen
 // (gfx.webrender.dcomp-texture-overlay-win, docs/findings.md, A laptop, measured). A run records its prefs and is
@@ -327,9 +328,18 @@ const romRefused = new RegExp(String.raw`\[launch\] rom refused: ` +
 // The console's first lines from a --fault on, which say whether the page told the player.
 let faultPhase = null;
 const faultLines = [];
+// --backcheck's audio_probe.js lines for the boot's short quanta, its first 10 s of sound on the sound's own clock, until
+// the first fault (a reload starts that clock again): each one's frames short and the loudest sample before it.
+const bootQuanta = [];
+let audioProbed = false, faulted = false;
 const onLine = (text) => {
   if (/^rt64 shader: /.test(text)) return;
   log(text);
+  if (/^audio(ring|peak) /.test(text)) audioProbed = true;
+  const quantum = /^audioshort ([\d.]+) short (\d+) of \d+ ring \d+ peak ([\d.]+)/.exec(text);
+  if (quantum && Number(quantum[1]) <= 10 && !faulted) {
+    bootQuanta.push({ at: Number(quantum[1]), short: Number(quantum[2]), peak: Number(quantum[3]) });
+  }
   const wait = /RT64: (\d+) (prebuilt shaders|shaders the list missed) built in ([\d.]+) s, the game waiting/.exec(text);
   if (wait) shaderWaits.push({ at: Math.round(seconds()), shaders: Number(wait[1]), seconds: Number(wait[3]), ...(wait[2] === 'prebuilt shaders' ? {} : { missed: true }) });
   const list = /^RT64: (\d+) prebuilt shaders, /.exec(text);
@@ -404,9 +414,10 @@ const ownPreload = `() => {
     };
   }
 }`;
-const preload = preloadFile || pad ? `() => {
+const preload = preloadFile || pad || backcheck ? `() => {
 (${ownPreload})();
 ${pad ? fs.readFileSync(new URL('./gamepad_probe.js', import.meta.url), 'utf8') : ''}
+${backcheck ? fs.readFileSync(new URL('./audio_probe.js', import.meta.url), 'utf8') : ''}
 ${preloadFile ? fs.readFileSync(preloadFile, 'utf8') : ''}
 }` : ownPreload;
 
@@ -892,6 +903,7 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
   log(`fault ${name}`);
   faultLines.length = 0;
   faultPhase = `${i} during`;
+  faulted = true;
   try {
     if (name === 'device') {
       faultResult.destroyed = await page.evaluate('(window.__devices.forEach((d) => d.destroy()), window.__devices.length)');
@@ -997,6 +1009,10 @@ const padSummary = pad ? { presses: padUse.presses, launcher: padUse.launcher, l
 if (padSummary) console.log(`pad: ${padSummary.presses} presses on the pad, ${padSummary.launcher} of them the launcher's; ` +
   `${padSummary.keyboard.length ? 'keys left on the keyboard ' + padSummary.keyboard.join(' ') : 'no key left on the keyboard'}; ` +
   `rumble ${padSummary.rumble ?? '-'}, ${padSummary.rumbleCalls ?? '-'} calls`);
+// The boot's frames short from audio_probe.js's lines where it ran (they are exact to the quantum on the sound's own
+// clock, the samples only to the second), and those of them inside the game's own silence.
+if (audioProbed && soundFrom !== null) bootShort = bootQuanta.reduce((t, q) => t + q.short, 0);
+const bootSilent = audioProbed ? bootQuanta.filter((q) => q.peak === 0).reduce((t, q) => t + q.short, 0) : 0;
 // --backcheck's verdicts: "pass", "fails" or "not played", and why.
 const verdicts = {};
 if (backcheck) {
@@ -1010,11 +1026,17 @@ if (backcheck) {
       : ['fails', why(`Load ROM took ${romPresses} presses to open the picker at ${scale}x`)];
   }
   const hidden = fault('hidden');
-  // W5 is the sound's: whether the page came through the hidden tab otherwise is the fault's own line.
+  // W5 is the sound's: whether the page came through the hidden tab otherwise is the fault's own line. A boot's short
+  // quantum with nothing played in the 20 ms before it (audio_probe.js's peak 0) fell inside the game's own silence (its
+  // silent logos, a reset), which nobody hears, so it is no sound lost; without the probe's lines (a document that isn't
+  // cross-origin isolated plays no sound worklet of its own) every frame short counts.
+  const lost = bootShort - bootSilent;
+  const silence = bootSilent ? `, ${bootSilent}${ms(bootSilent)} more inside the game's own silence` : '';
   verdicts.W5 = soundFrom === null ? ['fails', why('no sound played')]
-    : !hidden ? ['not played', why(`the hidden tab never came; ${bootShort} frames short in the boot`)]
-    : bootShort === 0 && hidden.audioShortAfter === 0 ? ['pass', "no sound frame short in the boot's first 10 s nor after the hidden tab"]
-    : ['fails', `${bootShort} frames short in the boot's first 10 s${ms(bootShort)}, ${hidden.audioShortAfter} in the 30 s after the hidden tab` +
+    : !hidden ? ['not played', why(`the hidden tab never came; ${lost} frames short in the boot${silence}`)]
+    : lost === 0 && hidden.audioShortAfter === 0 ? ['pass', `no sound frame short in the boot's first 10 s${bootSilent ?
+      ` but ${bootSilent}${ms(bootSilent)} inside the game's own silence` : ''} nor after the hidden tab`]
+    : ['fails', `${lost} frames short in the boot's first 10 s${ms(lost)}${silence}, ${hidden.audioShortAfter} in the 30 s after the hidden tab` +
       `${ms(hidden.audioShortAfter)}`];
   if (browser === 'chrome') {
     const kept = ['reload', 'reopen'].map(fault);
@@ -1075,7 +1097,7 @@ const summary = {
     perSecond: Math.round(100 * (memory.at(-1).gpuProcessMB - memory[0].gpuProcessMB) / (memory.at(-1).at - memory[0].at)) / 100 } : null,
   gpuProcessMemory: memoryBefore && memoryAfter ? { before: memoryBefore, after: memoryAfter } : null,
   faults: faultResults.length ? faultResults : null,
-  bootShort, pad: padSummary, backcheck: backcheck ? verdicts : null,
+  bootShort, bootShortSilent: audioProbed ? bootSilent : null, pad: padSummary, backcheck: backcheck ? verdicts : null,
 };
 const r = (x, digits = 1) => x?.toFixed(digits) ?? '-';
 console.log(`summary: ${browser} ${summary.size}${uncapped ? ' uncapped' : ''}, ${during.length} samples of ${interval} s played`);
@@ -1126,7 +1148,7 @@ if (recordFile) {
     ...(summary.gpuProcessMemory ? { gpuProcessMemory: summary.gpuProcessMemory } : {}),
     host: { cores: os.cpus().length, busy: host ? Math.round(100 * (1 - (hostAfter.idle - hostBefore.idle) / host)) : null },
     ...(faultResults.length ? { faults: faultResults } : {}),
-    ...(bootShort !== null ? { bootShort } : {}), ...(padSummary ? { pad: padSummary } : {}), ...(backcheck ? { backcheck: verdicts } : {}),
+    ...(bootShort !== null ? { bootShort, ...(audioProbed ? { bootShortSilent: bootSilent } : {}) } : {}), ...(padSummary ? { pad: padSummary } : {}), ...(backcheck ? { backcheck: verdicts } : {}),
     failed: failure,
   };
   if (!note) regressions = compare(run, fs.existsSync(recordFile) ? fs.readFileSync(recordFile, 'utf8') : '');
