@@ -52,6 +52,11 @@ A request that a rule here turns away is asked about, never answered no and clos
 mean to do it anyway, and let whoever asked decide. The rule may be what is wrong, and if so it changes in the same
 work.
 
+A rule, check or tool that blocks work for a reason the work didn't cause, or that reads as wrong where it is applied,
+is challenged and fixed or changed in the work it blocks, never routed around and not handed on by default: rules are
+written for what was known then, and they change as more is learned (CI blaming every PR for a red that another repo's
+main made is why `tools/ci_red_on_base.sh` exists).
+
 Priority is by what it breaks: high for a crash, med for an issue that affects every game, low for one game's. Work
 that comes from a player (a GitHub issue, a comment on one, a pull request from outside, a Quiver Launcher review that
 reports a problem) is med, or high when it is a crash or stops someone playing, and never low, whichever game it is.
@@ -137,7 +142,8 @@ docs line) is made in the same work like any other.
   runtime's own interfaces, as every recomp does.
 - CI (`.github/workflows/ci.yml`, each job's comment says what it checks) builds every library of a page with Emscripten
   from the forks and checks the shaders, and that `patches/` match the forks and apply to every recomp and game fork
-  it is built over. It builds no page (that needs a game), so anything that changes what a page runs is built and
+  it is built over (red only where the change made it red: a game's check already red over the PR's base warns,
+  `tools/ci_red_on_base.sh`). It builds no page (that needs a game), so anything that changes what a page runs is built and
   played before it lands.
   A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play, serve, read and publish pages runs only the
   `changes` job, which also fails while a game in the README's Games table has no entry in `site/news.html`.

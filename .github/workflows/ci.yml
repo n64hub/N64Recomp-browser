@@ -2,12 +2,16 @@
 # game, so nothing links into a page and nothing draws: a recomp's own CI and runs do that.
 #
 # A change to nothing but docs (*.md), plays.jsonl, the games' page (site/) and the tools that play, serve and publish
-# pages, which CI never runs, skips every job but changes: they report as skipped, not failed, except on a push to main
-# when what a page is built from has changed since the newest tag (the tag job). A tag builds everything. The changes
-# job also checks that What's new (site/news.html) has an entry for every game in README.md's Games table.
-# A green push to main that changes what a page is built from is tagged as the next release (the tag job). The compiles go through ccache (the
-# emscripten job, frontend/build_speed.cmake), so a PR whose forks, patches/ and sources are main's mostly hits; the
-# cache a PR saves is its own, main's is every PR's.
+# pages (the probes a play preloads, tools/*_probe.js, among them), which CI never runs, skips every job but changes:
+# they report as skipped, not failed, except on a push to main when what a page is built from has changed since the
+# newest tag (the tag job). A tag builds everything. The changes job also checks that What's new (site/news.html) has
+# an entry for every game in README.md's Games table. A game's patch job (dkr-patches to wwf-patches) checks this repo
+# against another repo's main, which moves by itself: a check of one that fails runs again over the change's base
+# (tools/ci_red_on_base.sh), and the job is red only where the change made it red. Red over the base too, it passes
+# with a warning: main is already red there, and fixing it is that job's own work, where its comment says.
+# A green push to main that changes what a page is built from is tagged as the next release (the tag job). The
+# compiles go through ccache (the emscripten job, frontend/build_speed.cmake), so a PR whose forks, patches/ and
+# sources are main's mostly hits; the cache a PR saves is its own, main's is every PR's.
 name: CI
 
 on:
@@ -68,7 +72,7 @@ jobs:
           fi
           echo "$files"
           code=false
-          if grep -qvE '\.md$|^tools/(page_driver\.mjs|play_page\.mjs|play_phone\.mjs|phone_turn\.mjs|record_shaders\.mjs|publish_(pages?|site)\.sh|serve_site\.mjs|wasm_offset\.mjs)$|^plays\.jsonl$|^site/' <<< "$files"
+          if grep -qvE '\.md$|^tools/(page_driver\.mjs|play_page\.mjs|play_phone\.mjs|phone_turn\.mjs|record_shaders\.mjs|publish_(pages?|site)\.sh|serve_site\.mjs|wasm_offset\.mjs|[a-z_]+_probe\.js)$|^plays\.jsonl$|^site/' <<< "$files"
           then code=true
           elif [[ "$GITHUB_EVENT_NAME" == push ]]; then
             # The same newest tag as the tag job's, and a tag that can't be found or fetched builds everything.
@@ -302,12 +306,20 @@ jobs:
           actions-cache-folder: emsdk-cache
       - uses: ./.github/actions/spirv-opt
       - name: They apply over DKR-R-web's
+        id: check1
+        continue-on-error: true
         run: |
           git clone -q --depth 1 https://github.com/n64hub/DKR-R-web "$RUNNER_TEMP/dkr"
           git -C "$RUNNER_TEMP/dkr" log -1 --format='DKR-R-web %h %s'
           rmdir "$RUNNER_TEMP/dkr/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$RUNNER_TEMP/dkr/lib/N64Recomp-browser"
           PATH="$HOME/.cargo/bin:$PATH" bash "$RUNNER_TEMP/dkr/scripts/build_web.sh" --patches
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches over Conker's web fork's own (CBFD-Recompiled-web, its main): its build.sh applies its recomp/*.patch to
   # N64Recomp, N64ModernRuntime, rt64 and RecompFrontend first, then its tools/web_patch.sh puts patches/apply.cmake's
@@ -324,6 +336,8 @@ jobs:
         with:
           persist-credentials: false
       - name: They apply over CBFD-Recompiled-web's
+        id: check1
+        continue-on-error: true
         run: |
           cbfd="$RUNNER_TEMP/cbfd"
           git clone -q --depth 1 https://github.com/n64hub/CBFD-Recompiled-web "$cbfd"
@@ -337,6 +351,12 @@ jobs:
           rmdir "$cbfd/tools/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$cbfd/tools/N64Recomp-browser"
           sh "$cbfd/tools/web_patch.sh"
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches under Jet Force Gemini's web fork's own (JetForceGemini-Recomp-web, its main): its tools/build_web.sh
   # puts patches/apply.cmake's on upstream's commits, then its patches/web/*.patch, the base project's rt64 and runtime
@@ -354,6 +374,8 @@ jobs:
         with:
           persist-credentials: false
       - name: JetForceGemini-Recomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           jfg="$RUNNER_TEMP/jfg"
           git clone -q --depth 1 https://github.com/n64hub/JetForceGemini-Recomp-web "$jfg"
@@ -380,6 +402,8 @@ jobs:
       # otherwise compiled only against upstream's: each of its files that includes ImGui is compiled here, as a page
       # compiles it (syntax only: no shaders are built), against the port's patched rt64 and its ImGui.
       - name: rt64's ImGui code against the port's ImGui
+        id: check2
+        continue-on-error: true
         run: |
           rt64="$RUNNER_TEMP/jfg/web-build/lib/rt64"
           flags=(-std=c++17 -pthread -fwasm-exceptions -msimd128 -sUSE_SDL=2 --use-port=emdawnwebgpu -fsyntax-only
@@ -398,6 +422,12 @@ jobs:
             echo "$file"
             em++ "${flags[@]}" "$file"
           done
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches under Star Wars Episode I: Racer's web fork's own (racer-web, its main), as jfg-patches does for Jet
   # Force Gemini's: its tools/build_web.sh puts patches/apply.cmake's on upstream's commits, then its patches/web/*.patch,
@@ -414,6 +444,8 @@ jobs:
         with:
           persist-credentials: false
       - name: racer-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           racer="$RUNNER_TEMP/racer"
           git clone -q --depth 1 https://github.com/n64hub/racer-web "$racer"
@@ -421,6 +453,12 @@ jobs:
           rmdir "$racer/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$racer/lib/N64Recomp-browser"
           bash "$racer/tools/build_web.sh" --patches
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches under Pokémon Snap's web fork's own (Snap64Recomp-web, its main), on its port's own rt64 and
   # N64ModernRuntime (their snap64 branches): its tools/build_web.sh leaves out the files where the port's lines and the
@@ -439,6 +477,8 @@ jobs:
         with:
           persist-credentials: false
       - name: Snap64Recomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           snap="$RUNNER_TEMP/snap"
           git clone -q --depth 1 https://github.com/n64hub/Snap64Recomp-web "$snap"
@@ -473,6 +513,8 @@ jobs:
       # Red here and not above means a hunk merged in where it applies but doesn't compile (on v0.173.0 one left a brace
       # open in rt64_game_frame.cpp), merged into patches/web by hand like one that doesn't apply.
       - name: Snap64Recomp-web's merged files compile
+        id: check2
+        continue-on-error: true
         run: |
           snap="$RUNNER_TEMP/snap" stubs="$RUNNER_TEMP/snap-stubs"
           rt64="$snap/lib/rt64" runtime="$snap/lib/N64ModernRuntime"
@@ -513,6 +555,12 @@ jobs:
             em++ "${common[@]}" "${flags[@]}" "$checkout/$file" || status=1
           done < <(awk '!/^#/ && $2 ~ /\.cpp$/' "$snap/patches/web/files.txt")
           exit $status
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches under Rush 2's web fork's own (rush2recompiled-web, its main), as Snap64Recomp-web's: its
   # tools/build_web.sh applies Rush 2's lib/patches to rt64, N64ModernRuntime and RecompFrontend first, then these but for
@@ -528,6 +576,8 @@ jobs:
         with:
           persist-credentials: false
       - name: rush2recompiled-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           rush2="$RUNNER_TEMP/rush2"
           git clone -q --depth 1 https://github.com/n64hub/rush2recompiled-web "$rush2"
@@ -539,6 +589,12 @@ jobs:
           rmdir "$rush2/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$rush2/lib/N64Recomp-browser"
           bash "$rush2/tools/build_web.sh" --patches
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches under 1080° Snowboarding's web fork's own (1080-Snowboarding-recomp-web, its main), as
   # Snap64Recomp-web's: its rt64, hlslpp, N64Recomp and RecompFrontend are newer than the patches' upstream commits and
@@ -556,6 +612,8 @@ jobs:
         with:
           persist-credentials: false
       - name: 1080-Snowboarding-recomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           game="$RUNNER_TEMP/1080"
           git clone -q --depth 1 https://github.com/n64hub/1080-Snowboarding-recomp-web "$game"
@@ -574,6 +632,8 @@ jobs:
       # Each recompinput/src/*.cpp of patches/RecompFrontend.patch, as the step above left it, compiled as a page compiles
       # it (recompinput/CMakeLists.txt's includes and options with Emscripten), syntax only.
       - name: 1080-Snowboarding-recomp-web's recompinput compiles
+        id: check2
+        continue-on-error: true
         run: |
           frontend="$RUNNER_TEMP/1080/lib/RecompFrontend" runtime="$RUNNER_TEMP/1080/lib/N64ModernRuntime"
           git -C "$frontend" -c protocol.version=2 submodule update -q --init --depth 1 lib/GamepadMotionHelpers \
@@ -594,6 +654,12 @@ jobs:
             em++ "${flags[@]}" "$frontend/$file" || status=1
           done
           exit $status
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches under Star Wars: Rogue Squadron's web fork's own (RogueSquadron64Recomp-web, its main), as
   # Snap64Recomp-web's: its rt64, plume and N64ModernRuntime (with its N64Recomp in the same repository) are the game's
@@ -610,6 +676,8 @@ jobs:
         with:
           persist-credentials: false
       - name: RogueSquadron64Recomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           game="$RUNNER_TEMP/rogue"
           git clone -q --depth 1 https://github.com/n64hub/RogueSquadron64Recomp-web "$game"
@@ -639,6 +707,8 @@ jobs:
       # Each rt64 and N64ModernRuntime C++ file of web/patches/files.txt, as the step above left it, compiled as
       # snap-patches compiles Snap64Recomp-web's.
       - name: RogueSquadron64Recomp-web's merged files compile
+        id: check2
+        continue-on-error: true
         run: |
           game="$RUNNER_TEMP/rogue" stubs="$RUNNER_TEMP/rogue-stubs"
           rt64="$game/lib/rt64" runtime="$game/lib/N64ModernRuntime"
@@ -679,6 +749,12 @@ jobs:
             em++ "${common[@]}" "${flags[@]}" "$checkout/$file" || status=1
           done < <(awk '!/^#/ && ($1 == "rt64" || $1 == "N64ModernRuntime") && $2 ~ /\.cpp$/' "$game/web/patches/files.txt")
           exit $status
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches over Tony Hawk's Pro Skater 2's web fork's own (THPS2-64Recomp-web, its main): its shared host
   # (decomp/common, THPS64Host-web) clones rt64 and N64ModernRuntime at its own pins with its own patches
@@ -696,6 +772,8 @@ jobs:
         with:
           persist-credentials: false
       - name: THPS2-64Recomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           game="$RUNNER_TEMP/thps2"
           git clone -q --depth 1 https://github.com/n64hub/THPS2-64Recomp-web "$game"
@@ -704,6 +782,12 @@ jobs:
           rmdir "$game/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
           bash "$game/tools/build_web.sh" --patches
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches over Space Station Silicon Valley's web fork's own (SSSV_Recomp-web, its main), as 1080° Snowboarding's:
   # its dependency-patches carry the game's own changes to rt64 (an older one, with S2DEX), plume, N64ModernRuntime,
@@ -719,6 +803,8 @@ jobs:
         with:
           persist-credentials: false
       - name: SSSV_Recomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           game="$RUNNER_TEMP/sssv"
           git clone -q --depth 1 https://github.com/n64hub/SSSV_Recomp-web "$game"
@@ -731,6 +817,12 @@ jobs:
           rmdir "$game/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
           bash "$game/tools/build_web.sh" --patches
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches over Beetle Adventure Racing's web fork's own (BeetleRecomp-web, its main): its tools/build_web.sh takes
   # its rt64 to the upstream commit these are made on, applies the game's own patches to rt64, N64ModernRuntime and
@@ -749,6 +841,8 @@ jobs:
         with:
           persist-credentials: false
       - name: BeetleRecomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           game="$RUNNER_TEMP/beetle"
           git clone -q --depth 1 https://github.com/n64hub/BeetleRecomp-web "$game"
@@ -767,6 +861,8 @@ jobs:
       # Each recompinput/src/*.cpp of patches/RecompFrontend.patch, as the step above left it, compiled as a page compiles
       # it, syntax only.
       - name: BeetleRecomp-web's recompinput compiles
+        id: check2
+        continue-on-error: true
         run: |
           frontend="$RUNNER_TEMP/beetle/lib/RecompFrontend" runtime="$RUNNER_TEMP/beetle/lib/N64ModernRuntime"
           git -C "$runtime" -c protocol.version=2 submodule update -q --init --depth 1 thirdparty/xxHash
@@ -785,6 +881,12 @@ jobs:
             em++ "${flags[@]}" "$frontend/$file" || status=1
           done
           exit $status
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches over Turok: Rage Wars' web fork's own (PaxDino-web, its main): its tools/build_web.sh applies the game's
   # own lib-patches/ to rt64, N64ModernRuntime, N64Recomp and RecompFrontend, then these on top, but for the files where
@@ -802,6 +904,8 @@ jobs:
         with:
           persist-credentials: false
       - name: PaxDino-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           game="$RUNNER_TEMP/paxdino"
           git clone -q --depth 1 https://github.com/n64hub/PaxDino-web "$game"
@@ -813,6 +917,12 @@ jobs:
           rmdir "$game/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$game/lib/N64Recomp-browser"
           bash "$game/tools/build_web.sh" --patches
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches over Banjo-Tooie's web fork's own (BanjoTooieRecompiled-web, its main): its tools/build_web.sh applies
   # its patches/*.patch to rt64, N64ModernRuntime and N64Recomp first (tools/setup_deps.py), then these on top but for
@@ -830,6 +940,8 @@ jobs:
         with:
           persist-credentials: false
       - name: BanjoTooieRecompiled-web's and these apply
+        id: check1
+        continue-on-error: true
         run: |
           bt="$RUNNER_TEMP/bt"
           git clone -q --depth 1 https://github.com/n64hub/BanjoTooieRecompiled-web "$bt"
@@ -841,6 +953,12 @@ jobs:
           rmdir "$bt/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$bt/lib/N64Recomp-browser"
           bash "$bt/tools/build_web.sh" --patches
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches under Wave Race 64's web fork's own (wave-race-64-recomp-web, its main): its tools/web_patch.sh applies
   # these to its rt64, N64ModernRuntime and RecompFrontend first, then its own tools/patch_*.py scripts, the last of which
@@ -858,6 +976,8 @@ jobs:
         with:
           persist-credentials: false
       - name: wave-race-64-recomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           wr="$RUNNER_TEMP/wr"
           git clone -q --depth 1 https://github.com/n64hub/wave-race-64-recomp-web "$wr"
@@ -868,6 +988,12 @@ jobs:
           rmdir "$wr/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$wr/lib/N64Recomp-browser"
           bash "$wr/tools/web_patch.sh"
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # Super Mario 64's own changes over the patches (super-mario-64-recomp, its main): its CMakeLists.txt applies its
   # runtime-patches/<project>-<n>-*.patch to its upstream submodules after patches/apply.cmake, and they change files
@@ -884,6 +1010,8 @@ jobs:
         with:
           persist-credentials: false
       - name: super-mario-64-recomp's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           sm64="$RUNNER_TEMP/sm64"
           git clone -q --depth 1 https://github.com/n64hub/super-mario-64-recomp "$sm64"
@@ -897,6 +1025,12 @@ jobs:
             git -C "$sm64/lib/$project" apply --whitespace=nowarn "$patch"
             echo "$(basename "$patch") applies"
           done
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # F-Zero X's own changes over the patches (f-zero-x-recomp, its main), as Super Mario 64's above: its
   # runtime-patches/apply.cmake applies the patches, then its runtime-patches/<project>-<n>-*.patch (RT64 drawing the
@@ -913,6 +1047,8 @@ jobs:
         with:
           persist-credentials: false
       - name: f-zero-x-recomp's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           fzx="$RUNNER_TEMP/fzx"
           git clone -q --depth 1 https://github.com/n64hub/f-zero-x-recomp "$fzx"
@@ -926,6 +1062,12 @@ jobs:
             git -C "$fzx/lib/$project" apply --whitespace=nowarn "$patch"
             echo "$(basename "$patch") applies"
           done
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # Rush 2049's own changes over the patches (rush-2049-recomp, its main): its tools/apply_runtime_patches.sh applies
   # each project's patch here, then its runtime-patches/<project>-<n>-*.patch, and they change lines near the forks'
@@ -943,6 +1085,8 @@ jobs:
         with:
           persist-credentials: false
       - name: rush-2049-recomp's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           rush="$RUNNER_TEMP/rush2049"
           git clone -q --depth 1 https://github.com/n64hub/rush-2049-recomp "$rush"
@@ -956,6 +1100,12 @@ jobs:
           rmdir "$rush/lib/N64Recomp-browser"
           ln -s "$GITHUB_WORKSPACE" "$rush/lib/N64Recomp-browser"
           bash "$rush/tools/apply_runtime_patches.sh"
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # The patches under WWF No Mercy's web fork's own (WWFNoMercyRecomp-web, its main), on its port's own rt64,
   # N64ModernRuntime and RecompFrontend (their wcw branches), as Snap64Recomp-web's: its tools/build_web.sh leaves out
@@ -973,6 +1123,8 @@ jobs:
         with:
           persist-credentials: false
       - name: WWFNoMercyRecomp-web's apply over them
+        id: check1
+        continue-on-error: true
         run: |
           wwf="$RUNNER_TEMP/wwf"
           git clone -q --depth 1 https://github.com/n64hub/WWFNoMercyRecomp-web "$wwf"
@@ -1001,6 +1153,8 @@ jobs:
       # RT64_GAME_FRAME_WORKLOADS, which the port's frame pairing refuses. The generated shader headers are stand-ins
       # declaring their blobs, as snap-patches' are.
       - name: WWFNoMercyRecomp-web's merged files compile
+        id: check2
+        continue-on-error: true
         run: |
           wwf="$RUNNER_TEMP/wwf" stubs="$RUNNER_TEMP/wwf-stubs"
           rt64="$wwf/lib/rt64" runtime="$wwf/lib/N64ModernRuntime" frontend="$wwf/lib/RecompFrontend"
@@ -1083,6 +1237,12 @@ jobs:
             em++ "${common[@]}" "${flags[@]}" "$checkout/$file" || status=1
           done < <(awk '!/^#/ && $2 ~ /\.cpp$/ && $3 != "own" { print $1, $2 }' "$wwf/web/patches/files.txt" | tr -d '\r')
           exit $status
+      # A check above failed: it runs again over the base, red only if this change made it red (tools/ci_red_on_base.sh).
+      - name: Red over the base too?
+        if: contains(steps.*.outcome, 'failure')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci_red_on_base.sh "$GITHUB_JOB"
 
   # Every library a page is made of, built with Emscripten (tests/build/CMakeLists.txt): from the forks, and from
   # Banjo-Kazooie's own upstream commits with the patches in.
