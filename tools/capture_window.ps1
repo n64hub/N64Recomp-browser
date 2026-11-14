@@ -32,6 +32,12 @@
 #   <s> or <addr> <bits>      ors bits into it: a cheat that reaches a later level, the way a page plan's n64w does
 #   <s> peek <addr>[,<addr>]  prints the 32-bit words at those addresses, in hex: a saved setting before and after a
 #                             restart (a byte at an address of 4 is the word's top byte, 0x01000000 for 1)
+#   <s> find <name> <word>,<word> <timeout s>
+#                             waits until RDRAM's first 32 MB hold those two words side by side and names their address:
+#                             a struct a game's patch marks with magic words (Perfect Dark's survey, 0x53484452,0x53525659),
+#                             whose fields later steps give as <name>+<offset> (survey+0x28) wherever an address goes,
+#                             as [<address>]+<offset> is a field of the struct the word at address points to
+#                             The plan's later times move on by the wait; not found by timeout, the run fails there
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
 # now and then and one of several frames most times. A burst's and a record's captures are scaled by -Scale (1).
@@ -132,6 +138,17 @@ public static class CaptureWindow {
         IntPtr n;
         if (!WriteProcessMemory(p, rdram + (int)(addr - 0x80000000u), BitConverter.GetBytes(v), (IntPtr)4, out n))
             throw new Exception("can't write RDRAM");
+    }
+    // The RDRAM address of the first 4-aligned pair of words a, b in the first len bytes, or zero: a struct a game's
+    // patch marks with magic words, for a plan's find. Read 64 KB at a time, a chunk that can't be read skipped.
+    public static uint Find(IntPtr p, IntPtr rdram, uint a, uint b, uint len) {
+        var buf = new byte[0x10000 + 4]; IntPtr n;
+        for (uint off = 0; off < len; off += 0x10000) {
+            if (!ReadProcessMemory(p, rdram + (int)off, buf, (IntPtr)buf.Length, out n)) continue;
+            for (int i = 0; i < 0x10000; i += 4)
+                if (BitConverter.ToUInt32(buf, i) == a && BitConverter.ToUInt32(buf, i + 4) == b) return 0x80000000u + off + (uint)i;
+        }
+        return 0;
     }
 
     // The mean absolute difference of two grey copies.
@@ -378,8 +395,20 @@ while ($hwnd -eq [IntPtr]::Zero -and $clock.Elapsed.TotalSeconds -lt 60 -and -no
 }
 Write-Output ("window after {0:N1}s" -f $clock.Elapsed.TotalSeconds)
 
-# A number in a plan: decimal, or hex with 0x.
-function Num($s) { if ($s -match '^0x') { [Convert]::ToUInt32($s.Substring(2), 16) } else { [uint32]$s } }
+# A number in a plan: decimal, hex with 0x, a name a find set, or [<address>], the word at that address now (a
+# pointer the game keeps); a name or [..] with +<number> after it for a field of its struct.
+$script:names = @{}
+function Num($s) {
+    if ($s -match '^\[(.+)\](?:\+(.+))?$') {
+        $base = [CaptureWindow]::Read($script:handle, (Rdram), (Num $Matches[1])); $off = $Matches[2]
+        if ($off) { $base += (Num $off) }; return [uint32]$base
+    }
+    if ($s -match '^([A-Za-z_]\w*)(?:\+(.+))?$') {
+        if (-not $script:names.ContainsKey($Matches[1])) { throw "no find has set $($Matches[1])" }
+        $base = $script:names[$Matches[1]]; if ($Matches[2]) { $base += (Num $Matches[2]) }; return [uint32]$base
+    }
+    if ($s -match '^0x') { [Convert]::ToUInt32($s.Substring(2), 16) } else { [uint32]$s }
+}
 $script:rdram = [IntPtr]::Zero
 $script:handle = [CaptureWindow]::OpenProcess(0x438, $false, [uint32]$proc.Id)
 function Rdram {
@@ -438,6 +467,16 @@ try {
                 Write-Output ("{0,6:N1}s poke {1} {2}" -f $clock.Elapsed.TotalSeconds, $p[2], $p[3]) }
             'or' { $addr = Num $p[2]; [CaptureWindow]::Write($handle, (Rdram), $addr, ([CaptureWindow]::Read($handle, (Rdram), $addr) -bor (Num $p[3])))
                 Write-Output ("{0,6:N1}s or {1} {2}" -f $clock.Elapsed.TotalSeconds, $p[2], $p[3]) }
+            'find' { $words = $p[3] -split ',' | ForEach-Object { Num $_ }; $began = $clock.Elapsed.TotalSeconds; $at = 0
+                while (-not $proc.HasExited -and $clock.Elapsed.TotalSeconds - $began -lt [double]$p[4]) {
+                    if ([CaptureWindow]::Rdram($handle) -ne [IntPtr]::Zero) {
+                        $at = [CaptureWindow]::Find($handle, (Rdram), $words[0], $words[1], 32MB); if ($at) { break } }
+                    Start-Sleep -Milliseconds 500
+                }
+                $shift += $clock.Elapsed.TotalSeconds - $began
+                if (-not $at) { Write-Output ("{0,6:N1}s find {1} NOT found" -f $clock.Elapsed.TotalSeconds, $p[2]); $failed = $true; break plan }
+                $script:names[$p[2]] = $at
+                Write-Output ("{0,6:N1}s find {1} at 0x{2:X8}" -f $clock.Elapsed.TotalSeconds, $p[2], $at) }
             'peek' { $words = $p[2] -split ',' | ForEach-Object { '{0}=0x{1:X8}' -f $_, [CaptureWindow]::Read($handle, (Rdram), (Num $_)) }
                 Write-Output ("{0,6:N1}s peek {1}" -f $clock.Elapsed.TotalSeconds, ($words -join ' ')) }
             'end' { break plan }
