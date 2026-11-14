@@ -40,21 +40,21 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 4c, 8a fails | W5 fails, W6's Drive |
-| Perfect Dark | 1, 2, 3, 4b, 4c fails, 5a, 5b, 6a, 6b, 8a fails | W5 fails, W6's Drive, W9 |
+| San Francisco Rush 2049 | 4c fails, 8a fails | W5 fails, W6's Drive |
+| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W5 fails, W6's Drive, W9 |
 | Super Mario 64 | | W5 fails, W6's Drive |
-| F-Zero X | 4c fails | W5 fails, W6's Drive |
-| Mario Party | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
-| Mario Party 2 | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W5 fails, W6's Drive, W8 |
-| Mario Party 3 | 4c fails, 5b, 6a, 8a, 8b, 8c fails | W6's Drive, W8 |
-| Super Smash Bros. | 4c fails | W5 fails, W6's Drive |
+| F-Zero X | | W6's Drive |
+| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Super Smash Bros. | | W5 fails, W6's Drive |
 | Paper Mario | 4a, 4c, 6b | W5 fails, W6's Drive |
 | Rayman 2 | | W5 fails, W6's Drive |
 | Donald Duck: Goin' Quackers | 2, 5b | W5 fails, W6's Drive |
 | Dinosaur Planet | | W5 fails |
-| Turok: Dinosaur Hunter | 5a | W2, W5, W6, W7 |
-| Turok 2: Seeds of Evil | 2 fails, 4c fails, 5a | W2, W5, W6, W7 |
-| Turok 3: Shadow of Oblivion | 4c fails, 5a | W2, W5, W6, W7 |
+| Turok: Dinosaur Hunter | 5a | W5 fails, W6's Drive |
+| Turok 2: Seeds of Evil | 2 fails, 4c, 5a | W2, W5, W6, W7 |
+| Turok 3: Shadow of Oblivion | 4c, 5a | W5 fails, W6's Drive |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
@@ -79,21 +79,28 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: 4c's pads are played on Super Smash Bros.' page with two stand-in pads of one id (W7's
-`unplugPad` and `replugPad`): a binding written to the controls file is read back after a restart and kept through
-each pad pulled out and plugged in again, both pads reading the one profile their model shares, but where each pad
-plays a port of its own (item 3) a pad plugged in again takes the last port, and while it is out the pads after it
-move up one, since RecompFrontend orders the pads by SDL's instance id, a new one at each plug (filed): Super Smash
-Bros., F-Zero X, Perfect Dark, the Mario Parties and Turok 2 and 3 fail it. Where every pad plays port 1 that passes,
-so Super Mario 64 and Turok: Dinosaur Hunter, whose keyboard half was played (a key added on the Controls tab kept
-across a quit and a restart, walking the Turoks' player forward), pass 4c, and Paper Mario's keyboard half is left;
+What the fails are: 4c's pads are played with two stand-in pads of one id (W7's `unplugPad` and `replugPad`). On
+Super Smash Bros.' page a binding written to the controls file is read back after a restart and kept through each pad
+pulled out and plugged in again, both pads reading the one profile their model shares; where each pad plays a port
+of its own (item 3) a pad plugged in again took the last port, and the pads after it moved up one while it was out,
+and a pad plugged in again at a lower place than another of its model rumbled that one (Rush 2049's page: all of a
+two-player race's rumble on pad 2). RecompFrontend ebd361b, 9fc3d68 and 74eb087 (docs/forks.md) fix both, and give an
+assigned or joined player back their controller: on builds of them Super Smash Bros.' pads keep ports 1 and 2 through
+each replug and restart, and F-Zero X's four rumble each, the first two plugged in again, so both pass 4c. Perfect
+Dark, the Mario Parties and Turok 2 and 3 play their pads by the same code, and 4c is left for their next pin move's
+play. Rush 2049's pads join on their first press and already came back to their players on its page (its runtime
+patch RecompFrontend-0004, the same as 9fc3d68), but its rumble fails until its pin takes 74eb087. Where every pad
+plays port 1 the ports pass, so Super Mario 64 and Turok: Dinosaur Hunter, whose keyboard half was played (a key added
+on the Controls tab kept across a quit and a restart, walking the Turoks' player forward), pass 4c, and Paper Mario's
+keyboard half is left;
 Turok 2's desktop build drops its map from some of the frames Frame Interpolation adds at Manual 120 while the player
 moves, 5-13 of 75-80 captures, with `RT64_GAME_FRAME_WORKLOADS` on or off and none at Original (filed); the Turoks' 5a is unplayed: none of the three writes its Controller Pak before a save
 point in a level (`saves/controllerpak_0.mpk` stays absent through their boots, intros and attract demos, and
 turok-engine writes the pak only on a change), and no save point was reached near Turok 1's or Turok 2's start; the Mario Parties' READMEs don't link their pages (8c); F-Zero X's page in Firefox loses
 none in its boot's first 10 s built on v0.201.0 but inside its own silence (0.6-2.5 s from Pages on v0.184.0, as
-section boot's shaders were built with the game waiting), and 2.4 s in the 2.6 s its first race's section takes to
-build 45 shaders, a later section's wait (W5; docs/findings.md, Firefox's boot wait and the first sound);
+section boot's shaders were built with the game waiting), and none after its tab is hidden and shown in either
+browser, so it passes W5: the 2.4 s it loses in the 2.6 s its first race's section takes to build 45 shaders is a
+later section's wait, which W5 doesn't count;
 Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
 first audio tasks come late (filed), and none after it since the ring's count leaves out the browser's burst, and the desktop
 build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
@@ -113,23 +120,28 @@ Mario Party 3's 132 frames in 1 play of 2, where that play lost thousands before
 Pages on v0.184.0 until their pins move, none drew for 25-60 s after the show on a busy GPU, Firefox's GPU process
 grown to 9-11 GB while hidden by the frames interpolated for presents a hidden page skips, which rt64 edd5da8 no
 longer draws; with the GPU to themselves, from Pages, they came through, but Mario Party 2's 59k short there the
-1.4 s its section Minigames13's 34 shaders took, a later section's wait (W5, filed);
+1.4 s its section Minigames13's 34 shaders took, a later section's wait, which W5 doesn't count, so Mario Party 2
+passes it;
 Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds whatever the window does, none
 more for a drag (6b, filed). In Firefox, where every page's boot section was built
 with its sound started (0.1-11.7 s short in the first 10 s on 37 pages of 38), it is built before the game starts
 since rt64 c5ced59: GoldenEye's page loses 0.8 s there, against 7.9-9.1 s from Pages, which may be play_page.mjs's
-own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s (a later
-section's wait, filed; W5; docs/findings.md, Firefox's boot wait and the first sound).
+own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s, a later
+section's wait, which W5 doesn't count (docs/findings.md, Firefox's boot wait and the first sound). Rush 2049
+still fails W5 after its tab is hidden and shown again, with no section's wait near it: 412 frames short in Chrome
+and 2,339-12,259 in Firefox in its plays on v0.201.0 (filed).
 The own recomps' backcheck of W2, W5, W6 and W7 (`--backcheck`, from Pages built on v0.184.0, Dinosaur Planet's on
 v0.190.0 and the Turoks' on v0.186.0-v0.187.0): every page opened Load ROM at its first click at 2x (W2) and kept its
 saves, the game's own and a file planted in `saves/`, through a reload and the browser closed and opened again (W6,
 whose Drive half, a signed-in player's, is played by hand and left), and the stand-in pad drove every launcher and
 plan, Super Mario 64's rumble reaching it 67 times (W7; the Turoks' plans needed `padKeys` for their own pad layout,
-@TUROK@). Every page lost sound in Chrome's boot's first 10 s, 79-710 ms, counted without asking whether the game was
-silent there (filed), and in Firefox's 0.3-10 s, its boot section's shaders built with the game waiting, which rt64
-c5ced59 builds before the game starts; after the tab was hidden 30 s, Chrome's pages lost 0-193 ms (Super Smash Bros.
-193, Mario Party 3 167, Dinosaur Planet 94), and Firefox's 1.1-6.4 s on Rush 2049, Mario Party 2 and 3, Donald Duck,
-Dinosaur Planet and Turok 3, whose Pages predate rt64 edd5da8 (the Mario Parties built on v0.201.0 lost none there; W5).
+Left Ctrl, Tab, E and Q their pad's right trigger, North and shoulders). Every page lost sound in Chrome's boot's
+first 10 s, 79-710 ms, counted without asking whether the game was silent there (filed), and in Firefox's 0.3-10 s,
+its boot section's shaders built with the game waiting, which rt64 c5ced59 builds before the game starts; after the
+tab was hidden 30 s, Chrome's pages lost 0-972 ms (Turok 3 972, Super Smash Bros. 193, Mario Party 3 167, Dinosaur
+Planet 94), and Firefox's 1.1-6.4 s on Rush 2049, Mario Party 2 and 3, Donald Duck, Dinosaur Planet and Turok 3, whose
+Pages predate rt64 edd5da8 (the Mario Parties built on v0.201.0 lost none there; W5, which F-Zero X and Mario Party 2
+pass on v0.201.0, above).
 
 ## A new recomp's list
 
@@ -289,7 +301,11 @@ player's, played by hand.
 - **W5.** No sound lost or turned to noise: none short in the boot's first 10 s in Chrome and Firefox
   (`audioShort`), nor after the tab is hidden and shown again. A loss inside the game's own silence (a boot's silent
   logos) is no sound lost: `tools/audio_probe.js` logs each short render quantum with the loudest sample played
-  before it, 0 there.
+  before it, 0 there. Nor is Firefox's wait for a later section of the prebuilt list (`play_page.mjs`'s
+  `shaderWaits` past the boot's, RT64's "building N prebuilt shaders for section X, the game waiting"): the game is
+  held under the page's panel as at a load, its sound with it, since a held game makes none (docs/findings.md,
+  Firefox's boot wait and the first sound). The stray rounds of section (none), a few shaders at a time in the middle
+  of play, are still sound lost.
 - **W6.** The game finds its save after the page is reloaded and after the browser is closed and opened again, and a
   signed-in player's save reaches the Drive and comes back in another browser (`frontend/save_sync.js`).
 - **W7.** A stand-in pad (`tools/gamepad_probe.js`) drives the launcher, the menus and play, its rumble played; a game

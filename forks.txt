@@ -4,4 +4,4 @@
 # checks them out here).
 rt64              https://github.com/n64hub/rt64-web               edd5da856335011fea254e5ba91d00af8c935400
 N64ModernRuntime  https://github.com/n64hub/N64ModernRuntime-web   497dab9bb6da7e625c78806c70a6cbd0aab3ebce
-RecompFrontend    https://github.com/n64hub/RecompFrontend-web     d143d0a0d44eab911a4c3a542d38236cbb3d9881
+RecompFrontend    https://github.com/n64hub/RecompFrontend-web     9753051afe2773cca81b02d9b878c46ebd1e227a
