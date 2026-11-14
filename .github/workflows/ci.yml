@@ -1074,7 +1074,9 @@ jobs:
   # (rt64's GPU timings beside its workload queue, plume's queries, RecompFrontend's input). Each project is checked out
   # at patches.txt's upstream commit, not the game's own pin, so this is what its next pin move builds; the script runs
   # with this checkout as its lib/N64Recomp-browser. Red on a PR means one stopped applying: it is made again over the
-  # new patches in the game's repo, in that PR's work.
+  # new patches in the game's repo, in that PR's work. Red on every PR, whatever it changes, means a change there made
+  # one fit only the game's own pin (one that edits a line the newer patches changed): the game's pin moves to the
+  # newest tag with that patch made again over it, at once, in the work that finds it (its docs/releasing.md).
   rush2049-patches:
     needs: changes
     if: needs.changes.outputs.code == 'true'
