@@ -40,7 +40,7 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 4c fails, 8a fails | W5 fails, W6's Drive |
+| San Francisco Rush 2049 | 4c fails, 8a fails | W5, W6's Drive |
 | Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W5 fails, W6's Drive, W9 |
 | Super Mario 64 | | W5 fails, W6's Drive |
 | F-Zero X | | W6's Drive |
@@ -127,9 +127,15 @@ more for a drag (6b, filed). In Firefox, where every page's boot section was bui
 with its sound started (0.1-11.7 s short in the first 10 s on 37 pages of 38), it is built before the game starts
 since rt64 c5ced59: GoldenEye's page loses 0.8 s there, against 7.9-9.1 s from Pages, which may be play_page.mjs's
 own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s, a later
-section's wait, which W5 doesn't count (docs/findings.md, Firefox's boot wait and the first sound). Rush 2049
-still fails W5 after its tab is hidden and shown again, with no section's wait near it: 412 frames short in Chrome
-and 2,339-12,259 in Firefox in its plays on v0.201.0 (filed).
+section's wait, which W5 doesn't count (docs/findings.md, Firefox's boot wait and the first sound). What Rush 2049
+lost after its tab was hidden and shown again (412 frames in Chrome, 1,013-12,259 in Firefox, uncapped) wasn't the
+hide's: its race lost as much visible and none hidden, each loss where the runtime held the game at a list RT64 took
+long over (docs/findings.md, A page in a hidden tab). Since its page keeps 100 ms of sound queued (its src/main.cpp),
+it passes W5: capped at 3840x2000 and hidden 30 s, none short after the show in 4 Firefox plays of 4 (main 3,935 and
+110 in 2 of 4, at the attract race's end) and 2 Chrome plays of 3, the third 10,259 on a GPU shared with two other
+plays and a process outside the machine's queue (plays.jsonl set rush-queue-100-capped). Uncapped, where its race
+keeps an RTX 2070 98% busy by itself, Firefox still lost 1,689 in 1 play of 2 (main 1,350-7,740 in 3 of 3): a GPU
+too slow for most of the game's lists, which no queue covers.
 The own recomps' backcheck of W2, W5, W6 and W7 (`--backcheck`, from Pages built on v0.184.0, Dinosaur Planet's on
 v0.190.0 and the Turoks' on v0.186.0-v0.187.0): every page opened Load ROM at its first click at 2x (W2) and kept its
 saves, the game's own and a file planted in `saves/`, through a reload and the browser closed and opened again (W6,
