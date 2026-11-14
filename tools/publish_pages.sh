@@ -173,6 +173,14 @@ if [[ -n "$ref" ]]; then
     [[ ${#args[@]} -eq 2 ]] || { echo "--ref builds one game's commit: name the game"; exit 1; }
     [[ -n "${PAGES_COPY:-}" ]] || { echo "--ref builds in copies of its own: set PAGES_COPY"; exit 1; }
 fi
+# Checked before any game: unset, a build failed only once its game's turn came, and the run ended with exit 1 and no
+# message at all (the copy's sync ssh'd to an empty host name with its output in a log the run's exit deletes).
+if [[ -z $played_dir ]]; then
+    [[ -n "${BUILD_HOST:-}" ]] || { echo "set BUILD_HOST to the ssh host to build on"; exit 1; }
+    for g in "${selected[@]}"; do
+        [[ $g == rush || -n "${ROMS:-}" ]] || { echo "set ROMS to the folder holding <game>.z64"; exit 1; }
+    done
+fi
 # base <clone>: the commit to build, as a whole SHA: origin/main, or --ref's, from origin first and from the clone only
 # when origin gives none (a commit fetched into it by hand). The clone's own branches are as it was cloned, never
 # updated, so `--ref main` read first from the clone built the fork's first commit. The fetch goes to a ref of this
