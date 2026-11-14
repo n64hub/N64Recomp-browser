@@ -43,9 +43,9 @@ items by almost no game when the record began.
 | San Francisco Rush 2049 | 4c, 8a fails | W5 fails, W6 |
 | Perfect Dark | 1, 2, 3, 4b, 4c fails, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | | W2, W5 fails, W6, W7 |
-| F-Zero X | 4c fails | W5 fails, W6 |
+| F-Zero X | 4c fails | W6 |
 | Mario Party | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Mario Party 2 | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
+| Mario Party 2 | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
 | Mario Party 3 | 4c fails, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
 | Super Smash Bros. | 4c fails | W2, W5, W6 |
 | Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
@@ -92,8 +92,9 @@ moves, 5-13 of 75-80 captures, with `RT64_GAME_FRAME_WORKLOADS` on or off and no
 point in a level (`saves/controllerpak_0.mpk` stays absent through their boots, intros and attract demos, and
 turok-engine writes the pak only on a change), and no save point was reached near Turok 1's or Turok 2's start; the Mario Parties' READMEs don't link their pages (8c); F-Zero X's page in Firefox loses
 none in its boot's first 10 s built on v0.201.0 but inside its own silence (0.6-2.5 s from Pages on v0.184.0, as
-section boot's shaders were built with the game waiting), and 2.4 s in the 2.6 s its first race's section takes to
-build 45 shaders, a later section's wait (W5; docs/findings.md, Firefox's boot wait and the first sound);
+section boot's shaders were built with the game waiting), and none after its tab is hidden and shown in either
+browser, so it passes W5: the 2.4 s it loses in the 2.6 s its first race's section takes to build 45 shaders is a
+later section's wait, which W5 doesn't count;
 Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
 first audio tasks come late (filed), and none after it since the ring's count leaves out the browser's burst, and the desktop
 build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
@@ -113,13 +114,16 @@ Mario Party 3's 132 frames in 1 play of 2, where that play lost thousands before
 Pages on v0.184.0 until their pins move, none drew for 25-60 s after the show on a busy GPU, Firefox's GPU process
 grown to 9-11 GB while hidden by the frames interpolated for presents a hidden page skips, which rt64 edd5da8 no
 longer draws; with the GPU to themselves, from Pages, they came through, but Mario Party 2's 59k short there the
-1.4 s its section Minigames13's 34 shaders took, a later section's wait (W5, filed);
+1.4 s its section Minigames13's 34 shaders took, a later section's wait, which W5 doesn't count, so Mario Party 2
+passes it;
 Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds whatever the window does, none
 more for a drag (6b, filed). In Firefox, where every page's boot section was built
 with its sound started (0.1-11.7 s short in the first 10 s on 37 pages of 38), it is built before the game starts
 since rt64 c5ced59: GoldenEye's page loses 0.8 s there, against 7.9-9.1 s from Pages, which may be play_page.mjs's
-own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s (a later
-section's wait, filed; W5; docs/findings.md, Firefox's boot wait and the first sound).
+own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s, a later
+section's wait, which W5 doesn't count (docs/findings.md, Firefox's boot wait and the first sound). Rush 2049
+still fails W5 after its tab is hidden and shown again, with no section's wait near it: 412 frames short in Chrome
+and 2,339-12,259 in Firefox in its plays on v0.201.0 (filed).
 
 ## A new recomp's list
 
@@ -275,7 +279,11 @@ Every game's page, a game fork's or a recomp of the project's own, is checked fo
 - **W5.** No sound lost or turned to noise: none short in the boot's first 10 s in Chrome and Firefox
   (`audioShort`), nor after the tab is hidden and shown again. A loss inside the game's own silence (a boot's silent
   logos) is no sound lost: `tools/audio_probe.js` logs each short render quantum with the loudest sample played
-  before it, 0 there.
+  before it, 0 there. Nor is Firefox's wait for a later section of the prebuilt list (`play_page.mjs`'s
+  `shaderWaits` past the boot's, RT64's "building N prebuilt shaders for section X, the game waiting"): the game is
+  held under the page's panel as at a load, its sound with it, since a held game makes none (docs/findings.md,
+  Firefox's boot wait and the first sound). The stray rounds of section (none), a few shaders at a time in the middle
+  of play, are still sound lost.
 - **W6.** The game finds its save after the page is reloaded and after the browser is closed and opened again, and a
   signed-in player's save reaches the Drive and comes back in another browser (`frontend/save_sync.js`).
 - **W7.** A stand-in pad (`tools/gamepad_probe.js`) drives the launcher, the menus and play, its rumble played; a game
