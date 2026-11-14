@@ -32,12 +32,14 @@
 #   <s> or <addr> <bits>      ors bits into it: a cheat that reaches a later level, the way a page plan's n64w does
 #   <s> peek <addr>[,<addr>]  prints the 32-bit words at those addresses, in hex: a saved setting before and after a
 #                             restart (a byte at an address of 4 is the word's top byte, 0x01000000 for 1)
-#   <s> find <name> <word>,<word> <timeout s>
+#   <s> find <name> <word>,<word> <timeout s> [key]
 #                             waits until RDRAM's first 32 MB hold those two words side by side and names their address:
 #                             a struct a game's patch marks with magic words (Perfect Dark's survey, 0x53484452,0x53525659),
 #                             whose fields later steps give as <name>+<offset> (survey+0x28) wherever an address goes,
 #                             as [<address>]+<offset> is a field of the struct the word at address points to
-#                             The plan's later times move on by the wait; not found by timeout, the run fails there
+#                             The plan's later times move on by the wait; not found by timeout, the run fails there.
+#                             With a key, it presses it every 1.5 s meanwhile: Enter on a launcher's Start Game, which
+#                             a busy host can take seconds to be ready for, until the game's patches are in RDRAM
 #   <s> end
 # A capture takes 40-110 ms (a 1600x1200 window, a busy host the slower), so a flicker of one 60 Hz frame is caught
 # now and then and one of several frames most times. A burst's and a record's captures are scaled by -Scale (1).
@@ -468,9 +470,12 @@ try {
             'or' { $addr = Num $p[2]; [CaptureWindow]::Write($handle, (Rdram), $addr, ([CaptureWindow]::Read($handle, (Rdram), $addr) -bor (Num $p[3])))
                 Write-Output ("{0,6:N1}s or {1} {2}" -f $clock.Elapsed.TotalSeconds, $p[2], $p[3]) }
             'find' { $words = $p[3] -split ',' | ForEach-Object { Num $_ }; $began = $clock.Elapsed.TotalSeconds; $at = 0
+                $press = -10.0
                 while (-not $proc.HasExited -and $clock.Elapsed.TotalSeconds - $began -lt [double]$p[4]) {
                     if ([CaptureWindow]::Rdram($handle) -ne [IntPtr]::Zero) {
                         $at = [CaptureWindow]::Find($handle, (Rdram), $words[0], $words[1], 32MB); if ($at) { break } }
+                    if ($p.Count -gt 5 -and $clock.Elapsed.TotalSeconds - $press -ge 1.5) {
+                        $press = $clock.Elapsed.TotalSeconds; Send-Key ([CaptureWindow]::Of([uint32]$proc.Id)) $p[5] 120 }
                     Start-Sleep -Milliseconds 500
                 }
                 $shift += $clock.Elapsed.TotalSeconds - $began
