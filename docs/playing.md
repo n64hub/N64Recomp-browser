@@ -201,8 +201,9 @@ work, naming the game, the browser, the time and the curve.
   every 20 s (`heapwalk`): the sizes that hold the most and that grew, and what points at the most grown, which names
   the vector or map a leak piles into.
 - What a game makes of several controllers, and where its rumble goes: `--preload tools/gamepad_probe.js` gives the
-  page stand-in pads, plugged in by a plan's `plugPads()` once SDL runs (before Start Game), and says what reached
-  each pad's vibrationActuator (`padRumbles()`) and which pad the page looked for (its header).
+  page stand-in pads, plugged in by a plan's `plugPads()` once SDL runs (before Start Game), pulled out and plugged
+  in again by `unplugPad()` and `replugPad()`, and says what reached each pad's vibrationActuator (`padRumbles()`)
+  and which pad the page looked for (its header).
 - Video memory: read the adapter's `\GPU Adapter Memory(*)\Dedicated Usage` and nvidia-smi, never
   `\GPU Process Memory(*)\Dedicated Usage`, which climbs by a canvas a frame in Firefox (Windows 10 counts every reopen
   of its shared canvas texture, KB4490156). nvidia-smi's is the whole GPU's, so a page filling video memory beside
