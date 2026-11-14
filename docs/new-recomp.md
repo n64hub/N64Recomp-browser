@@ -40,18 +40,18 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 4c, 8a fails | W5 fails, W6 |
-| Perfect Dark | 1, 2, 3, 4b, 4c fails, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
-| Super Mario 64 | | W2, W5 fails, W6, W7 |
-| F-Zero X | 4c fails | W5 fails, W6 |
-| Mario Party | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Mario Party 2 | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
-| Mario Party 3 | 4c fails, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Super Smash Bros. | 4c fails | W2, W5, W6 |
-| Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
-| Rayman 2 | | W2, W5, W6, W7 |
-| Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
-| Dinosaur Planet | | W2, W5 fails, W7 |
+| San Francisco Rush 2049 | 4c, 8a fails | W5 fails, W6's Drive |
+| Perfect Dark | 1, 2, 3, 4b, 4c fails, 5a, 5b, 6a, 6b, 8a fails | W5 fails, W6's Drive, W9 |
+| Super Mario 64 | | W5 fails, W6's Drive |
+| F-Zero X | 4c fails | W5 fails, W6's Drive |
+| Mario Party | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Mario Party 2 | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W5 fails, W6's Drive, W8 |
+| Mario Party 3 | 4c fails, 5b, 6a, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Super Smash Bros. | 4c fails | W5 fails, W6's Drive |
+| Paper Mario | 4a, 4c, 6b | W5 fails, W6's Drive |
+| Rayman 2 | | W5 fails, W6's Drive |
+| Donald Duck: Goin' Quackers | 2, 5b | W5 fails, W6's Drive |
+| Dinosaur Planet | | W5 fails |
 | Turok: Dinosaur Hunter | 5a | W2, W5, W6, W7 |
 | Turok 2: Seeds of Evil | 2 fails, 4c fails, 5a | W2, W5, W6, W7 |
 | Turok 3: Shadow of Oblivion | 4c fails, 5a | W2, W5, W6, W7 |
@@ -120,6 +120,16 @@ with its sound started (0.1-11.7 s short in the first 10 s on 37 pages of 38), i
 since rt64 c5ced59: GoldenEye's page loses 0.8 s there, against 7.9-9.1 s from Pages, which may be play_page.mjs's
 own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s (a later
 section's wait, filed; W5; docs/findings.md, Firefox's boot wait and the first sound).
+The own recomps' backcheck of W2, W5, W6 and W7 (`--backcheck`, from Pages built on v0.184.0, Dinosaur Planet's on
+v0.190.0 and the Turoks' on v0.186.0-v0.187.0): every page opened Load ROM at its first click at 2x (W2) and kept its
+saves, the game's own and a file planted in `saves/`, through a reload and the browser closed and opened again (W6,
+whose Drive half, a signed-in player's, is played by hand and left), and the stand-in pad drove every launcher and
+plan, Super Mario 64's rumble reaching it 67 times (W7; the Turoks' plans needed `padKeys` for their own pad layout,
+@TUROK@). Every page lost sound in Chrome's boot's first 10 s, 79-710 ms, counted without asking whether the game was
+silent there (filed), and in Firefox's 0.3-10 s, its boot section's shaders built with the game waiting, which rt64
+c5ced59 builds before the game starts; after the tab was hidden 30 s, Chrome's pages lost 0-193 ms (Super Smash Bros.
+193, Mario Party 3 167, Dinosaur Planet 94), and Firefox's 1.1-6.4 s on Rush 2049, Mario Party 2 and 3, Donald Duck,
+Dinosaur Planet and Turok 3, whose Pages predate rt64 edd5da8 (the Mario Parties built on v0.201.0 lost none there; W5).
 
 ## A new recomp's list
 
