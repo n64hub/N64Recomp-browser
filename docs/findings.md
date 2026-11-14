@@ -990,7 +990,10 @@ all, its sound lost in pieces of 0.06-0.3 s instead of one gap. The game's sound
 RT64 taking its lists and drawing none until the round is built: the player misses that much of the level unseen
 behind the panel, and a game that renders to RAM reads back
 framebuffers that were never drawn. The one place a later section's build costs no play is where the player waits
-anyway, behind the launcher, where Firefox would build a pipeline at a time between its frames.
+anyway, behind the launcher, where Firefox would build a pipeline at a time between its frames, the launcher held a
+build's 0.06-0.3 s when the player acts there and the play plans, which click through it at once, gaining nothing.
+So a later section's wait in Firefox stays what it is, the game held under the page's panel with its sound as at a
+load, and W5 (docs/new-recomp.md) doesn't count it.
 
 ## What the prebuilt lists miss
 
