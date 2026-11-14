@@ -53,7 +53,7 @@ items by almost no game when the record began.
 | Donald Duck: Goin' Quackers | 2, 5b | W5 fails, W6's Drive |
 | Dinosaur Planet | | W5 fails |
 | Turok: Dinosaur Hunter | 5a | W5 fails, W6's Drive |
-| Turok 2: Seeds of Evil | 2 fails, 4c, 5a | W2, W5, W6, W7 |
+| Turok 2: Seeds of Evil | 2 fails, 4c, 5a | W5 fails, W6's Drive |
 | Turok 3: Shadow of Oblivion | 4c, 5a | W5 fails, W6's Drive |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
