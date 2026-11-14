@@ -13,7 +13,9 @@
 #
 # Plan lines, each at seconds since the exe started:
 #   <s> key <name> [ms]       press and release a key in the window (a letter, a digit, Enter, Space, Shift, Escape,
-#                             Tab, Up, Down, Left, Right), held ms (120)
+#                             Tab, Up, Down, Left, Right), held ms (120); a name @<x>,<y> is a left click there, x and y
+#                             fractions of the client area (@0.5,0.425 a launcher's Start Game), posted to the window
+#                             so the pointer never moves: a launcher takes Enter for the option under the pointer
 #   <s> shot <name>           one capture, <name>.png
 #   <s> burst <name> <count>  count captures back to back, <name>-0000.png on, the plan waiting meanwhile
 #   <s> record <name>         captures back to back from here, <name>-0000.png on, while the plan's keys go on, until
@@ -335,6 +337,15 @@ $named = @{ Enter = 0x0D; Space = 0x20; Shift = 0x10; Escape = 0x1B; Tab = 0x09;
 $extended = @(0x25, 0x26, 0x27, 0x28)
 
 function Send-Key($hwnd, $name, $ms) {
+    if ($name -match '^@([\d.]+),([\d.]+)$') {
+        # A left click at that fraction of the client area, posted to the window: the pointer itself never moves.
+        $c = New-Object CaptureWindow+RECT; [void][CaptureWindow]::GetClientRect($hwnd, [ref]$c)
+        $x = [int](($c.R - $c.L) * [double]$Matches[1]); $y = [int](($c.B - $c.T) * [double]$Matches[2])
+        $l = [IntPtr](($y -shl 16) -bor $x)
+        [void][CaptureWindow]::PostMessage($hwnd, 0x200, [IntPtr]0, $l); Start-Sleep -Milliseconds 50
+        [void][CaptureWindow]::PostMessage($hwnd, 0x201, [IntPtr]1, $l); Start-Sleep -Milliseconds $ms
+        [void][CaptureWindow]::PostMessage($hwnd, 0x202, [IntPtr]0, $l); return
+    }
     if ($named.ContainsKey($name)) { $vk = $named[$name] }
     elseif ($name -match '^[A-Za-z0-9]$') { $vk = [int][char]$name.ToUpper() }
     else { throw "unknown key $name" }
