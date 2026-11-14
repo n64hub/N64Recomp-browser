@@ -37,21 +37,21 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 8a fails | W5 fails, W6 |
-| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
-| Super Mario 64 | 4c | W2, W5 fails, W6, W7 |
-| F-Zero X | 4c | W5 fails, W6 |
-| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
-| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Super Smash Bros. | | W2, W5, W6 |
+| San Francisco Rush 2049 | 4c, 8a fails | W5 fails, W6 |
+| Perfect Dark | 1, 2, 3, 4b, 4c fails, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
+| Super Mario 64 | | W2, W5 fails, W6, W7 |
+| F-Zero X | 4c fails | W5 fails, W6 |
+| Mario Party | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
+| Mario Party 2 | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
+| Mario Party 3 | 4c fails, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
+| Super Smash Bros. | 4c fails | W2, W5, W6 |
 | Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
-| Turok: Dinosaur Hunter | 4c, 5a | W2, W5, W6, W7 |
-| Turok 2: Seeds of Evil | 4c, 5a | W2, W5, W6, W7 |
-| Turok 3: Shadow of Oblivion | 4c, 5a | W2, W5, W6, W7 |
+| Turok: Dinosaur Hunter | 5a | W2, W5, W6, W7 |
+| Turok 2: Seeds of Evil | 4c fails, 5a | W2, W5, W6, W7 |
+| Turok 3: Shadow of Oblivion | 4c fails, 5a | W2, W5, W6, W7 |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
@@ -76,9 +76,15 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: Super Mario 64's 4c has been played with the keyboard only, its pads waiting for a way
-to play them (filed), and the Turoks' the same (a key added on the Controls tab was kept across a quit and a restart
-and walked the player forward); the Turoks' 5a is unplayed: none of the three writes its Controller Pak before a save
+What the fails are: 4c's pads are played on Super Smash Bros.' page with two stand-in pads of one id (W7's
+`unplugPad` and `replugPad`): a binding written to the controls file is read back after a restart and kept through
+each pad pulled out and plugged in again, both pads reading the one profile their model shares, but where each pad
+plays a port of its own (item 3) a pad plugged in again takes the last port, and while it is out the pads after it
+move up one, since RecompFrontend orders the pads by SDL's instance id, a new one at each plug (filed): Super Smash
+Bros., F-Zero X, Perfect Dark, the Mario Parties and Turok 2 and 3 fail it. Where every pad plays port 1 that passes,
+so Super Mario 64 and Turok: Dinosaur Hunter, whose keyboard half was played (a key added on the Controls tab kept
+across a quit and a restart, walking the Turoks' player forward), pass 4c, and Paper Mario's keyboard half is left;
+the Turoks' 5a is unplayed: none of the three writes its Controller Pak before a save
 point in a level (`saves/controllerpak_0.mpk` stays absent through their boots, intros and attract demos, and
 turok-engine writes the pak only on a change), and no save point was reached near Turok 1's or Turok 2's start; the Mario Parties' READMEs don't link their pages (8c); F-Zero X's page in Firefox loses
 none in its boot's first 10 s built on v0.201.0 but inside its own silence (0.6-2.5 s from Pages on v0.184.0, as
@@ -195,7 +201,10 @@ rumble included.
   must neither crash nor stop the game. The launcher's own Enter on Start Game can be that press: Turok: Dinosaur
   Hunter's first read of the pad comes while the key is still down, so a game started with Enter opened its manager
   every time (Start leaves it).
-- **4c.** Bindings are kept across a restart and a pad plugged in again, two pads of one model included.
+- **4c.** Bindings are kept across a restart and a pad plugged in again, two pads of one model included, and a pad
+  plugged in again plays the port it played before. A page plays the pads with no pad on the machine: W7's stand-in
+  pads, one pulled out and plugged in again by `unplugPad` and `replugPad`, a binding written to the controls file
+  (`<HOME>/.config/<program id>/controls.json`, the page's `FS`) and read back on the same profile's next visit.
 
 ### 5. Saves and settings
 
