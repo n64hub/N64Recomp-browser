@@ -92,19 +92,22 @@ somewhere else is patched by name: `cmake -P lib/N64Recomp-browser/patches/apply
 
 ### 3. The web build in CMakeLists.txt
 
-In the recomp's CMakeLists.txt, in an `if (EMSCRIPTEN)` block (the desktop build doesn't change):
+In the recomp's CMakeLists.txt, `build_speed.cmake` before rt64 and the others are added, for the page and the desktop
+build alike, then an `if (EMSCRIPTEN)` block (the desktop build doesn't change otherwise):
 
 ```cmake
-include(lib/N64Recomp-browser/patches/apply.cmake)       # patches the checkouts, if they aren't already
-n64recomp_browser_apply_patches(${CMAKE_SOURCE_DIR}/lib)
-add_compile_options(-pthread -fwasm-exceptions -msimd128 -mtail-call "-DXXH_HAS_INCLUDE(x)=0")
-add_link_options(-pthread -fwasm-exceptions -mtail-call)
 include(lib/N64Recomp-browser/frontend/build_speed.cmake)   # ccache, if it is on PATH
-set(RT64_PREBUILT_SHADER_LIST ${CMAKE_SOURCE_DIR}/<the game's shader list>)   # required: step 4
-# ... add rt64 (RT64_STATIC), N64ModernRuntime and RecompFrontend as for the desktop ...
-add_subdirectory(lib/N64Recomp-browser/frontend ${CMAKE_BINARY_DIR}/web_frontend)
-n64recomp_browser_frontend_page(<the recomp's executable>)
-target_link_options(<the recomp's executable> PRIVATE -sINITIAL_MEMORY=2GB)   # if 1536MB, frontend/'s, isn't enough
+if (EMSCRIPTEN)
+    include(lib/N64Recomp-browser/patches/apply.cmake)       # patches the checkouts, if they aren't already
+    n64recomp_browser_apply_patches(${CMAKE_SOURCE_DIR}/lib)
+    add_compile_options(-pthread -fwasm-exceptions -msimd128 -mtail-call "-DXXH_HAS_INCLUDE(x)=0")
+    add_link_options(-pthread -fwasm-exceptions -mtail-call)
+    set(RT64_PREBUILT_SHADER_LIST ${CMAKE_SOURCE_DIR}/<the game's shader list>)   # required: step 4
+    # ... add rt64 (RT64_STATIC), N64ModernRuntime and RecompFrontend as for the desktop ...
+    add_subdirectory(lib/N64Recomp-browser/frontend ${CMAKE_BINARY_DIR}/web_frontend)
+    n64recomp_browser_frontend_page(<the recomp's executable>)
+    target_link_options(<the recomp's executable> PRIVATE -sINITIAL_MEMORY=2GB)   # if 1536MB, frontend/'s, isn't enough
+endif()
 ```
 
 Build with `emcmake cmake ... -DRT64_NAGA_EXECUTABLE=<naga>` (`cargo install naga-cli`), with `spirv-opt` on

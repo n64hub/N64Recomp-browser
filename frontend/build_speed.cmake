@@ -1,6 +1,8 @@
-# Shorter Emscripten builds of a page. include() it in the recomp's CMakeLists.txt before rt64, N64ModernRuntime and
-# RecompFrontend are added, since it sets what their targets start from.
+# Shorter builds through ccache, of a page and of the desktop build. include() it in the recomp's CMakeLists.txt before
+# rt64, N64ModernRuntime and RecompFrontend are added, since it sets what their targets start from, and outside its
+# if (EMSCRIPTEN) block: the desktop case is the last part below.
 #
+# A page (Emscripten):
 # - With ccache on PATH, every compile goes through it, so a fresh build dir compiles nothing that a build before it
 #   compiled. A hit never starts emcc, whose Python costs about a second a file on Windows. Paths inside the recomp's
 #   checkout are made relative to the build dir (CCACHE_BASEDIR), so another checkout, or the same one moved, hits too
@@ -25,19 +27,37 @@
 #
 # A build to try something can also link without Binaryen's optimizations: N64RECOMP_BROWSER_FAST_LINK
 # (frontend/CMakeLists.txt).
+#
+# The desktop build (clang-cl, MSVC, or GCC and Clang on Linux), when ccache is on PATH and the caller set no launcher
+# of its own (a Linux release's, or CI's sccache, stays): a new build dir or another checkout of the same code compiles
+# only what changed since a build here. CCACHE_BASEDIR, the checkout, makes its paths relative and CCACHE_NOHASHDIR
+# leaves the build dir out of what a compile is hashed by: without both, clang-cl's compiles in one checkout hit nothing
+# of another's. Debug info goes in each object (/Z7), since /Zi's shared PDB can't be cached, so a hit's names the
+# checkout that compiled it first. Precompiled headers (RmlUi's) are off, as for a page.
 
 execute_process(COMMAND git rev-parse --show-toplevel WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE N64RECOMP_BROWSER_CHECKOUT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 if (NOT N64RECOMP_BROWSER_CHECKOUT)
     set(N64RECOMP_BROWSER_CHECKOUT ${CMAKE_SOURCE_DIR})
 endif()
-add_compile_options(-ffile-prefix-map=${N64RECOMP_BROWSER_CHECKOUT}/=)
-
 find_program(CCACHE_PROGRAM ccache)
-if (CCACHE_PROGRAM)
-    set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -DCHECKOUT=${N64RECOMP_BROWSER_CHECKOUT}
-        -DBUILD_DIR=${CMAKE_BINARY_DIR} -DEMSCRIPTEN_VERSION=${EMSCRIPTEN_VERSION}
-        -P ${CMAKE_CURRENT_LIST_DIR}/ccache_launcher.cmake -- ${CCACHE_PROGRAM})
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
-    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+if (EMSCRIPTEN)
+    add_compile_options(-ffile-prefix-map=${N64RECOMP_BROWSER_CHECKOUT}/=)
+    if (CCACHE_PROGRAM)
+        set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -DCHECKOUT=${N64RECOMP_BROWSER_CHECKOUT}
+            -DBUILD_DIR=${CMAKE_BINARY_DIR} -DEMSCRIPTEN_VERSION=${EMSCRIPTEN_VERSION}
+            -P ${CMAKE_CURRENT_LIST_DIR}/ccache_launcher.cmake -- ${CCACHE_PROGRAM})
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
+        set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+    endif()
+else()
+    if (CCACHE_PROGRAM AND NOT CMAKE_C_COMPILER_LAUNCHER)
+        set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env CCACHE_BASEDIR=${N64RECOMP_BROWSER_CHECKOUT}
+            CCACHE_NOHASHDIR=1 ${CCACHE_PROGRAM})
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
+        set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+        foreach (flags C_FLAGS_DEBUG CXX_FLAGS_DEBUG C_FLAGS_RELWITHDEBINFO CXX_FLAGS_RELWITHDEBINFO)
+            string(REPLACE "/Zi" "/Z7" CMAKE_${flags} "${CMAKE_${flags}}")
+        endforeach()
+    endif()
 endif()
