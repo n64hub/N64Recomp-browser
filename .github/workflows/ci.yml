@@ -1085,7 +1085,8 @@ jobs:
           exit $status
 
   # Every library a page is made of, built with Emscripten (tests/build/CMakeLists.txt): from the forks, and from
-  # Banjo-Kazooie's own upstream commits with the patches in.
+  # Banjo-Kazooie's own upstream commits with the patches in. And frontend/build_speed.cmake's ccache, for a page and
+  # for a desktop build.
   emscripten:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -1166,6 +1167,20 @@ jobs:
       # the build that writes it (tests/depfile).
       - name: Incremental build
         run: bash tests/depfile/run.sh build-depfile
+      # frontend/build_speed.cmake's desktop case, which the recomps' desktop builds include and their CI's sccache
+      # skips: a native build goes through ccache, and a second build dir of the same code compiles nothing.
+      - name: Desktop build through ccache
+        run: |
+          for b in build-desktop-1 build-desktop-2; do
+            mkdir -p $b
+            echo 'const char depfile_check_value[] = "desktop";' > $b/value.txt
+            cmake -S tests/depfile -B $b -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo > /dev/null
+            ccache -z > /dev/null
+            ninja -C $b > /dev/null
+          done
+          grep -q CCACHE_NOHASHDIR=1 build-desktop-2/build.ninja
+          ccache --print-stats | tee stats.txt | grep -x 'direct_cache_hit	1'
+          grep -x 'cache_miss	0' stats.txt
 
   # A push to main that changes what a page is built from (forks.txt, patches/, frontend/, renderer/) is tagged
   # v0.<n+1>.0 once its jobs pass: a tag is a release, and the retest builds the newest one, so a change left untagged
