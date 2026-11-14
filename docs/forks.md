@@ -990,4 +990,11 @@ RecompFrontend 74eb087 a pad plugged in again rumbles itself: a joystick found i
 RecompFrontend 9753051 9fc3d68's reconnect_player_controller declared in a players namespace of its own after
                        players.h's includes: beside the namespace's first line it conflicted in apply.cmake's
                        three-way merge into a RecompFrontend whose header is formatted otherwise (1080 Snowboarding's)
+rt64 aabee0e           a present takes the color images a frame draws (colorImageAddressVector) once the frame's first
+                       display frame is drawn, copied under the framebuffer manager's lock: the workload thread set them
+                       as it began the frame, and SkipBuffering's present, which waits only for the workload that drew
+                       the VI's framebuffer with RT64_GAME_FRAME_WORKLOADS (e4f59dc), showed one the frame was still
+                       drawing. Turok 2's desktop build, its map (Tab) drawn in a second workload after the level:
+                       10-13 of ~300 frames captured with the map open lacked it in each of three plays, interpolated or
+                       not; 0 of 933 after
 ```
