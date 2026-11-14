@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web 74eb08757363fbf55da791568f2d76399043305b
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web 9753051afe2773cca81b02d9b878c46ebd1e227a
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
@@ -77,19 +77,23 @@ index 1961e29..0dc0354 100644
      void update_rumble();
      bool should_override_keystate(SDL_Scancode key, SDL_Keymod mod);
 diff --git a/recompinput/include/recompinput/players.h b/recompinput/include/recompinput/players.h
-index 6c59b61..f2fda11 100644
+index 6c59b61..ec2a157 100644
 --- a/recompinput/include/recompinput/players.h
 +++ b/recompinput/include/recompinput/players.h
-@@ -15,6 +15,9 @@ namespace recompinput {
-     };
+@@ -3,6 +3,13 @@
  
-     namespace players {
-+        // With RECOMPINPUT_RECONNECT_PLAYERS, from SDL_CONTROLLERDEVICEADDED: a controller plugged in again goes back
-+        // to the player who had it (players.cpp).
-+        void reconnect_player_controller(SDL_GameController* controller);
-         size_t get_number_of_assigned_players();
-         size_t get_max_number_of_players();
-         bool is_single_player_mode();
+ #include "recompinput.h"
+ 
++// With RECOMPINPUT_RECONNECT_PLAYERS, from SDL_CONTROLLERDEVICEADDED: a controller plugged in again goes back to the
++// player who had it (players.cpp). Declared apart from the namespace's other lines, which a game's RecompFrontend can
++// have formatted otherwise, so the web's change merges into it.
++namespace recompinput::players {
++    void reconnect_player_controller(SDL_GameController* controller);
++}
++
+ namespace recompinput {
+     struct Player {
+         SDL_GameController* controller = nullptr;
 diff --git a/recompinput/include/recompinput/profiles.h b/recompinput/include/recompinput/profiles.h
 index 45bedd1..d6819a0 100644
 --- a/recompinput/include/recompinput/profiles.h

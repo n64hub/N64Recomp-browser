@@ -986,4 +986,7 @@ RecompFrontend 74eb087 a pad plugged in again rumbles itself: a joystick found i
                        at a lower place than an older pad of its model found that pad's gamepad, and both players'
                        rumble went to one pad; the rank is now taken among the gamepads and joysticks no connected
                        joystick has matched yet. Web only
+RecompFrontend 9753051 9fc3d68's reconnect_player_controller declared in a players namespace of its own after
+                       players.h's includes: beside the namespace's first line it conflicted in apply.cmake's
+                       three-way merge into a RecompFrontend whose header is formatted otherwise (1080 Snowboarding's)
 ```
