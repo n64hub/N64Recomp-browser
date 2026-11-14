@@ -20,9 +20,12 @@ The lists and the record are kept by the work that plays the games, in the same 
   saying it twice. A finding only one game can have goes in that game's own docs instead.
 - Labels (`4b`, `W3`) are never renumbered or reused, since game repos and commits cite them: a new line takes the
   next letter under its item, a new item the next number.
-- An item added or changed is backchecked: the work that adds it puts its label in the Left cells of every game in the
-  record it can apply to and files work to play it on them (one piece for every game it reaches, or one a game where
-  each needs its own fix), unless it plays them itself.
+- An item added or changed is backchecked on this project's own recomps: the work that adds it puts its label in the
+  Left cells of every own recomp in the record it can apply to and files work to play it on them (one piece for every
+  recomp it reaches, or one a recomp where each needs its own fix), unless it plays them itself. A game fork isn't
+  backchecked: it is someone else's recomp plus the same web support the own recomps run, so their plays check that
+  support, and a backcheck across every game fork cost more than it found. A game fork's row keeps what its port left,
+  and a later item reaches it only when work on that game plays it.
 - A play of a game for an item (a backcheck, a port, a fix, the retest) updates that game's row: the label leaves Left
   when the play shows it passes, or stays marked "fails" while the fix is filed. An item a game can't have (item 3 in
   a game of one player) leaves its row, and the game's own docs say why.
