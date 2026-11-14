@@ -8,7 +8,7 @@ moves `forks.txt` onto it.
 
 ## Options off on a desktop build
 
-Seventeen options are off on a desktop build, on with Emscripten, and settable natively, each by the commit that adds it:
+Eighteen options are off on a desktop build, on with Emscripten, and settable natively, each by the commit that adds it:
 `RT64_FLIPPED_RECT_HIGH_RES` (rt64 fe91344), `RT64_UNEVEN_FRAME_RATES` (rt64 179adb8), `RT64_GAME_FRAME_WORKLOADS` (rt64
 bce5e11), `RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA_EYE` (rt64 2c4230e),
 `RT64_SCISSOR_INSIDE_FRAMEBUFFER` (rt64 cad03e4), `RT64_SKIP_COLLAPSED_MATCHES` (rt64 f6a01be),
@@ -17,8 +17,8 @@ bce5e11), `RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA
 66539ab), `ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS` (N64ModernRuntime bf96a62), `ULTRAMODERN_RSP_TASKS_COPIED`
 (N64ModernRuntime 0ec6c51), `ULTRAMODERN_SCREEN_UPDATE_AFTER_VI` (N64ModernRuntime c700131),
 `ULTRAMODERN_VIS_WAIT_FOR_RENDERER` (N64ModernRuntime 05d95be), `ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`
-(N64ModernRuntime 684377c) and `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED`
-(RecompFrontend bf01590).
+(N64ModernRuntime 684377c), `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED` (RecompFrontend bf01590) and
+`RECOMPINPUT_RECONNECT_PLAYERS` (RecompFrontend 9fc3d68, on with `RECOMPINPUT_PADS_IN_ORDER` too).
 
 ## Every commit
 
@@ -971,4 +971,23 @@ rt64 edd5da8           a hidden page draws no interpolated frames, only its game
                        display's rate went to the GPU unseen. Firefox queued what a busy GPU couldn't finish, its GPU
                        process grew to 9-21 GB while hidden and the page drew nothing for 25-60 s after it was shown
                        (docs/findings.md, A page in a hidden tab). Web only
+RecompFrontend ebd361b RECOMPINPUT_PADS_IN_ORDER: a pad takes a port as it connects, the lowest no connected pad holds,
+                       and keeps it while connected, as in a console's socket: each pad's port was its place among
+                       SDL's instance ids, which rise with each connection, so a pad pulled out and plugged in again
+                       went last and the pads after its old port moved up one (two stand-in pads on a page: the first
+                       plugged in again played port 2, the second port 1). get_detected_controller_count() counts up
+                       to the highest port held, so a pad past an empty port still plays
+RecompFrontend 9fc3d68 RECOMPINPUT_RECONNECT_PLAYERS: a controller plugged in again goes back to the player who had it,
+                       the one whose controller is detached and of the same GUID hash (players.cpp,
+                       reconnect_player_controller): a player kept the SDL controller that went and read nothing until
+                       players were assigned again. Rush 2049's runtime patch RecompFrontend-0004 did the same; this
+                       sits apart from its lines, so it still applies over this until Rush 2049 drops it
+RecompFrontend 74eb087 a pad plugged in again rumbles itself: a joystick found its gamepad as the k-th of its name in
+                       the browser's order for the k-th joystick of the name by instance id, so one plugged in again
+                       at a lower place than an older pad of its model found that pad's gamepad, and both players'
+                       rumble went to one pad; the rank is now taken among the gamepads and joysticks no connected
+                       joystick has matched yet. Web only
+RecompFrontend 9753051 9fc3d68's reconnect_player_controller declared in a players namespace of its own after
+                       players.h's includes: beside the namespace's first line it conflicted in apply.cmake's
+                       three-way merge into a RecompFrontend whose header is formatted otherwise (1080 Snowboarding's)
 ```

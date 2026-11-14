@@ -406,7 +406,9 @@ n64hub/RecompFrontend-web           N64Recomp/RecompFrontend recompui on WebGPU,
                                                                   list late as another; a game of several
                                                                   players plays as one until they are
                                                                   assigned, or with RECOMPINPUT_PADS_IN_ORDER,
-                                                                  an option it turns on, each pad its own port
+                                                                  an option it turns on, each pad its own port,
+                                                                  kept while it is plugged in; a pad plugged
+                                                                  in again goes back to its player
 n64hub/hlslpp-web                   redorav/hlslpp           fixes to the WebAssembly SIMD backend RT64's
                                                                   CPU-side matrices use with -msimd128
 ```
