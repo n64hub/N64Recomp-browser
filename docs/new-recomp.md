@@ -45,9 +45,9 @@ items by almost no game when the record began.
 | Super Mario 64 | | W5 fails, W6's Drive |
 | F-Zero X | | W6's Drive |
 | Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
-| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
+| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W5 fails, W6's Drive, W8 |
 | Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W6's Drive, W8 |
-| Super Smash Bros. | | W5 fails, W6's Drive |
+| Super Smash Bros. | | W6's Drive |
 | Paper Mario | 4a, 4c, 6b | W5 fails, W6's Drive |
 | Rayman 2 | | W5 fails, W6's Drive |
 | Donald Duck: Goin' Quackers | 2, 5b | W5 fails, W6's Drive |
@@ -136,12 +136,17 @@ saves, the game's own and a file planted in `saves/`, through a reload and the b
 whose Drive half, a signed-in player's, is played by hand and left), and the stand-in pad drove every launcher and
 plan, Super Mario 64's rumble reaching it 67 times (W7; the Turoks' plans needed `padKeys` for their own pad layout,
 Left Ctrl, Tab, E and Q their pad's right trigger, North and shoulders). Every page lost sound in Chrome's boot's
-first 10 s, 79-710 ms, counted without asking whether the game was silent there (filed), and in Firefox's 0.3-10 s,
+first 10 s, 79-710 ms, counted then without asking whether the game was silent there; `--backcheck` now leaves out a
+short quantum with nothing played in the 20 ms before it (`tools/audio_probe.js`), and built on v0.203.0 Mario Party
+lost none there, Super Smash Bros. 196 frames and Mario Party 2 808, all inside their own silence, so none of the three
+loses sound in Chrome's boot (Super Smash Bros. none in Firefox's either, nor after its tab was hidden in either
+browser: it passes W5), and in Firefox's 0.3-10 s,
 its boot section's shaders built with the game waiting, which rt64 c5ced59 builds before the game starts; after the
 tab was hidden 30 s, Chrome's pages lost 0-972 ms (Turok 3 972, Super Smash Bros. 193, Mario Party 3 167, Dinosaur
 Planet 94), and Firefox's 1.1-6.4 s on Rush 2049, Mario Party 2 and 3, Donald Duck, Dinosaur Planet and Turok 3, whose
-Pages predate rt64 edd5da8 (the Mario Parties built on v0.201.0 lost none there; W5, which F-Zero X and Mario Party 2
-pass on v0.201.0, above).
+Pages predate rt64 edd5da8 (the Mario Parties built on v0.201.0 lost none there; W5, which F-Zero X passes on
+v0.201.0, above). Built on v0.203.0, Mario Party 2's page in Chrome lost 40 ms of its music 2.2 s after its tab was
+shown again, where Pages on v0.184.0 lost none (filed with Rush 2049's loss there), so it fails W5 again.
 
 ## A new recomp's list
 
