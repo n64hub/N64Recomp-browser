@@ -920,7 +920,9 @@ N64ModernRuntime       ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS: a yield the game 
                        Adventure Racing's scheduler took one unanswered at the next VI for a hung RSP and sent itself
                        the RSP's and RDP's done: lists counted done before RT64 read them, RT64 ran from one into data
                        loaded since until the page ran out of memory, or the scheduler's thread queues broke. With
-                       render to RAM's late copy it came 33 times in a play, and the page never reached a race
+                       render to RAM's late copy it came 33 times in a play, and the page never reached a race. A
+                       game that reuses a list's buffer once the RSP is done can't take the early done: Rage Wars'
+                       page takes the define out (docs/game-forks.md)
 rt64 32e204c           the RAM of the framebuffer a VI shows changed to what render to RAM copied into it is no present
                        and no frame of its own (VIHistory::pushFactor), as with render to RAM off: Turok 2's second list
                        a frame draws into the framebuffer already shown, and its exact copy, landing a VI after the

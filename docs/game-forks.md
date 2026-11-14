@@ -554,7 +554,10 @@ runs from TLB-mapped addresses, which the desktop build reaches through views of
 backed by moving the heap's break past them, and the page's memory grows up to 4 GB. Its online Netplay is lockstep
 over UDP to another PC's address, which a page can't open, so the page's launcher and menus have no Netplay (nor Add to Steam or
 Exit), and local multiplayer, bots and trials stay. RT64's bloom pass, the game's own, writes `rgba16f` on WebGPU
-(`web/patches/rt64.patch`). The rest is behind `__EMSCRIPTEN__` as in the other ports: the canvas, the sound through
+(`web/patches/rt64.patch`). The game reuses a display list's buffer as soon as the RSP is done, so its own runtime
+patch sends that done only once RT64 has read the whole list, and the page takes `ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`
+(docs/forks.md) out of ultramodern's definitions (its `CMakeLists.txt`): the early done it sends for a yield let the game
+write over a list RT64 had yet to read, and a match stopped drawing for good about 10 s in, its sound running dry. The rest is behind `__EMSCRIPTEN__` as in the other ports: the canvas, the sound through
 `audio_output.h`, either preset at resolution Auto and the display's frame rate, no MSAA. Its list is 119 shaders: the
 boot (the launcher, the boot screens, the title and the menus to level select, 32, six of them missed in a match by
 the plays and moved there) and a section for each of the nine maps a new save offers (8-15 each), recorded by
