@@ -1040,7 +1040,11 @@ if (backcheck) {
       `${ms(hidden.audioShortAfter)}`];
   if (browser === 'chrome') {
     const kept = ['reload', 'reopen'].map(fault);
+    // A reload or reopen that failed before the saves were read again (its page stopped answering at the boot) kept
+    // nothing anybody saw: savesKept is never set.
     verdicts.W6 = kept.some((f) => !f) ? ['not played', why('the reload or the reopen never came')]
+      : kept.some((f) => f.savesKept === undefined) ? ['not played', kept.filter((f) => f.savesKept === undefined)
+        .map((f) => `the ${f.name} failed before the saves were read again: ${f.failed ?? 'no reason'}`).join('; ')]
       : kept.some((f) => f.savesKept === false) ? ['fails', kept.filter((f) => f.savesKept === false).map((f) => `the ${f.name} lost ` +
         Object.keys(f.savesBefore).filter((k) => f.savesAfter?.[k] !== f.savesBefore[k]).join(', ')).join('; ')]
       : kept.every((f) => f.savesKept === null) ? ['not played', 'no save file, not even the planted one']
