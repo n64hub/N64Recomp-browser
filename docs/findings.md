@@ -1931,6 +1931,41 @@ uncapped, a present counter preloaded, whole GPU turns on an idle host (plays.js
   246; Mario Party 2's Mario Land 322-326 and minigames 0x05 358, 0x0B 299-338 and 0x13 340 on v0.143.0 and the test
   builds of these changes.
 
+## Keyframed meshes under the automatic vertex interpolation
+
+rt64's automatic vertex interpolation (docs/forks.md, rt64 a03baa2) pairs two frames' vertices under a transform by
+their order. Rush 2049's start-line flags, keyframed meshes whose vertices change order from frame to frame, broke into
+shards between the game's frames until its scene nodes got matrix ids (docs/new-recomp.md, item 2). To find the same in
+other games, a logging-only rt64 build counted, on each frame where it moves a transform's vertices, those that a
+pairing by order sends further than four times the distance to the nearest vertex of the frame before. Where 3 or more
+did, and at least one vertex in 20, it measured each triangle's longest edge in the two frames, a vertex index each:
+on a mesh that only bends, a triangle keeps its size, and on a mispaired one it stretches. Each game was played in
+Chrome by its regular plan, uncapped at 3840x2000 on a busy host (plays.jsonl, "keyframe backcheck"), the logs held to
+300 lines, so a count past that is a lower bound:
+
+- Rush 2049 before its fix: one 68-vertex mesh, the flags, stretched in 61 of the 109 frames logged on it over 30 s,
+  1402 of 11772 triangles more than twice their length, up to 6.3 times. That is what a game that shows it looks
+  like here. On its fix only single frames remain, as in Turok 3 and Racer below.
+- Turok: Dinosaur Hunter: a 16-vertex mesh in the Iguana logo's intro (347 of 1148 triangles, up to 6.3 times, in 62
+  frames over 8 s) and a 43-vertex one in the fly-over of the hub after Start (1049 of 3984, up to 3.9 times, in 83
+  frames over 20 s). Over a hundred shots there, at 960x500 and 1920x1000, taken in the seconds the log saw them,
+  show no shard: the arrows, the axe, the iguana and the hub's blocks, pillars and vines draw whole.
+- Paper Mario: a 332- and a 333-vertex mesh as its attract demo starts (786 of 10960 triangles, up to 7.3 times, in
+  44 frames over 5 s), and two small meshes (14 and 28 vertices) later in the play, up to 2.4 times. 30 shots in
+  the demo's first 8 s show its stage, sprites and the scenery beside the stage whole.
+- 1080° Snowboarding: 149 of 300 logged frames over its race, spread over many 48- and 64-vertex meshes, a few
+  triangles each, up to 24 times. The race's shots show the rider, the fences and the banners whole.
+- Super Smash Bros.: meshes of 10-16 vertices, up to 3.2 times, a triangle or a few at a time. Donald Duck: Goin'
+  Quackers: one triangle in ten of a 10-vertex mesh, up to 2.3 times.
+- Turok 3 (one frame 19 s in, a 100-vertex mesh, up to 7.5 times) and Star Wars Episode I: Racer (three frames, the
+  largest a 667-vertex mesh at 10.3 times): single frames, never a mesh frame after frame.
+- None stretched: Mario Party 1, 2 and 3, Rayman 2, Dinosaur Planet, Diddy Kong Racing, Star Wars: Rogue Squadron and
+  Tony Hawk's Pro Skater 2, most of them no frame logged at all.
+
+So no game but Rush 2049 showed it in what these plans play, and none was given ids for it. Jet Force Gemini gives its
+draws ids of its own (its rt64 patch), and Turok 2 played on main stopped drawing in its level whatever the log did
+(filed).
+
 ## Pokémon Snap's camera check against its desktop build
 
 After a course Pokémon Snap's camera check counts the photos taken ("N pictures have been taken"), a frame of

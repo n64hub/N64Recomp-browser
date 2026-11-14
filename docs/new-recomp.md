@@ -156,8 +156,9 @@ What it looks for:
   Quackers'); a keyframed animation drawn without ids (flags, cloth, water) holds together in the frames drawn between
   the game's: the rt64 fork's automatic vertex interpolation pairs two frames' vertices by their order, so a game that
   plays one by switching meshes whose vertices aren't in the same order needs those draws in a group with an id
-  (Rush 2049's start-line flags broke into shards about one drawn frame in six, its src/node_interpolation.cpp); 2D
-  (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
+  (Rush 2049's start-line flags broke into shards about one drawn frame in six, its src/node_interpolation.cpp; no
+  other game's regular plan showed it, docs/findings.md, Keyframed meshes under the automatic vertex interpolation);
+  2D (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
 - Letterboxes: black bars or a black row where the picture should reach the window, at odd window heights too, and
   the picture's last row and column filled at any window size (Turok 3's cutscene bars stopped a column short at
   1280x720, RT64's anchoring, docs/forks.md; Dinosaur Planet's a row short, with a grey strip of an old frame under
