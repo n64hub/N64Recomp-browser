@@ -40,10 +40,10 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 4c fails, 8a fails | W5, W6's Drive |
-| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W5 fails, W6's Drive, W9 |
+| San Francisco Rush 2049 | 1a, 4c fails, 8a fails | W5, W6's Drive |
+| Perfect Dark | 2 fails, 4c, 8a fails | W5 fails, W6's Drive |
 | Super Mario 64 | | W5 fails, W6's Drive |
-| F-Zero X | | W6's Drive |
+| F-Zero X | 1a | W6's Drive |
 | Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
 | Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W5 fails, W6's Drive, W8 |
 | Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W6's Drive, W8 |
@@ -53,8 +53,8 @@ items by almost no game when the record began.
 | Donald Duck: Goin' Quackers | 2, 5b | W5 fails, W6's Drive |
 | Dinosaur Planet | | W5 fails |
 | Turok: Dinosaur Hunter | 5a | W5 fails, W6's Drive |
-| Turok 2: Seeds of Evil | 2 fails, 4c, 5a | W5 fails, W6's Drive |
-| Turok 3: Shadow of Oblivion | 4c, 5a | W5 fails, W6's Drive |
+| Turok 2: Seeds of Evil | 1a, 2 fails, 4c, 5a | W5 fails, W6's Drive |
+| Turok 3: Shadow of Oblivion | 1a, 4c, 5a | W5 fails, W6's Drive |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
@@ -168,6 +168,12 @@ game engine's own hooks (turok-engine's `docs/widescreen.md`). Text that crosses
 between the two sides. A scissor set around the HUD covers every scissor the frame's 3D drew with, or RT64 stops
 widening the 3D (Super Smash Bros.' `patches/hud.c`). The game culls to its 4:3 view, so its culling is widened to the
 picture's.
+
+- **1a.** Split screen at 16:9 and at 21:9, with two players and with three or four. A view as wide as the frame (two
+  players, one above the other) is widened by RT64 as one player's is, so its culling and its HUD are widened with it,
+  or the window's sides draw black and the radar is stretched; a view narrower than the frame (side by side, quarters)
+  stays 4:3, and the window beside it is cleared once a frame, or it keeps an old frame stretched to the sides
+  (Perfect Dark's Combat Simulator showed both, its `patches/widescreen.c`).
 
 ### 2. A graphics sweep, played past the first level
 
