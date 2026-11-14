@@ -979,6 +979,22 @@ sound, the first race being that early in its plan. A later section's wait stops
 did, and no point before the game gets there is free to build it in: built before the game starts too, Rush 2049's
 would add 7-9 s to every Firefox start.
 
+Nor can the sound go on through a later section's wait while the game is held. RT64's workload thread holds the
+frame for the round (RasterShaderCache::waitForPrebuild()) after the game's list has been read, and within a few lists
+the graphics thread finds RT64's workload queue full and stops in its list. The VI thread then sends no VI
+(ULTRAMODERN_VIS_WAIT_FOR_RENDERER, N64ModernRuntime d405b65), on purpose: Paper Mario's page trapped when its game ran
+on past a list the renderer still held. With no VI the game makes no sound: an N64 game's audio is made a VI's worth at a
+time, on the VI's message. A wait split so the game draws between pieces is no shorter: Firefox's GPU process builds one
+pipeline at a time, 0.06-0.3 s each (Rush 2049's race 43 in 6.7-9.0 s, plays.jsonl), so the game is held as long in
+all, its sound lost in pieces of 0.06-0.3 s instead of one gap. The game's sound can only go on if the game does,
+RT64 taking its lists and drawing none until the round is built: the player misses that much of the level unseen
+behind the panel, and a game that renders to RAM reads back
+framebuffers that were never drawn. The one place a later section's build costs no play is where the player waits
+anyway, behind the launcher, where Firefox would build a pipeline at a time between its frames, the launcher held a
+build's 0.06-0.3 s when the player acts there and the play plans, which click through it at once, gaining nothing.
+So a later section's wait in Firefox stays what it is, the game held under the page's panel with its sound as at a
+load, and W5 (docs/new-recomp.md) doesn't count it.
+
 ## What the prebuilt lists miss
 
 Each list was recorded from a plan that reaches a level's start and plays a few seconds of it (its header says what

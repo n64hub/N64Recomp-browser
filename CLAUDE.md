@@ -102,8 +102,9 @@ docs line) is made in the same work like any other.
   does better (a shader list in sections, the late copy) is tried on the others.
 - The checklists in docs/new-recomp.md are kept by the work that plays the games, in the same PR (its Keeping them): a
   problem one game turns up that another could have too goes in as an item, an item added is backchecked (its label
-  in the row of every game it can apply to, and work filed to play it there), and a play of a game for an item updates
-  that game's row. A port or new recomp is called done once its row holds only fails whose fixes are filed.
+  in the row of every own recomp it can apply to, and work filed to play it there; game forks aren't backchecked), and
+  a play of a game for an item updates that game's row. A port or new recomp is called done once its row holds only
+  fails whose fixes are filed.
 - Work that is started: a critical fix, a new port, and work whose likely cause is shared code, measured on two games
   or more. One game's polish (one browser's sound in one game, 100 ms gaps at one screen change) is filed and waits
   until asked for.
