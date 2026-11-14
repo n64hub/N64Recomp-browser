@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web edd5da856335011fea254e5ba91d00af8c935400
+rt64: https://github.com/n64hub/rt64-web 2eb3bbdc93b30e3eb3ce67ccc8d3fa0a19657e1f
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -5387,7 +5387,7 @@ index 8ea27d5..589d7eb 100644
  
          void reset();
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..616a0ce 100644
+index 5a331aa..d76524a 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -8,6 +8,13 @@
@@ -5978,7 +5978,7 @@ index 5a331aa..616a0ce 100644
                  ext.presentQueue->waitForPresentId(workload.presentId);
  
                  if (!threadsRunning) {
-@@ -912,22 +1286,27 @@ namespace RT64 {
+@@ -912,32 +1286,43 @@ namespace RT64 {
  
                  ElapsedTimer workloadTimer;
                  workloadProfiler.start();
@@ -6010,9 +6010,16 @@ index 5a331aa..616a0ce 100644
                  RenderTargetKey interpolationTargetKey;
 +                uint32_t interpolationTargetWorkload = 0;
                  int32_t interpolationTargetFbPairIndex = -1;
++                // The color images go to the present queue (colorImageAddressVector) once the frame's first display frame is
++                // drawn, below, not here: a present that took them now chose a framebuffer this frame is about to draw, which
++                // the presentation's SkipBuffering shows, and read it while this thread drew it. Turok 2's map, drawn in the
++                // frame's second workload after the level, was missing from 3-10% of the frames shown while it was open.
++                thread_local std::vector<uint32_t> frameColorImages;
                  {
                      std::scoped_lock<std::mutex> managerLock(ext.sharedResources->managerMutex);
-@@ -936,8 +1315,9 @@ namespace RT64 {
+                     FramebufferManager &fbManager = ext.sharedResources->framebufferManager;
+-                    std::vector<uint32_t> &colorVector = ext.sharedResources->colorImageAddressVector;
++                    std::vector<uint32_t> &colorVector = frameColorImages;
                      std::unordered_set<uint32_t> &colorSet = ext.sharedResources->colorImageAddressSet;
                      colorVector.clear();
                      colorSet.clear();
@@ -6024,7 +6031,7 @@ index 5a331aa..616a0ce 100644
                          bool interpolationCandidate = fbPair.earlyPresentCandidate();
                          if (fbPair.drawColorRect.isEmpty()) {
                              continue;
-@@ -965,6 +1345,7 @@ namespace RT64 {
+@@ -965,6 +1350,7 @@ namespace RT64 {
                              interpolationTargetKey.address = fbPair.colorImage.address;
                              interpolationTargetKey.siz = fbPair.colorImage.siz;
                              interpolationTargetKey.width = fbPair.colorImage.width;
@@ -6032,7 +6039,7 @@ index 5a331aa..616a0ce 100644
                              interpolationTargetFbPairIndex = f;
                          }
                      }
-@@ -979,6 +1360,11 @@ namespace RT64 {
+@@ -979,6 +1365,11 @@ namespace RT64 {
                  bool tileInterpolationUsed = false;
                  bool lookAtInterpolationUsed = false;
                  if (requiresFrameMatching) {
@@ -6044,7 +6051,7 @@ index 5a331aa..616a0ce 100644
                      matchingProfiler.reset();
                      matchingProfiler.start();
                      curFrame.match(ext.workloadGraphicsWorker, *this, prevFrame, ext.workloadVelocityUploader, velocityUploaderUsed, tileInterpolationUsed, lookAtInterpolationUsed);
-@@ -987,6 +1373,16 @@ namespace RT64 {
+@@ -987,6 +1378,16 @@ namespace RT64 {
  
                      const bool displayRateAboveOriginal = (workload.viOriginalRate > 0) && (workloadConfig.targetRate > workload.viOriginalRate);
                      generateInterpolatedFrames = !workload.paused && displayRateAboveOriginal && !interpolationTargetKey.isEmpty();
@@ -6061,7 +6068,7 @@ index 5a331aa..616a0ce 100644
  
                      const bool resetTicks = !generateInterpolatedFrames || (originalRateForTicks != workload.viOriginalRate) || (displayRateForTicks != workloadConfig.targetRate) || !displayRateAboveOriginal;
                      if (resetTicks) {
-@@ -1001,29 +1397,32 @@ namespace RT64 {
+@@ -1001,29 +1402,32 @@ namespace RT64 {
                  uint32_t displayFrames = 1;
                  if (generateInterpolatedFrames) {
                      logicalTicks += workloadConfig.targetRate;
@@ -6100,7 +6107,7 @@ index 5a331aa..616a0ce 100644
                      ext.sharedResources->interpolatedFramesIndex = ext.sharedResources->interpolatedFramesIndex ^ 1;
                      lastPresentId = workload.presentId;
                  }
-@@ -1037,17 +1436,38 @@ namespace RT64 {
+@@ -1037,17 +1441,38 @@ namespace RT64 {
                  }
  
                  InterpolatedFrameCounters &curFrameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
@@ -6139,7 +6146,7 @@ index 5a331aa..616a0ce 100644
                      uint32_t previousSize = uint32_t(interpolatedTargets.size());
                      interpolatedTargets.resize(requiredFrames);
                      for (uint32_t i = previousSize; i < requiredFrames; i++) {
-@@ -1055,7 +1475,7 @@ namespace RT64 {
+@@ -1055,7 +1480,7 @@ namespace RT64 {
                      }
                  }
                  
@@ -6148,7 +6155,7 @@ index 5a331aa..616a0ce 100644
                  const int64_t setupTimeMicro = workloadTimer.elapsedMicroseconds();
                  const int64_t adjustedTimeWindowMicro = originalTimeMicro - setupTimeMicro;
                  const int64_t maxTimePerFrameMicro = adjustedTimeWindowMicro / displayFrames;
-@@ -1063,6 +1483,21 @@ namespace RT64 {
+@@ -1063,6 +1488,21 @@ namespace RT64 {
                  bool skipWorkloadNow = false;
                  uint32_t targetIndex = 0;
                  uint32_t framesRendered = 0;
@@ -6170,7 +6177,7 @@ index 5a331aa..616a0ce 100644
                  int64_t renderTimeTotalMicro = 0;
                  for (uint32_t frame = 0; (frame < displayFrames) && !skipWorkloadNow; frame++) {
                      // Evaluate if this frame should be skipped. Measure the current time and compare it to what frame is estimated should be have been rendered by now.
-@@ -1071,7 +1506,7 @@ namespace RT64 {
+@@ -1071,7 +1511,7 @@ namespace RT64 {
                          const int64_t expectedTimeMicro = frame * maxTimePerFrameMicro;
                          const int64_t measuredFrameMicro = renderTimeTotalMicro / framesRendered;
                          if ((currentTimeMicro > expectedTimeMicro) || ((currentTimeMicro + measuredFrameMicro) > adjustedTimeWindowMicro)) {
@@ -6179,7 +6186,7 @@ index 5a331aa..616a0ce 100644
                              skippedFrames = true;
                              continue;
                          }
-@@ -1081,20 +1516,53 @@ namespace RT64 {
+@@ -1081,20 +1521,53 @@ namespace RT64 {
                      uint32_t overrideModifier = 0;
                      if (generateInterpolatedFrames) {
                          prevFrameWeight = std::clamp((workloadConfig.targetRate + displayTicks - logicalTicks) / float(workloadConfig.targetRate), 0.0f, 1.0f);
@@ -6239,7 +6246,7 @@ index 5a331aa..616a0ce 100644
                                  });
                              }
  
-@@ -1102,7 +1570,7 @@ namespace RT64 {
+@@ -1102,7 +1575,7 @@ namespace RT64 {
                          }
                      }
                      else if (workload.paused) {
@@ -6248,7 +6255,7 @@ index 5a331aa..616a0ce 100644
                          prevFrameWeight = 1.0f - curFrameWeight;
                      }
                      else {
-@@ -1112,28 +1580,30 @@ namespace RT64 {
+@@ -1112,28 +1585,31 @@ namespace RT64 {
  
                      const bool uploadExtras = (frame == 0) && workloadConfig.raytracingEnabled;
                      if (uploadExtras) {
@@ -6275,6 +6282,7 @@ index 5a331aa..616a0ce 100644
                      // After one frame is rendered, we indicate the workload has been processed so the present thread can start presenting frames as soon as it can.
                      if (frame == 0) {
 -                        threadAdvanceWorkloadId(workload.workloadId);
++                        ext.sharedResources->colorImageAddressVector = frameColorImages;
 +                        threadAdvanceWorkloadId(lastWorkload.workloadId);
                      }
  
@@ -6288,7 +6296,7 @@ index 5a331aa..616a0ce 100644
  
                          {
                              std::scoped_lock<std::mutex> managerLock(ext.sharedResources->interpolatedMutex);
-@@ -1143,7 +1613,7 @@ namespace RT64 {
+@@ -1143,7 +1619,7 @@ namespace RT64 {
  
                          // Add the amount of display ticks that correspond to the remaining frames.
                          if (skipWorkloadNow) {
@@ -6297,7 +6305,7 @@ index 5a331aa..616a0ce 100644
                          }
  
                          ext.sharedResources->interpolatedCondition.notify_all();
-@@ -1164,8 +1634,43 @@ namespace RT64 {
+@@ -1164,8 +1640,43 @@ namespace RT64 {
  
                  threadConfigurationValidate();
  
