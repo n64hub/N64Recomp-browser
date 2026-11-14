@@ -6,7 +6,10 @@
 #        [-ExeArgs <args>] [-Env RT64_FRAME_LOG=1,...] [-Scale 0.5] [-Flag 2]
 #
 # It starts the exe in -WorkDir (its stdout and stderr go to stdout.log and stderr.log in -OutDir), finds the window
-# of the process it started and plays the plan, then stops that process by its PID. Only that window is captured,
+# of the process it started and plays the plan, then stops that process by its PID. A -WorkDir with a portable.txt
+# keeps the run's settings and saves apart from a player's, but only where the program stays in it: a recomp that moves
+# to its own folder when the working directory has no assets/ (Perfect Dark's, the Turoks') then reads and writes the
+# player's own, so give -WorkDir its assets/ too, a directory junction to the release's. Only that window is captured,
 # with PrintWindow, never the screen: PrintWindow renders the window itself, whatever lies over it. -Flag 2
 # (PW_RENDERFULLCONTENT) is the one that captures RT64's Vulkan swap chain; 3 returns black game frames on some
 # drivers.
