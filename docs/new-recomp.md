@@ -40,21 +40,21 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 4c, 8a fails | W5 fails, W6 |
-| Perfect Dark | 1, 2, 3, 4b, 4c fails, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
+| San Francisco Rush 2049 | 4c fails, 8a fails | W5 fails, W6 |
+| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
 | Super Mario 64 | | W2, W5 fails, W6, W7 |
-| F-Zero X | 4c fails | W6 |
-| Mario Party | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Mario Party 2 | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Mario Party 3 | 4c fails, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
-| Super Smash Bros. | 4c fails | W2, W5, W6 |
+| F-Zero X | | W6 |
+| Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
+| Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
+| Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
+| Super Smash Bros. | | W2, W5, W6 |
 | Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
 | Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
 | Turok: Dinosaur Hunter | 5a | W2, W5, W6, W7 |
-| Turok 2: Seeds of Evil | 2 fails, 4c fails, 5a | W2, W5, W6, W7 |
-| Turok 3: Shadow of Oblivion | 4c fails, 5a | W2, W5, W6, W7 |
+| Turok 2: Seeds of Evil | 2 fails, 4c, 5a | W2, W5, W6, W7 |
+| Turok 3: Shadow of Oblivion | 4c, 5a | W2, W5, W6, W7 |
 | GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
@@ -79,14 +79,20 @@ items by almost no game when the record began.
 | Turok: Rage Wars | | W2, W5, W6, W7 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: 4c's pads are played on Super Smash Bros.' page with two stand-in pads of one id (W7's
-`unplugPad` and `replugPad`): a binding written to the controls file is read back after a restart and kept through
-each pad pulled out and plugged in again, both pads reading the one profile their model shares, but where each pad
-plays a port of its own (item 3) a pad plugged in again takes the last port, and while it is out the pads after it
-move up one, since RecompFrontend orders the pads by SDL's instance id, a new one at each plug (filed): Super Smash
-Bros., F-Zero X, Perfect Dark, the Mario Parties and Turok 2 and 3 fail it. Where every pad plays port 1 that passes,
-so Super Mario 64 and Turok: Dinosaur Hunter, whose keyboard half was played (a key added on the Controls tab kept
-across a quit and a restart, walking the Turoks' player forward), pass 4c, and Paper Mario's keyboard half is left;
+What the fails are: 4c's pads are played with two stand-in pads of one id (W7's `unplugPad` and `replugPad`). On
+Super Smash Bros.' page a binding written to the controls file is read back after a restart and kept through each pad
+pulled out and plugged in again, both pads reading the one profile their model shares; where each pad plays a port
+of its own (item 3) a pad plugged in again took the last port, and the pads after it moved up one while it was out,
+and a pad plugged in again at a lower place than another of its model rumbled that one (Rush 2049's page: all of a
+two-player race's rumble on pad 2). RecompFrontend ebd361b, 9fc3d68 and 74eb087 (docs/forks.md) fix both, and give an
+assigned or joined player back their controller: on builds of them Super Smash Bros.' pads keep ports 1 and 2 through
+each replug and restart, and F-Zero X's four rumble each, the first two plugged in again, so both pass 4c. Perfect
+Dark, the Mario Parties and Turok 2 and 3 play their pads by the same code, and 4c is left for their next pin move's
+play. Rush 2049's pads join on their first press and already came back to their players on its page (its runtime
+patch RecompFrontend-0004, the same as 9fc3d68), but its rumble fails until its pin takes 74eb087. Where every pad
+plays port 1 the ports pass, so Super Mario 64 and Turok: Dinosaur Hunter, whose keyboard half was played (a key added
+on the Controls tab kept across a quit and a restart, walking the Turoks' player forward), pass 4c, and Paper Mario's
+keyboard half is left;
 Turok 2's desktop build drops its map from some of the frames Frame Interpolation adds at Manual 120 while the player
 moves, 5-13 of 75-80 captures, with `RT64_GAME_FRAME_WORKLOADS` on or off and none at Original (filed); the Turoks' 5a is unplayed: none of the three writes its Controller Pak before a save
 point in a level (`saves/controllerpak_0.mpk` stays absent through their boots, intros and attract demos, and
