@@ -37,22 +37,22 @@ items by almost no game when the record began.
 
 | Game | New recomp: left | Web port: left |
 |---|---|---|
-| San Francisco Rush 2049 | 2, 3, 4a, 4b, 5a, 6a, 6b | W2, W5, W6, W7 |
-| Perfect Dark | 1, 2, 3, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W9 |
-| Super Mario 64 | 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W5, W6, W7 |
-| F-Zero X | 2, 3, 4a, 4b, 4c, 5a, 5b, 6b, 8a, 8c fails | W2, W5, W6, W7, W9 |
-| Mario Party | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
-| Mario Party 2 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
-| Mario Party 3 | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8b, 8c fails | W2, W3 fails, W4 fails, W5, W6, W7, W8 |
-| Super Smash Bros. | 1 fails, 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W4 fails, W5, W6, W9 |
-| Paper Mario | 1 fails, 2, 4a, 4b, 4c, 5a, 5b, 6b, 8a | W2, W4 fails, W5, W6, W7, W9 |
+| San Francisco Rush 2049 | 4c, 8a fails | W5 fails, W6 |
+| Perfect Dark | 1, 2, 3, 4b, 4c fails, 5a, 5b, 6a, 6b, 8a fails | W2, W5, W6, W7, W9 |
+| Super Mario 64 | | W2, W5 fails, W6, W7 |
+| F-Zero X | 4c fails | W5 fails, W6 |
+| Mario Party | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W6, W7, W8 |
+| Mario Party 2 | 4c fails, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W2, W5 fails, W6, W7, W8 |
+| Mario Party 3 | 4c fails, 5b, 6a, 8a, 8b, 8c fails | W2, W6, W7, W8 |
+| Super Smash Bros. | 4c fails | W2, W5, W6 |
+| Paper Mario | 4a, 4c, 6b | W2, W5 fails, W6, W7 |
 | Rayman 2 | | W2, W5, W6, W7 |
-| Donald Duck: Goin' Quackers | 2, 5a, 5b, 6b | W2, W5, W6, W7 |
+| Donald Duck: Goin' Quackers | 2, 5b | W2, W5, W6, W7 |
 | Dinosaur Planet | | W2, W5 fails, W7 |
-| Turok: Dinosaur Hunter | 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W8, W9 |
-| Turok 2: Seeds of Evil | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a, 8c fails | W2, W3 fails, W5, W6, W7, W8, W9 |
-| Turok 3: Shadow of Oblivion | 3, 4a, 4b, 4c, 5a, 5b, 6a, 6b, 8a | W2, W5, W6, W7, W8, W9 |
-| GoldenEye 007 | | W2, W5, W6, W7 |
+| Turok: Dinosaur Hunter | 5a | W2, W5, W6, W7 |
+| Turok 2: Seeds of Evil | 2 fails, 4c fails, 5a | W2, W5, W6, W7 |
+| Turok 3: Shadow of Oblivion | 4c fails, 5a | W2, W5, W6, W7 |
+| GoldenEye 007 | | W2, W5 fails, W6, W7 |
 | The Legend of Zelda: Majora's Mask | | W2, W5, W6, W7 |
 | Banjo-Kazooie | | W2, W5, W6, W7 |
 | Conker's Bad Fur Day | | W2, W5, W6, W7 |
@@ -68,20 +68,55 @@ items by almost no game when the record began.
 | Star Wars Episode I: Racer | | W2, W5, W6, W7, W9 |
 | Pokémon Snap | | W2, W5, W6, W7 |
 | Rush 2: Extreme Racing USA | | W2, W5, W6, W7 |
-| 1080° Snowboarding | | W2, W5, W6, W7, W8, W9 |
-| Space Station Silicon Valley | | W2, W5, W6, W7, W8, W9 |
-| Tony Hawk's Pro Skater 2 | | W2, W5, W6, W7, W8, W9 |
+| 1080° Snowboarding | | W2, W5, W6, W7, W9 |
+| Space Station Silicon Valley | | W2, W5, W6, W7, W9 |
+| Tony Hawk's Pro Skater 2 | | W2, W5, W6, W7, W9 |
 | Star Wars: Rogue Squadron | | W2, W5, W6, W7, W9 |
-| Beetle Adventure Racing! | | W2, W5, W6, W7, W8, W9 |
-| Turok: Rage Wars | | W2, W5, W6, W7, W8, W9 |
+| Beetle Adventure Racing! | | W2, W5, W6, W7, W9 |
+| Turok: Rage Wars | | W2, W5, W6, W7 |
 | WWF No Mercy | | W2, W5, W6, W7, W8, W9 |
 
-What the fails are: Smash's and Paper Mario's HUD and menus stay in the middle 4:3 (1); F-Zero X's, the Mario Parties'
-and Turok 2's READMEs don't link their pages (8c); the Mario Parties' and Turok 2's regular plans, played on a fresh
-profile, miss shaders their lists lack (W3); Dinosaur Planet's page still loses up to 13 ms of sound in its game's
-first seconds in Chrome on a first visit, though none at the logos since plume-web e69d031 (docs/findings.md, Compute
-pipelines built at their first dispatch), and about 42 ms at the logos in Firefox (W5); the Mario Parties keep render
-to RAM on in their desktop builds, and Smash's and Paper Mario's pages keep the exact copy with no reason given (W4).
+What the fails are: 4c's pads are played on Super Smash Bros.' page with two stand-in pads of one id (W7's
+`unplugPad` and `replugPad`): a binding written to the controls file is read back after a restart and kept through
+each pad pulled out and plugged in again, both pads reading the one profile their model shares, but where each pad
+plays a port of its own (item 3) a pad plugged in again takes the last port, and while it is out the pads after it
+move up one, since RecompFrontend orders the pads by SDL's instance id, a new one at each plug (filed): Super Smash
+Bros., F-Zero X, Perfect Dark, the Mario Parties and Turok 2 and 3 fail it. Where every pad plays port 1 that passes,
+so Super Mario 64 and Turok: Dinosaur Hunter, whose keyboard half was played (a key added on the Controls tab kept
+across a quit and a restart, walking the Turoks' player forward), pass 4c, and Paper Mario's keyboard half is left;
+Turok 2's desktop build drops its map from some of the frames Frame Interpolation adds at Manual 120 while the player
+moves, 5-13 of 75-80 captures, with `RT64_GAME_FRAME_WORKLOADS` on or off and none at Original (filed); the Turoks' 5a is unplayed: none of the three writes its Controller Pak before a save
+point in a level (`saves/controllerpak_0.mpk` stays absent through their boots, intros and attract demos, and
+turok-engine writes the pak only on a change), and no save point was reached near Turok 1's or Turok 2's start; the Mario Parties' READMEs don't link their pages (8c); F-Zero X's page in Firefox loses
+none in its boot's first 10 s built on v0.201.0 but inside its own silence (0.6-2.5 s from Pages on v0.184.0, as
+section boot's shaders were built with the game waiting), and 2.4 s in the 2.6 s its first race's section takes to
+build 45 shaders, a later section's wait (W5; docs/findings.md, Firefox's boot wait and the first sound);
+Dinosaur Planet's page still loses 315-816 frames in its sound's first second in Chrome on first visits, where its
+first audio tasks come late (filed), and none after it since the ring's count leaves out the browser's burst, and the desktop
+build loses 22 ms as its sound starts, none at the logos since plume-web e69d031 (docs/findings.md, Compute pipelines
+built at their first dispatch), and in Firefox, since plume-web 4381169 none at its first 3D, and since plume-web
+0ac34ab 1-2 thousand frames at its menu, where Firefox built RT64's ubershader in line (71-83 thousand); Super Mario 64's page in Chrome loses about 95 ms in its boot's first 0.2 s
+and at 3.4 s inside its own silence, where the game's sound code makes nothing as it reloads, and 3-85 ms of its logo's
+fading sound at 0.5-0.6 s in 4 of 10 plays, where the ring is still refilling (none in 10 plays since, and the
+browser's burst left out of the ring's count cuts less of the logo's sound at its 6 s reset, 1 play of 5 against 4; W5); Paper
+Mario's boot loses sound in both browsers only inside its own silence, which lasts until its intro stage's music, but
+its tab hidden in its intro loses 16-32 ms of that music in Chrome in some plays, as the present thread waits for a
+present in flight (filed), and in Firefox the intro story's own shaders, which RT64 builds a few at a time with the
+game waiting, break up its music for 0.1-0.3 s a dozen times (W5); the Mario Parties' pages in Firefox lose
+none in their boot's first 10 s built on v0.200.0 (66k-108k from Pages on v0.184.0, as section boot's shaders were
+built with the game waiting), and built on v0.201.0 each came through its tab hidden 30 s and shown again on a GPU
+94-96% busy, Firefox's GPU process at 2.0-2.3 GB while hidden and the page back within 5 s, none short after but
+Mario Party 3's 132 frames in 1 play of 2, where that play lost thousands before the hide too; on v0.200.0, and from
+Pages on v0.184.0 until their pins move, none drew for 25-60 s after the show on a busy GPU, Firefox's GPU process
+grown to 9-11 GB while hidden by the frames interpolated for presents a hidden page skips, which rt64 edd5da8 no
+longer draws; with the GPU to themselves, from Pages, they came through, but Mario Party 2's 59k short there the
+1.4 s its section Minigames13's 34 shaders took, a later section's wait (W5, filed);
+Mario Party 1's and 2's desktop builds drop about 22 ms of sound every few seconds whatever the window does, none
+more for a drag (6b, filed). In Firefox, where every page's boot section was built
+with its sound started (0.1-11.7 s short in the first 10 s on 37 pages of 38), it is built before the game starts
+since rt64 c5ced59: GoldenEye's page loses 0.8 s there, against 7.9-9.1 s from Pages, which may be play_page.mjs's
+own memory report (filed), and Rush 2049's 3.2-4.2 s, its race section's 8-9 s wait coming in those 10 s (a later
+section's wait, filed; W5; docs/findings.md, Firefox's boot wait and the first sound).
 
 ## A new recomp's list
 
@@ -94,7 +129,9 @@ offers it. The 3D reaches the window's edges at 16:9 and at 21:9, and the HUD is
 and corners, not left in a 4:3 box in the middle: RT64's `gEXSetRectAlign`, `gEXSetViewportAlign` and edge-aligned
 scissors written into the HUD's display list as the game draws each piece (Jet Force Gemini's Screen Corners), or a
 game engine's own hooks (turok-engine's `docs/widescreen.md`). Text that crosses the middle stays whole, not split
-between the two sides. The game culls to its 4:3 view, so its culling is widened to the picture's.
+between the two sides. A scissor set around the HUD covers every scissor the frame's 3D drew with, or RT64 stops
+widening the 3D (Super Smash Bros.' `patches/hud.c`). The game culls to its 4:3 view, so its culling is widened to the
+picture's.
 
 ### 2. A graphics sweep, played past the first level
 
@@ -110,20 +147,40 @@ Firefox, with captures or clips of what is found. What it plays, beyond the firs
 What it looks for:
 
 - Flicker: a surface or the HUD blinking frame to frame, z-fighting, a frame of garbage or a stale framebuffer in a
-  transition, a frame drawn without its HUD, text or characters.
+  transition, a frame drawn without its HUD, text or characters, or with only the part of its world drawn first. A
+  game that draws a frame in several RSP tasks needs `RT64_GAME_FRAME_WORKLOADS` on its desktop build too, as its page
+  has it, or RT64 interpolates each task as a frame of its own (docs/forks.md; the Mario Parties', Paper Mario's and
+  Turok 1's and 2's CMakeLists.txt: Paper Mario's opening at Mario's house showed the house's inside without its outer
+  wall, roof and trees in half the frames one host showed; Turok 1's and 2's map is a task of its own after the
+  level's). A page opened with `?frame-log` and read by `tools/frame_log.mjs`
+  tells: a frame drawn in several tasks reads as `drawn=2` or more, frame after frame, where the game draws it so. The
+  other own recomps drew each frame in one through their play plans, a frame or two at a screen change aside.
 - Interpolation: on the frame a level section, room or the world's origin changes, what is drawn snaps rather than
   blending between the two (Dinosaur Planet's, Perfect Dark's and GoldenEye's sections); characters' model parts carry
   ids of their own, or RT64 pairs one character's parts with a look-alike's (Mario Party's, Rayman 2's, Goin'
-  Quackers'); 2D (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
+  Quackers'); a keyframed animation drawn without ids (flags, cloth, water) holds together in the frames drawn between
+  the game's: the rt64 fork's automatic vertex interpolation pairs two frames' vertices by their order, so a game that
+  plays one by switching meshes whose vertices aren't in the same order needs those draws in a group with an id
+  (Rush 2049's start-line flags broke into shards about one drawn frame in six, its src/node_interpolation.cpp; no
+  other game's regular plan showed it, docs/findings.md, Keyframed meshes under the automatic vertex interpolation);
+  2D (sprites, scrolling textures, particles, menus) moves at the display's rate, not the game's.
 - Letterboxes: black bars or a black row where the picture should reach the window, at odd window heights too, and
   the picture's last row and column filled at any window size (Turok 3's cutscene bars stopped a column short at
   1280x720, RT64's anchoring, docs/forks.md; Dinosaur Planet's a row short, with a grey strip of an old frame under
-  them, since the game's own scissor ends a row before the frame's, its docs/restored-content.md).
+  them, since the game's own scissor ends a row before the frame's, its docs/restored-content.md; Super Mario 64's
+  title backdrop the window's top row, flickering with three framebuffers' old frames, since the game's full-screen
+  projection falls a quarter of a line short of the top, which only a picture taller than 240 rows shows, its
+  patches/widescreen.c).
 - Tiling: seams or misaligned tiles on walls, ground, sky and the HUD's pieces at high resolution.
 - Widescreen: things culled or the level cut off near the picture's left and right edges (a game can cut its level a
-  second time, at 16:9, as Turok 2 does); full-screen overlays, tints, wipes and fades cut at the 4:3 picture's
+  second time, at 16:9, as Turok 2 does); an off-screen marker (a bubble or an arrow for a character past the edge)
+  placed at the 4:3 picture's edge; full-screen overlays, tints, wipes and fades cut at the 4:3 picture's
   scissor rather than reaching the window's edges (`RT64_SCISSOR_INSIDE_FRAMEBUFFER`, docs/forks.md); rooms seen
-  through doors and portals clipped or drawn on walls.
+  through doors and portals clipped or drawn on walls; beside a menu's or title's 4:3 picture, a picture made for the
+  4:3 frame repeated across the window, or sides never cleared that keep an old frame (Paper Mario's title and file
+  select showed copies of a framed painting with white between them, and its black beside a 4:3 frame was never drawn:
+  RT64 drops an extended fill whose right side, before it is moved from its origin, is left of its left side, its
+  patches/widescreen.c).
 - Missing draws: text, glyphs, the map's lines or a menu screen that comes up empty.
 
 ### 3. Every controller its own port
@@ -133,17 +190,26 @@ the second pad plays port 2 without anyone assigning players first, and the game
 each. RecompFrontend's `RECOMPINPUT_PADS_IN_ORDER` does that (set before `add_subdirectory` of RecompFrontend, with
 `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED`, `set_single_player_mode(false)` and the game's player count), and the
 game's `get_connected_device_info` reports a controller in port 1, in each port a pad is connected for
-(`get_detected_controller_count`) and in each assigned player's: F-Zero X's, Super Smash Bros.' and Mario Party's
-`main.cpp` are the pattern. Single-player mode, where every pad plays port 1, is for a game of one player only. The
-page plays it with stand-in pads (W7).
+(`get_detected_controller_count`) and in each assigned player's, each with a Rumble Pak in it unless the game keeps
+its save on a Controller Pak there (5a): a game that finds no Rumble Pak (`osMotorInit`) never rumbles for that
+player. F-Zero X's, Super Smash Bros.' and Mario Party's `main.cpp` are the pattern. A game whose pads become
+players on their first press (per-pad bindings) can keep that and join every connected pad in the order it was
+plugged in on any pad's first press instead (Rush 2049's `RecompFrontend-0009` runtime patch). Single-player mode,
+where every pad plays port 1, is for a game of one player only. The page plays it with stand-in pads (W7), their
+rumble included.
 
 ### 4. Input
 
 - **4a.** On a new profile: mouse look on and pointing the way the game's stick does, and keyboard defaults that reach
   every menu (the arrows and the D-pad's keys) as well as play.
 - **4b.** Start or Enter pressed or held through the boot: many games open their Controller Pak manager for it, which
-  must neither crash nor stop the game.
-- **4c.** Bindings are kept across a restart and a pad plugged in again, two pads of one model included.
+  must neither crash nor stop the game. The launcher's own Enter on Start Game can be that press: Turok: Dinosaur
+  Hunter's first read of the pad comes while the key is still down, so a game started with Enter opened its manager
+  every time (Start leaves it).
+- **4c.** Bindings are kept across a restart and a pad plugged in again, two pads of one model included, and a pad
+  plugged in again plays the port it played before. A page plays the pads with no pad on the machine: W7's stand-in
+  pads, one pulled out and plugged in again by `unplugPad` and `replugPad`, a binding written to the controls file
+  (`<HOME>/.config/<program id>/controls.json`, the page's `FS`) and read back on the same profile's next visit.
 
 ### 5. Saves and settings
 
@@ -163,7 +229,11 @@ page plays it with stand-in pads (W7).
 - **6b.** No sound lost or turned to noise on the desktop through the boot and a window dragged (the page's is W5). On
   Windows a drag holds the window's thread in the move loop that a `WM_SYSCOMMAND` `SC_MOVE` posted to the window
   starts as well, which a script holds and ends (Escape) without the mouse, and SDL's disk driver
-  (`SDL_AUDIODRIVER=disk`, `SDL_DISKAUDIOFILE`) records what the game played, its gaps as runs of zeros.
+  (`SDL_AUDIODRIVER=disk`, `SDL_DISKAUDIOFILE`) records what the game played, its gaps as runs of zeros
+  (`tools/capture_window.ps1`'s `drag`). A gap is a loss only where a recording of the same boot without drags has
+  none (a game's own cut to its attract demo is a run of zeros too, as Turok: Dinosaur Hunter's is) and a second drag
+  play loses it again: Turok 3's first lost 65 ms in a drag over its title music beside a page play at 3840 wide, and
+  two more lost nothing.
 
 ### 7. The page
 
@@ -171,7 +241,9 @@ The web port list, every item of it.
 
 ### 8. The release
 
-- **8a.** The desktop build runs on Windows and on Linux, Mesa's lavapipe included.
+- **8a.** The desktop build runs on Windows and on Linux, Mesa's lavapipe included: its release's boot
+  (`tools/boot_release.sh`, 90 s) passes on both. A build whose pin is older than plume a8e74eb crashes on lavapipe
+  seconds into its game (docs/findings.md, A desktop build on Mesa's lavapipe), so it fails until the retest moves it.
 - **8b.** Its icon, window title and launcher art are its own game's, not the recomp it was started from.
 - **8c.** Its README links its page.
 
@@ -202,13 +274,18 @@ player's, played by hand.
   its levels and the console's reports of CPU writes to a framebuffer with a copy pending read). Else the exact copy,
   naming what reads it (Majora's Mask's Pictograph Box, Jet Force Gemini's shadows' render targets).
 - **W5.** No sound lost or turned to noise: none short in the boot's first 10 s in Chrome and Firefox
-  (`audioShort`), nor after the tab is hidden and shown again.
+  (`audioShort`), nor after the tab is hidden and shown again. A loss inside the game's own silence (a boot's silent
+  logos) is no sound lost: `tools/audio_probe.js` logs each short render quantum with the loudest sample played
+  before it, 0 there.
 - **W6.** The game finds its save after the page is reloaded and after the browser is closed and opened again, and a
   signed-in player's save reaches the Drive and comes back in another browser (`frontend/save_sync.js`).
 - **W7.** A stand-in pad (`tools/gamepad_probe.js`) drives the launcher, the menus and play, its rumble played; a game
   of several players has a pads plan that plugs a pad a port (Super Smash Bros.' `tools/play_plan_pads.json`, item 3).
-- **W8.** A regular plan and an extended one (docs/playing.md, Plans): the regular plan reaches a level as a player
-  does and plays a minute or more in it, and the extended plan's misses are in the shader list.
+- **W8.** A regular plan (docs/playing.md, Plans) that reaches a level as a player does and plays a minute or more in
+  it, and a shader list recorded on what it plays. The levels past the plan's go into the list when a card's play
+  reaches them, never as work of their own: a shader the list misses costs Firefox 0.2-0.3 s once, Chrome draws it
+  with the ubershader until it is built, and the page remembers it (docs/porting.md, Prebuilt shader lists). An
+  extended plan is no part of it either: a game gets one when a card first needs a longer play.
 - **W9.** A long play, over 3 minutes of the game's busiest screens at 3840 wide, in Chrome and in Firefox, without
   running out of memory or a "memory access out of bounds".
 - **W10.** Firefox played on its own and from Pages: black frames, white edges, traps and freezes have turned up there

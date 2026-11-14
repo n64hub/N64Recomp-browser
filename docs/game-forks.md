@@ -523,7 +523,10 @@ framebuffer), each of which takes one a list old. Its depth fog's read of the Z-
 asks a graphics task to yield to an audio task, and at the next VI takes one still unanswered for a hung RSP and sends
 itself the RSP's and RDP's done (`_uvScDlistRecover`): with the copy a list late a list waits for RT64 longer, so the
 page never got from the menus into a race and Chrome's ran out of memory, until the runtime answered a yield asked of
-a queued graphics task (`ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`, docs/forks.md). The copy's wait held the game:
+a queued graphics task (`ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`, docs/forks.md). A pin older than the fix's
+(N64Recomp-browser v0.192.0) has the recover send its done while RT64 still reads the list, the game writes its next
+list over it, and in Firefox the page stopped drawing at the pause menu's New Track, a ROM load waiting 2 s on the list
+before RT64 walked out of RDRAM, then ran out of memory. The copy's wait held the game:
 against the exact copy, in Chrome at 3840x2000 (an RTX 2070), its races ran at 50-60 frames a second where they had
 run at about 30 (`?uncapped=240&present-stats`, 231 presents a second against 217), and uncapped it presented 238
 against 217. Its list is 261 shaders: the boot (the launcher, the Controller
@@ -551,7 +554,10 @@ runs from TLB-mapped addresses, which the desktop build reaches through views of
 backed by moving the heap's break past them, and the page's memory grows up to 4 GB. Its online Netplay is lockstep
 over UDP to another PC's address, which a page can't open, so the page's launcher and menus have no Netplay (nor Add to Steam or
 Exit), and local multiplayer, bots and trials stay. RT64's bloom pass, the game's own, writes `rgba16f` on WebGPU
-(`web/patches/rt64.patch`). The rest is behind `__EMSCRIPTEN__` as in the other ports: the canvas, the sound through
+(`web/patches/rt64.patch`). The game reuses a display list's buffer as soon as the RSP is done, so its own runtime
+patch sends that done only once RT64 has read the whole list, and the page takes `ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`
+(docs/forks.md) out of ultramodern's definitions (its `CMakeLists.txt`): the early done it sends for a yield let the game
+write over a list RT64 had yet to read, and a match stopped drawing for good about 10 s in, its sound running dry. The rest is behind `__EMSCRIPTEN__` as in the other ports: the canvas, the sound through
 `audio_output.h`, either preset at resolution Auto and the display's frame rate, no MSAA. Its list is 119 shaders: the
 boot (the launcher, the boot screens, the title and the menus to level select, 32, six of them missed in a match by
 the plays and moved there) and a section for each of the nine maps a new save offers (8-15 each), recorded by

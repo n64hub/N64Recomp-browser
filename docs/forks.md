@@ -920,11 +920,54 @@ N64ModernRuntime       ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS: a yield the game 
                        Adventure Racing's scheduler took one unanswered at the next VI for a hung RSP and sent itself
                        the RSP's and RDP's done: lists counted done before RT64 read them, RT64 ran from one into data
                        loaded since until the page ran out of memory, or the scheduler's thread queues broke. With
-                       render to RAM's late copy it came 33 times in a play, and the page never reached a race
+                       render to RAM's late copy it came 33 times in a play, and the page never reached a race. A
+                       game that reuses a list's buffer once the RSP is done can't take the early done: Rage Wars'
+                       page takes the define out (docs/game-forks.md)
 rt64 32e204c           the RAM of the framebuffer a VI shows changed to what render to RAM copied into it is no present
                        and no frame of its own (VIHistory::pushFactor), as with render to RAM off: Turok 2's second list
                        a frame draws into the framebuffer already shown, and its exact copy, landing a VI after the
                        swap, made each game frame two, the second of one VI, so RT64 timed its levels at 30 as 60 and
                        drew nothing between them (docs/findings.md, A game at 30, uncapped). Each framebuffer says
                        whether its RAM hash is render to RAM's or the CPU's (Framebuffer::RAMHashCopied)
+plume 4381169,         WebGPU: in Firefox too a compute pipeline is built for its predicted layout before its first
+rt64 fb507fc           dispatch, with createComputePipeline at the device's next submission after it is made (RT64's: at
+                       the launcher), since a shader made after it can change that layout; built at its first dispatch,
+                       Firefox's GPU process compiled it in line, and Dinosaur Planet's render-to-RAM copy and sound
+                       waited behind RT64's RSP pipelines as its first 3D drew (docs/findings.md, Compute pipelines
+                       built at their first dispatch)
+rt64 1589517           with Emscripten a framebuffer's RAM stored into a workload (every RDRAM check stores every
+                       framebuffer RT64 knows) shares the bytes of its last store, in any workload, when they match:
+                       each of RT64_GAME_FRAME_WORKLOADS's 64 kept its own copies at 1.5 times its most, and Rogue
+                       Squadron's eight 640x480 framebuffers took 450 MB of its heap that way and ran it out at its
+                       first mission (docs/findings.md, Memory). A desktop build keeps a buffer a workload, as before
+plume a8e74eb,         Vulkan: no descriptor indexing on Mesa's lavapipe (Mesa's vendor ID), so RT64 binds each draw's
+rt64 038d240           textures as on WebGPU: lavapipe miscompiled the raster shaders' non-uniformly indexed texture
+                       array and crashed every recomp's Linux build seconds into its game (docs/findings.md, A desktop
+                       build on Mesa's lavapipe). Desktop only
+rt64 c5ced59,          where pipelines build in line with the browser's other GPU work (Firefox), the prebuilt list's
+N64ModernRuntime       boot section is built before the game's code first runs, so before its first sound:
+e9d688a,               librecomp's wait_for_game_started() calls ultramodern::renderer::prepare_for_game(), which has
+RecompFrontend d143d0a the graphics thread run the renderer's (RecompFrontend's, and this repo's renderer/), RT64's
+                       Application::prepareForGame(): the draw of nothing that resolves the pipelines' layout, section
+                       0's round, and a round trip on the device. Built at the game's first frame, the boot stopped
+                       the game with its sound started, 0.1-11.7 s of the first 10 s of sound lost on 37 pages of 38
+                       (docs/findings.md, Firefox's boot wait and the first sound). Chrome waits for nothing there.
+                       Web only
+N64ModernRuntime       ULTRAMODERN_VIS_WAIT_FOR_RENDERER's stall is two VIs (30 ms), not 100 ms: the 100 ms left a game
+d405b65 497dab9        six VIs behind every list that took about that long, and Paper Mario's page in Firefox, hidden on
+                       a busy host, its lists 50-230 ms each, freed what one pointed at as its intro handed over to its
+                       demo and trapped in its heap allocator or stopped drawing (docs/findings.md, Memory). d405b65
+                       held VIs while a graphics task was unfinished for two VIs, counted in submit_rsp_task and
+                       dp_complete, lines five game forks' runtimes change; 497dab9 puts those back and shortens the
+                       stall instead. Web only
+plume 0ac34ab,         WebGPU: where the device builds pipelines in line (Firefox), a draw of nothing builds the bound
+rt64 77e98da           pipeline for the layout it resolves, as a draw would, so RT64's warm-up in prepareForGame() has
+                       Firefox compile the ubershader's 245 KB shaders before the game starts; it built nothing there,
+                       and the game's first draw with the ubershader built it in line with the game's sound running
+                       (docs/findings.md, Compute pipelines built at their first dispatch). Chrome is as it was
+rt64 edd5da8           a hidden page draws no interpolated frames, only its game's own: it presents none, so nothing
+                       held the workload thread to the presents in flight, and the frames for every slot of the
+                       display's rate went to the GPU unseen. Firefox queued what a busy GPU couldn't finish, its GPU
+                       process grew to 9-21 GB while hidden and the page drew nothing for 25-60 s after it was shown
+                       (docs/findings.md, A page in a hidden tab). Web only
 ```

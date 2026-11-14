@@ -73,15 +73,16 @@
 // hears a tab that plays sound and keeps it at a player's priority when it is hidden, which --fault hidden needs
 // (docs/findings.md, A page in a hidden tab). A run records its flags and is compared only with runs that set the same
 // ones.
-// --gecko-profile (Firefox only) runs the Gecko profiler from the page's navigate to the end of the play, so the boot
-// too, every process and the GPU process's CanvasRenderer thread among them (page_driver.mjs's geckoProfile), and
-// writes the profile to the file (a run that failed too, a page that stopped answering as it booted among them, once the
-// browser's own process answers, waiting up to 3 minutes for it), to open in profiler.firefox.com, which symbolicates
-// it. It samples every 10 ms: the profiler asks Windows for 1 ms timers
+// --gecko-profile (Firefox only) runs the Gecko profiler from the page's navigate to the end of the play, or of the
+// last fault with --fault, so the boot too, every process and the GPU process's CanvasRenderer thread among them
+// (page_driver.mjs's geckoProfile), and writes the profile to the file (a run that failed too, a page that stopped
+// answering as it booted among them, once the browser's own process answers, waiting up to 3 minutes for it), to open
+// in profiler.firefox.com, which symbolicates it. It samples every 10 ms: the profiler asks Windows for 1 ms timers
 // below that, which changes how Firefox's waits end (docs/playing.md, Uncapped, and the browsers' clocks).
 // --chrome-trace (Chrome only) records a Chrome trace over the play, every thread's JavaScript and wasm stacks sampled
 // (page_driver.mjs's chromeTrace), and writes it to the file, to open in DevTools' Performance panel or
-// ui.perfetto.dev; a wasm frame is named only in a page linked with --profiling-funcs. Sampling costs the page's
+// ui.perfetto.dev; a wasm frame is named only in a page linked with --profiling-funcs. With --fault it covers the
+// faults and not the play, what the page does as a fault comes being the reason to take one. Sampling costs the page's
 // threads, so a traced run's numbers are the trace's, not the page's, and are not recorded.
 // --fault does to the page, once the play is over (a plan's play ends in its level), what a player's browser or the
 // player does to one, then lets the game run by itself 30 s more, and a list (resize,hidden,audio,device,reload) does
@@ -761,7 +762,8 @@ const finish = async (code) => {
   if (profileOption === null) { try { fs.rmSync(profile, { recursive: true, force: true }); } catch {} }
   process.exit(code);
 };
-let audioBefore = null;
+// The sound's counters as the play starts and ends, so its frames short are the play's alone, not a fault's after it.
+let audioBefore = null, audioAfter = null;
 // Firefox's report of its GPU process when the play starts and ends (page_driver.mjs's gpuProcessMemory).
 let memoryBefore = null, memoryAfter = null;
 let failure = null;
@@ -825,14 +827,15 @@ try {
   romByKey = (plan.setup ?? []).some((step) => step[0] === 'rom' && typeof step[1] === 'string');
   romPresses = page.romPresses;
   await padRun(plan.start ?? []);
-  audioBefore = last?.audio ?? null;
   memoryBefore = page.gpuProcessMemory ? await page.gpuProcessMemory().catch(() => null) : null;
-  // That report runs every process's memory reporters, which held a Firefox page's presents and animation frames 120-203
-  // ms (Banjo's and Conker's launchers; counted, it was a settled launcher's longest gap), so the play's gaps start once
-  // it has passed, and none from before the play comes into them.
-  if (memoryBefore) await sleep(500);
+  // That report runs every process's memory reporters, the page's too, which held a Firefox page's presents and animation
+  // frames 120-203 ms (Banjo's and Conker's launchers; counted, it was a settled launcher's longest gap) and its thread,
+  // which runs the game's WebGPU calls, 444-473 ms in Paper Mario's intro, its sound running dry for 0.3-0.4 s. So the
+  // play's gaps and sound start once it has passed: a sample after it ends the one it fell in, which the play leaves out.
+  if (memoryBefore) { await sleep(500); await sample(); }
+  audioBefore = last?.audio ?? null;
   await page.evaluate('window.__gaps = []; undefined').catch(() => {});
-  if (chromeTraceFile) await page.chromeTrace.start();
+  if (chromeTraceFile && !faultList.length) await page.chromeTrace.start();
   playing = true;
   hostBefore = hostTimes();
   viewport = await page.viewport();
@@ -840,9 +843,12 @@ try {
   await padRun(shotFile ? [...play, ['shot', path.resolve(shotFile)]] : play);
   await sample();
   playing = false;
-  if (geckoProfileFile) { profiling = false; await page.geckoProfile.dump(geckoProfileFile); }
-  if (chromeTraceFile) await page.chromeTrace.stop(path.resolve(chromeTraceFile));
+  audioAfter = last?.audio ?? null;
+  if (geckoProfileFile && !faultList.length) { profiling = false; await page.geckoProfile.dump(geckoProfileFile); }
+  if (chromeTraceFile && !faultList.length) await page.chromeTrace.stop(path.resolve(chromeTraceFile));
   memoryAfter = page.gpuProcessMemory ? await page.gpuProcessMemory().catch(() => null) : null;
+  // And the faults' samples start after it: its 0.3-0.4 s of sound read as a hidden tab's in Firefox.
+  if (memoryAfter && faultList.length) { await sleep(500); await sample(); }
 } catch (error) {
   log(`failed: ${error.message}`);
   failure = error.message;
@@ -850,6 +856,7 @@ try {
   // process is what stopped answering (docs/findings.md, A page that stops answering) it comes once that process
   // answers again, if it does within 3 minutes.
   if (profiling) {
+    profiling = false;
     const from = Date.now();
     await Promise.race([page.geckoProfile.dump(geckoProfileFile),
       sleep(180000).then(() => { throw new Error('the browser gave no answer in 3 minutes'); })]).then(
@@ -871,6 +878,9 @@ const hostAfter = hostTimes();
 const playErrors = errors.slice(), playExceptions = exceptions;
 const faultResults = [];
 let planted = null;
+const tracingFaults = Boolean(chromeTraceFile && faultList.length && !failure);
+// Its start holds every thread of the page's 100-150 ms (V8's sampler starting), so the first fault comes 5 s after.
+if (tracingFaults) { await page.chromeTrace.start(); await sleep(5000); }
 for (const [i, name] of (failure ? [] : faultList).entries()) {
   const faultResult = { name, at: Math.round(seconds()),
     presentsBefore: median(samples.filter((s) => i ? s.fault === `${i - 1} after` : s.playing).slice(-3).map((s) => s.presents)) };
@@ -966,6 +976,14 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
   for (const text of faultResult.lines) console.log(`  console ${text}`);
   if (faultResult.failed) break;
 }
+if (tracingFaults) await page.chromeTrace.stop(path.resolve(chromeTraceFile)).then(() => log(`chrome trace written to ${chromeTraceFile}`),
+  (e) => log(`no chrome trace: ${e.message}`));
+// A profile of a run with faults runs on through them: what a hidden page's threads do is the reason to take one.
+if (profiling) {
+  profiling = false;
+  await page.geckoProfile.dump(geckoProfileFile).then(() => log(`gecko profile written to ${geckoProfileFile}`),
+    (e) => log(`no gecko profile: ${e.message}`));
+}
 
 // What reached the pad's rumble, and the sound's rate, to give frames short as ms.
 if (pad) {
@@ -1021,7 +1039,7 @@ const animationFrames = median(during.map((s) => s.animationFrames));
 // Uncapped, and the browsers' clocks): Chrome on Windows then sleeps 17 ms and a timer tick between frames, and
 // plume takes that for the display.
 const noDisplay = !uncapped && animationFrames !== null && animationFrames < 57;
-const audioAfter = last?.audio ?? null;
+audioAfter ??= last?.audio ?? null;  // a play that failed partway: its sound until then
 const percentile = (values, q) => {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] : null;

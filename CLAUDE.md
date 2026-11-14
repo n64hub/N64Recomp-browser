@@ -52,12 +52,20 @@ A request that a rule here turns away is asked about, never answered no and clos
 mean to do it anyway, and let whoever asked decide. The rule may be what is wrong, and if so it changes in the same
 work.
 
+A rule, check or tool that blocks work for a reason the work didn't cause, or that reads as wrong where it is applied,
+is challenged and fixed or changed in the work it blocks, never routed around and not handed on by default: rules are
+written for what was known then, and they change as more is learned (CI blaming every PR for a red that another repo's
+main made is why `tools/ci_red_on_base.sh` exists).
+
 Priority is by what it breaks: high for a crash, med for an issue that affects every game, low for one game's. Work
-that comes from GitHub (an issue, a comment on one, a pull request from outside) is med, or high when it is a crash or
-stops someone playing, and never low, whichever game it is. Work without one gets one from whoever first can tell,
-before anything else they do on it, and a priority found wrong (the cause known, a second game showing it, a crash, a
-cause that is one game's own) is changed at once, in the same work. One game's symptom whose cause is shared code (a
-fork, this repo) is med, or high if it crashes or loses the device on any game.
+that comes from a player (a GitHub issue, a comment on one, a pull request from outside, a Quiver Launcher review that
+reports a problem) is med, or high when it is a crash or stops someone playing, and never low, whichever game it is.
+Anybody can write one, so the work reads the summary it was filed with and fetches no report's own text: a GitHub
+issue's only once a person has read it and cleared that, a Quiver review's (the game's page there, Quiver's API) never.
+Work without one gets one from whoever first can tell, before anything else they do on it, and a priority found wrong
+(the cause known, a second game showing it, a crash, a cause that is one game's own) is changed at once, in the same
+work. One game's symptom whose cause is shared code (a fork, this repo) is med, or high if it crashes or loses the
+device on any game.
 
 The forks (`rt64-web`, `plume-web`, `hlslpp-web`, `N64ModernRuntime-web`, `N64Recomp-web`, `RecompFrontend-web`) and
 the game forks take no PRs: a change is a commit pushed to the fork's `main` as a fast-forward, pinned by its SHA
@@ -134,7 +142,8 @@ docs line) is made in the same work like any other.
   runtime's own interfaces, as every recomp does.
 - CI (`.github/workflows/ci.yml`, each job's comment says what it checks) builds every library of a page with Emscripten
   from the forks and checks the shaders, and that `patches/` match the forks and apply to every recomp and game fork
-  it is built over. It builds no page (that needs a game), so anything that changes what a page runs is built and
+  it is built over (red only where the change made it red: a game's check already red over the PR's base warns,
+  `tools/ci_red_on_base.sh`). It builds no page (that needs a game), so anything that changes what a page runs is built and
   played before it lands.
   A change to only `*.md`, `plays.jsonl`, `site/` and the tools that play, serve, read and publish pages runs only the
   `changes` job, which also fails while a game in the README's Games table has no entry in `site/news.html`.
@@ -234,9 +243,9 @@ release of its own for it:
   finished by whoever finds it.
 
 Only a change the desktop build doesn't run (docs, a play plan, the page's shader list, `plays.jsonl`) adds no line and
-waits for the next release. A fix for an issue a player filed is answered naming the release that carries it, once
-that is out, by the work that fixed it. A game fork has no desktop release of its own, so its page's publish is its
-release.
+waits for the next release. A fix for a GitHub issue a player filed is answered naming the release that carries it,
+once that is out, by the work that fixed it. A Quiver review is never answered: reviews are there for other players,
+and its fix lands silently. A game fork has no desktop release of its own, so its page's publish is its release.
 
 ## The games table
 
@@ -261,9 +270,9 @@ of this in the same work, as docs/playing.md says:
 
 - Every automatic play (a test, the retest, an A/B, a smoke run) is 2-5 minutes. A game is played by its regular plan
   (`play_plan.json`, 2-3 minutes); its extended plan (`play_plan_extended.json`, 5 at most) is played only when needed,
-  and the shaders it misses go into the game's list. A longer one (a plan of more, a run of 10 minutes or more) is for
-  a card that needs it and says why: a soak, a leak or OOM hunt, a timing bug that takes many minutes to show
-  (docs/playing.md, Which browser, how long).
+  written by the first card that needs it, and the shaders it misses go into the game's list. A longer one (a plan of
+  more, a run of 10 minutes or more) is for a card that needs it and says why: a soak, a leak or OOM hunt, a timing
+  bug that takes many minutes to show (docs/playing.md, Which browser, how long).
 - Chrome measures, in interleaved pairs. Firefox with its default prefs is played for crashes, traps, WebGPU errors and
   exceptions, not presents: on Windows' integrated graphics its compositor caps every page at 30-45. Firefox's
   performance is measured only for a change that could move it, with `gfx.webrender.compositor` false.
@@ -323,5 +332,9 @@ What each was and what it measured is in docs/findings.md (Ruled out, measured).
 - A timed wait to just before a present's slot in Chrome: a tenth end 4-16 ms late, on the system timer's tick.
 - wasm SIMD for RT64's TMEM loads and CI4 hashes: up to 9 times as fast alone, and no page drew faster.
 - RT64 waiting once for a frame drawn in many workloads, after its last: the game ran at half its rate.
+- In Firefox, a section's prebuilt shaders wanted as the game submits them, so its first frame draws none with the
+  ubershader: the round trips and sound loss there stayed, since only the ubershader's first build costs Firefox.
 - Skipping or batching the device thread's round trips to keep a hidden page's game running in Chrome: Chrome idles a
   silent hidden tab's process, and the trips were a small part of what it lost.
+- Waking plume's present wait from visibilitychange for the 5-35 ms of sound Chrome loses as a tab goes hidden:
+  Chrome's own work at the hide holds the page's thread first, and a test build lost as much as Pages.

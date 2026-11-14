@@ -1,4 +1,4 @@
-plume: https://github.com/n64hub/plume-web e69d031efc2b183f3c54ae3fd759765e6d843549
+plume: https://github.com/n64hub/plume-web 0ac34ab9d34db9de0c984dd85d3f7b8b201c6925
 on upstream d890ac899e505fb30040e037a4037cdeca68f033 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -2872,7 +2872,7 @@ index 9dcfedf..b352bb6 100644
          uint64_t maxTextureSize = 0;
  
 diff --git a/plume_vulkan.cpp b/plume_vulkan.cpp
-index f1dd503..4f8a64c 100644
+index f1dd503..48526ea 100644
 --- a/plume_vulkan.cpp
 +++ b/plume_vulkan.cpp
 @@ -3076,13 +3076,26 @@ namespace plume {
@@ -2949,6 +2949,19 @@ index f1dd503..4f8a64c 100644
      }
  
      void VulkanCommandList::copyBufferRegion(RenderBufferReference dstBuffer, RenderBufferReference srcBuffer, uint64_t size) {
+@@ -4126,7 +4143,11 @@ namespace plume {
+         capabilities.sampleLocations = (sampleLocationProperties.sampleLocationSampleCounts != 0);
+         capabilities.resolveRegion = true;
+         capabilities.resolveModes = false;
+-        capabilities.descriptorIndexing = descriptorIndexingSupported;
++        // Mesa's lavapipe (Mesa's vendor ID, Vulkan on the CPU) reports descriptor indexing but miscompiles a fragment
++        // shader's non-uniformly indexed texture array (Mesa 25.2 to 26.2): its loop over the lanes' indices took the
++        // set's address from a lane that held 0 for it, read a descriptor near address 0 and crashed the program.
++        // Without the capability a renderer binds its textures per draw, as it does on WebGPU, and never indexes one.
++        capabilities.descriptorIndexing = descriptorIndexingSupported && (uint32_t(description.vendor) != VK_VENDOR_ID_MESA);
+         capabilities.scalarBlockLayout = scalarBlockLayoutSupported;
+         capabilities.bufferDeviceAddress = bufferDeviceAddressSupported;
+         capabilities.samplerMirrorClampToEdge = supportedOptionalExtensions.find(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME) != supportedOptionalExtensions.end();
 diff --git a/plume_web_waits.h b/plume_web_waits.h
 new file mode 100644
 index 0000000..23df721
@@ -3094,10 +3107,10 @@ index 0000000..23df721
 +#endif
 diff --git a/plume_webgpu.cpp b/plume_webgpu.cpp
 new file mode 100644
-index 0000000..e7de470
+index 0000000..b68180c
 --- /dev/null
 +++ b/plume_webgpu.cpp
-@@ -0,0 +1,3840 @@
+@@ -0,0 +1,3874 @@
 +//
 +// plume
 +//
@@ -4398,16 +4411,16 @@ index 0000000..e7de470
 +        this->desc.specConstants = nullptr;
 +        self = std::make_shared<WebGPUComputePipeline *>(this);
 +
-+        // Where the device builds in the background (Chrome), it starts building the pipeline now for the layout its
-+        // dispatches will likely resolve to, and again whenever a new binding stage changes that layout (WebGPUShader).
-+        // Built at its first dispatch, Chrome compiled it in line on its GPU main thread, where none of the page's GPU
-+        // work ran for 50-125 ms on a profile's first visit (RT64's texture decode, framebuffer write and RSP pipelines,
-+        // at a game's first frames and first 3D: Dinosaur Planet's page lost sound at its boot's logos to them). A wrong
-+        // guess builds one no dispatch uses, and the dispatch builds the one it needs, as before.
-+        if (!device->capabilities.backgroundPipelineBuilds) {
-+            return;
-+        }
-+
++        // The pipeline is built now for the layout its dispatches will likely resolve to, and again whenever a new
++        // binding stage changes that layout (WebGPUShader), so it isn't built at its first dispatch. Built there, the
++        // browser compiled it in line, with none of the page's GPU work running meanwhile: 50-125 ms each on Chrome's
++        // GPU main thread on a profile's first visit, and in Firefox's GPU process up to 1.7 s of round trips with the
++        // others built beside it (RT64's texture decode, framebuffer write and RSP pipelines, at a game's first frames
++        // and first 3D: Dinosaur Planet's page lost sound at its boot's logos to them in both). Where the device builds
++        // in the background (Chrome) it builds with createComputePipelineAsync; in Firefox, whose GPU process builds
++        // every pipeline in line, with createComputePipeline at the next submission, which costs the GPU process the
++        // build there (RT64's: at the launcher) instead. A wrong guess builds one no dispatch uses, and the dispatch
++        // builds the one it needs, as before.
 +        const WebGPUShader *shader = static_cast<const WebGPUShader *>(desc.computeShader);
 +        const WebGPUPipelineLayout *pipelineLayout = static_cast<const WebGPUPipelineLayout *>(desc.pipelineLayout);
 +        if ((shader == nullptr) || (pipelineLayout == nullptr) || (pipelineLayout->setBindings.size() != pipelineLayout->descriptorSetCount)) {
@@ -4431,7 +4444,18 @@ index 0000000..e7de470
 +        }
 +    }
 +
-+    void WebGPUComputePipeline::buildPredicted() {
++    void WebGPUComputePipeline::buildPredicted(bool now) {
++        // Firefox builds it in line, so it waits for the next submission (WebGPUCommandQueue::executeCommandLists()):
++        // RT64 makes its compute pipelines before the shaders whose binding stages change their layouts, and building
++        // each where it was made built 8 of the 21 twice, 29 builds in 1.9 s of Firefox's GPU process at Dinosaur
++        // Planet's launcher.
++        if (!device->capabilities.backgroundPipelineBuilds && !now) {
++            predictionPending = true;
++            device->computePredictionsPending = true;
++            return;
++        }
++
++        predictionPending = false;
 +        WGPUPipelineLayout layout = predictLayout();
 +        if ((layout == nullptr) || (pipelines.find(layout) != pipelines.end()) || (pending.find(layout) != pending.end())) {
 +            return;
@@ -4445,6 +4469,11 @@ index 0000000..e7de470
 +        pipelineDesc.compute.entryPoint = toStringView(computeStage.entryPointName);
 +        pipelineDesc.compute.constantCount = constants.size();
 +        pipelineDesc.compute.constants = constants.data();
++
++        if (!device->capabilities.backgroundPipelineBuilds) {
++            pipelines[layout] = wgpuDeviceCreateComputePipeline(device->device, &pipelineDesc);
++            return;
++        }
 +
 +        WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo = WGPU_CREATE_COMPUTE_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
 +        callbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
@@ -4628,7 +4657,8 @@ index 0000000..e7de470
 +        // buildInBackground is too, though it is ready at once: a draw that wants it before it is built builds it in
 +        // line, and on Chrome's GPU main thread that held a page's presents for as long (RT64's ubershader, one
 +        // pipeline per depth and coverage state, made at setup: ~1 s the first time a game drew with a third state,
-+        // Ocarina of Time's title 25 s after its boot). Firefox builds those in line too, so it builds each when drawn.
++        // Ocarina of Time's title 25 s after its boot). Firefox builds those in line too, so it builds each when drawn,
++        // or drawn with nothing (WebGPUCommandList::prepareDraw()).
 +        builds = std::make_shared<WebGPURenderPipelineBuilds>();
 +        builds->device = device;
 +        builds->pipeline = this;
@@ -5974,14 +6004,22 @@ index 0000000..e7de470
 +
 +        // A draw of nothing records nothing, but resolves the bindings as a draw would, which starts the pipelines waiting
 +        // for that layout (WebGPUGraphicsPipeline) in the background, the bound one included: a renderer draws nothing with
-+        // the sets it draws with to have its pipelines built before its first draw needs them.
++        // the sets it draws with to have its pipelines built before its first draw needs them. Where the device builds
++        // in line (Firefox) nothing builds in the background, so the bound one is built here, as a draw would build it:
++        // the browser then has its shaders compiled, and the pipelines with the same shaders in other states build for
++        // about nothing when drawn. RT64's ubershader (one 245 KB pixel shader) cost 1.4 s of Firefox's GPU process
++        // there, the page's sound lost meanwhile, when the game's first draw with it built it in line instead.
 +        assert((pipeline != nullptr) && (pipeline->type == WebGPUPipeline::Type::Graphics));
 +        WGPUPipelineLayout layout = resolveBindings(graphics, !drawsNothing);
++        const WebGPUGraphicsPipeline *graphicsPipeline = static_cast<const WebGPUGraphicsPipeline *>(pipeline);
 +        if (drawsNothing) {
++            if (!device->capabilities.backgroundPipelineBuilds) {
++                const_cast<WebGPUGraphicsPipeline *>(graphicsPipeline)->get(layout);
++            }
++
 +            return false;
 +        }
 +
-+        const WebGPUGraphicsPipeline *graphicsPipeline = static_cast<const WebGPUGraphicsPipeline *>(pipeline);
 +        setPassPipeline(const_cast<WebGPUGraphicsPipeline *>(graphicsPipeline)->get(layout));
 +        if (graphicsPipeline->desc.stencilEnabled && (!pass.stencilReferenceSet || (pass.stencilReference != graphicsPipeline->desc.stencilReference))) {
 +            wgpuRenderPassEncoderSetStencilReference(renderPass, graphicsPipeline->desc.stencilReference);
@@ -6457,6 +6495,15 @@ index 0000000..e7de470
 +    }
 +
 +    void WebGPUCommandQueue::executeCommandLists(const RenderCommandList **commandLists, uint32_t commandListCount, RenderCommandSemaphore **waitSemaphores, uint32_t waitSemaphoreCount, RenderCommandSemaphore **signalSemaphores, uint32_t signalSemaphoreCount, RenderCommandFence *signalFence) {
++        if (device->computePredictionsPending) {
++            device->computePredictionsPending = false;
++            for (WebGPUComputePipeline *pipeline : device->computePipelines) {
++                if (pipeline->predictionPending) {
++                    pipeline->buildPredicted(true);
++                }
++            }
++        }
++
 +        device->flushMappedBuffers();
 +
 +        std::vector<WGPUCommandBuffer> commandBuffers;
@@ -6940,10 +6987,10 @@ index 0000000..e7de470
 +};
 diff --git a/plume_webgpu.h b/plume_webgpu.h
 new file mode 100644
-index 0000000..2a7292e
+index 0000000..fd34f5f
 --- /dev/null
 +++ b/plume_webgpu.h
-@@ -0,0 +1,775 @@
+@@ -0,0 +1,780 @@
 +//
 +// plume
 +//
@@ -6975,11 +7022,13 @@ index 0000000..2a7292e
 +//   any draw resolved that layout, it waits for the first one to. Behind plume_device_thread.h, createGraphicsPipeline()
 +//   waits for isReady() on the calling thread, which draws with another pipeline meanwhile. A draw with a layout the
 +//   pipeline wasn't built for (a new binding stage changes them all) builds it in place, as any other pipeline is.
-+//   Where the browser builds those off the device (Chrome), a compute pipeline is built with createComputePipelineAsync
-+//   when it is created, for the layout its dispatches will likely resolve to: every binding of its sets bound, with
-+//   what the set layouts don't say (a texture's format and dimension, a sampler's filtering) read from its shader's
-+//   declarations, and again when a new binding stage changes that layout. A dispatch with another layout, or before
-+//   that build is done, builds it in place.
++//   A compute pipeline is built when it is created, for the layout its dispatches will likely resolve to: every binding
++//   of its sets bound, with what the set layouts don't say (a texture's format and dimension, a sampler's filtering)
++//   read from its shader's declarations, and again when a new binding stage changes that layout. Where the browser
++//   builds those off the device (Chrome) it is built with createComputePipelineAsync; in Firefox in line, at the
++//   device's next submission, once the shaders made with it have settled their binding stages, which costs the GPU
++//   process the build there (RT64's: at the launcher) and not at its first dispatch. A dispatch with another layout,
++//   or before that build is done, builds it in place.
 +// - Buffer mapping is asynchronous. An UPLOAD buffer keeps a CPU copy: map() returns it and unmap() writes it to the
 +//   GPU, and a buffer left mapped is written in full on every executeCommandLists(), since a persistently mapped
 +//   D3D12-style upload buffer never says what changed. A READBACK buffer that a submitted command list copied into
@@ -7288,13 +7337,14 @@ index 0000000..2a7292e
 +        bool pushConstants = false;
 +        std::map<std::pair<uint32_t, uint32_t>, std::string> bindingTypes;
 +        std::set<WGPUPipelineLayout> pending;
++        bool predictionPending = false;
 +        std::shared_ptr<WebGPUComputePipeline *> self;
 +
 +        WebGPUComputePipeline(WebGPUDevice *device, const RenderComputePipelineDesc &desc);
 +        ~WebGPUComputePipeline() override;
 +        WGPUComputePipeline get(WGPUPipelineLayout layout);
 +        WGPUPipelineLayout predictLayout() const;
-+        void buildPredicted();
++        void buildPredicted(bool now = false);
 +    };
 +
 +    // A graphics pipeline's builds in flight, shared with their callbacks, which can run after it is gone.
@@ -7656,8 +7706,10 @@ index 0000000..2a7292e
 +        std::list<std::string> bindGroupUses;
 +        std::unordered_map<uint32_t, WGPUShaderStage> bindingStages;
 +        uint64_t bindingStagesRevision = 0;
-+        // The compute pipelines built in the background, built again for their predicted layout when a binding stage changes it.
++        // The compute pipelines built for their predicted layout, built again when a binding stage changes it, and
++        // whether any has a build that waits for the next submission (Firefox: WebGPUComputePipeline::buildPredicted()).
 +        std::set<WebGPUComputePipeline *> computePipelines;
++        bool computePredictionsPending = false;
 +        std::map<std::vector<WGPUBindGroupLayout>, WGPUPipelineLayout> pipelineLayouts;
 +        std::vector<WebGPUBuffer *> mappedBuffers;
 +        WGPUShaderModule clearShader = nullptr;

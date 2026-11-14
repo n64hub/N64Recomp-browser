@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 32e204c2cb3af484dbb13113d0d3c126d5290b09
+rt64: https://github.com/n64hub/rt64-web edd5da856335011fea254e5ba91d00af8c935400
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -1345,7 +1345,7 @@ index 558f1ee..40a2e09 100644
      };
  };
 diff --git a/src/hle/rt64_application.cpp b/src/hle/rt64_application.cpp
-index 785de27..42eb2e6 100644
+index 785de27..1c18cf8 100644
 --- a/src/hle/rt64_application.cpp
 +++ b/src/hle/rt64_application.cpp
 @@ -16,12 +16,18 @@
@@ -1492,12 +1492,13 @@ index 785de27..42eb2e6 100644
          sharedQueueResources->renderTargetManager.setMultisampling(multisampling);
          sharedQueueResources->renderTargetManager.setUsesHDR(usesHDR);
  
-@@ -455,6 +520,19 @@ namespace RT64 {
+@@ -455,6 +520,20 @@ namespace RT64 {
          // Set up the RDP
          state->rdp->setGBI();
  
 +#   if defined(__EMSCRIPTEN__)
 +        // Where pipelines build in the background (Chrome), the ubershader's are built before the game draws with them.
++        // Elsewhere (Firefox) the same warm-up is done just before the game starts (prepareForGame()).
 +        if (device->getCapabilities().backgroundPipelineBuilds) {
 +            state->warmUpPipelines();
 +        }
@@ -1512,9 +1513,34 @@ index 785de27..42eb2e6 100644
          return SetupResult::Success;
      }
  
-@@ -510,6 +588,12 @@ namespace RT64 {
+@@ -509,7 +588,37 @@ namespace RT64 {
+         }
      }
  
++#   if defined(__EMSCRIPTEN__)
++    // Before the game's code first runs (N64ModernRuntime's ultramodern::renderer::prepare_for_game()). Where the browser
++    // builds pipelines in line with its other GPU work (Firefox), the prebuilt shaders of the list's first section, the
++    // boot, are built here, and the ubershader's state the warm-up draws with, with the game waiting before it makes a
++    // sound. Built at the game's first frames, as they were, they stopped the game with its sound started, for as long
++    // as they took: 0.1-11.7 s of the first 10 s of sound lost, on 37 pages of 38. Built at setup, they would hold the
++    // launcher's first frame as long. The draw of nothing (State::warmUpPipelines()) resolves the layout the pipelines
++    // are built for, the shader cache's round builds the section (RasterShaderCache::prebuildForGame()), and a round trip
++    // on the device waits until the browser has done all of it, so the game's first frames queue behind none of it.
++    // Where pipelines build in the background (Chrome), the warm-up was at setup and the list builds behind the
++    // launcher, so nothing waits here.
++    void Application::prepareForGame() {
++        if (device->getCapabilities().backgroundPipelineBuilds) {
++            return;
++        }
++
++        state->warmUpPipelines();
++        workloadQueue->waitForWorkloadId(state->workloadId);
++        rasterShaderCache->prebuildForGame();
++        RenderWorker worker(device.get(), "Prepare for game", RenderCommandListType::DIRECT);
++        RenderWorkerExecution execution(&worker);
++    }
++#   endif
++
      void Application::updateScreen() {
 +#   if defined(__EMSCRIPTEN__)
 +        if (device->isLost()) {
@@ -1525,7 +1551,7 @@ index 785de27..42eb2e6 100644
          appWindow->sdlCheckFilterInstallation();
          screenApiProfiler.logAndRestart();
          state->updateScreen(core.decodeVI(), false);
-@@ -674,9 +758,17 @@ namespace RT64 {
+@@ -674,9 +783,17 @@ namespace RT64 {
          presentQueue.reset();
  
          // Call the deinit hook if one was attached.
@@ -1546,7 +1572,7 @@ index 785de27..42eb2e6 100644
          }
  
          drawDataUploader.reset();
-@@ -705,6 +797,30 @@ namespace RT64 {
+@@ -705,6 +822,30 @@ namespace RT64 {
          FileDialog::finish();
      }
  
@@ -1578,7 +1604,7 @@ index 785de27..42eb2e6 100644
          if (!appConfig.useConfigurationFile || userPaths.isEmpty()) {
              return false;
 diff --git a/src/hle/rt64_application.h b/src/hle/rt64_application.h
-index 6c83fe0..e20f73b 100644
+index 6c83fe0..1e873a7 100644
 --- a/src/hle/rt64_application.h
 +++ b/src/hle/rt64_application.h
 @@ -90,6 +90,11 @@ namespace RT64 {
@@ -1602,7 +1628,13 @@ index 6c83fe0..e20f73b 100644
          ProfilingTimer dlApiProfiler = ProfilingTimer(120);
          ProfilingTimer screenApiProfiler = ProfilingTimer(120);
  
-@@ -159,6 +166,9 @@ namespace RT64 {
+@@ -156,9 +163,15 @@ namespace RT64 {
+         SetupResult setup(uint32_t threadId);
+         void processDisplayLists(uint8_t *memory, uint32_t dlStartAddress, uint32_t dlEndAddress, bool isHLE);
+         void updateScreen();
++#   if defined(__EMSCRIPTEN__)
++        void prepareForGame();
++#   endif
          void destroyShaderCache();
          void updateMultisampling();
          void end();
@@ -2276,6 +2308,128 @@ index 60b0fa4..4531833 100644
          bool inProjection(uint32_t transformsIndex, Projection::Type type) const;
          int changeProjection(uint32_t transformsIndex, Projection::Type type);
          bool isEmpty() const;
+diff --git a/src/hle/rt64_framebuffer_storage.cpp b/src/hle/rt64_framebuffer_storage.cpp
+index 8272c02..2121bf9 100644
+--- a/src/hle/rt64_framebuffer_storage.cpp
++++ b/src/hle/rt64_framebuffer_storage.cpp
+@@ -7,7 +7,21 @@
+ #include <cassert>
+ #include <cstring>
+ 
++#if defined(__EMSCRIPTEN__)
++#   include <algorithm>
++#   include <mutex>
++#   include <unordered_map>
++#endif
++
+ namespace RT64 {
++#if defined(__EMSCRIPTEN__)
++    // The bytes each framebuffer (by address and size) was last stored with, in any workload: a store of the same bytes
++    // shares them. Weak, so the bytes go once the last workload holding them is reset.
++    static std::mutex sharedBytesMutex;
++    static std::unordered_map<uint64_t, std::weak_ptr<const std::vector<uint8_t>>> sharedBytes;
++    static size_t sharedBytesPruneAt = 64;
++#endif
++
+     // FramebufferStorage
+ 
+     FramebufferStorage::FramebufferStorage() {
+@@ -20,6 +34,31 @@ namespace RT64 {
+     }
+ 
+     void FramebufferStorage::store(uint32_t fbPairIndex, uint32_t address, const uint8_t *data, uint32_t size) {
++        Handle handle;
++        handle.fbPairIndex = fbPairIndex;
++        handle.address = address;
++        handle.size = size;
++#   if defined(__EMSCRIPTEN__)
++        handle.rdramIndex = 0;
++        {
++            std::scoped_lock<std::mutex> lock(sharedBytesMutex);
++            std::weak_ptr<const std::vector<uint8_t>> &last = sharedBytes[(uint64_t(address) << 32) | size];
++            handle.bytes = last.lock();
++            if ((handle.bytes == nullptr) || (memcmp(handle.bytes->data(), data, size) != 0)) {
++                handle.bytes = std::make_shared<const std::vector<uint8_t>>(data, data + size);
++                last = handle.bytes;
++            }
++
++            // Framebuffers come and go: forget those no workload holds any more once there are many.
++            if (sharedBytes.size() >= sharedBytesPruneAt) {
++                for (auto it = sharedBytes.begin(); it != sharedBytes.end();) {
++                    it = it->second.expired() ? sharedBytes.erase(it) : std::next(it);
++                }
++
++                sharedBytesPruneAt = std::max<size_t>(64, sharedBytes.size() * 2);
++            }
++        }
++#   else
+         uint32_t dstIndex = rdramUsed;
+         rdramUsed += size;
+         if (rdramUsed > rdramData.size()) {
+@@ -28,13 +67,9 @@ namespace RT64 {
+         }
+ 
+         memcpy(rdramData.data() + dstIndex, data, size);
+-
+-        Handle handle;
+-        handle.fbPairIndex = fbPairIndex;
+-        handle.address = address;
+         handle.rdramIndex = dstIndex;
+-        handle.size = size;
+-        handleVector.emplace_back(handle);
++#   endif
++        handleVector.emplace_back(std::move(handle));
+     }
+ 
+     const FramebufferStorage::Handle *FramebufferStorage::get(uint32_t maxFbPairIndex, uint32_t address) const {
+@@ -55,7 +90,11 @@ namespace RT64 {
+     }
+ 
+     const uint8_t *FramebufferStorage::getRDRAM(const Handle &handle) const {
++#   if defined(__EMSCRIPTEN__)
++        return handle.bytes->data();
++#   else
+         assert((handle.rdramIndex + handle.size) <= rdramData.size());
+         return rdramData.data() + handle.rdramIndex;
++#   endif
+     }
+ };
+\ No newline at end of file
+diff --git a/src/hle/rt64_framebuffer_storage.h b/src/hle/rt64_framebuffer_storage.h
+index 5c3c4d2..cba893c 100644
+--- a/src/hle/rt64_framebuffer_storage.h
++++ b/src/hle/rt64_framebuffer_storage.h
+@@ -6,12 +6,19 @@
+ // at the start of a frame. Sometimes it's necessary for the high resolution renderer
+ // to reload the contents from RDRAM in case the resources get resized and discarded.
+ // The storage is the resource it can use to fix that.
++//
++// With Emscripten a framebuffer's bytes that match the ones it last stored, in any workload, are shared with that
++// store rather than copied: every RDRAM check stores every framebuffer RT64 knows into the workload it is in, and the
++// workload queue a page keeps (RT64_GAME_FRAME_WORKLOADS, 64) held 64 copies of each, each workload's at 1.5 times the
++// most it had stored. A game with eight 640x480 framebuffers kept 470 MB of its page's heap in them, and a ninth ran it
++// out of memory. A framebuffer whose RAM changed is still a copy of its own in each workload that stores it.
+ 
+ #pragma once
+ 
+ #include "common/rt64_common.h"
+ 
+ #include <map>
++#include <memory>
+ 
+ namespace RT64 {
+     struct FramebufferStorage {
+@@ -20,6 +27,10 @@ namespace RT64 {
+             uint32_t address;
+             uint32_t rdramIndex;
+             uint32_t size;
++#       if defined(__EMSCRIPTEN__)
++            // The bytes, shared by every handle (in any workload) that stored the same ones at the same address.
++            std::shared_ptr<const std::vector<uint8_t>> bytes;
++#       endif
+         };
+ 
+         uint32_t rdramUsed;
 diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
 index 87392d0..795a9f9 100644
 --- a/src/hle/rt64_game_frame.cpp
@@ -5233,7 +5387,7 @@ index 8ea27d5..589d7eb 100644
  
          void reset();
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..c0b8ce3 100644
+index 5a331aa..616a0ce 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -8,6 +8,13 @@
@@ -5890,7 +6044,24 @@ index 5a331aa..c0b8ce3 100644
                      matchingProfiler.reset();
                      matchingProfiler.start();
                      curFrame.match(ext.workloadGraphicsWorker, *this, prevFrame, ext.workloadVelocityUploader, velocityUploaderUsed, tileInterpolationUsed, lookAtInterpolationUsed);
-@@ -1001,29 +1387,32 @@ namespace RT64 {
+@@ -987,6 +1373,16 @@ namespace RT64 {
+ 
+                     const bool displayRateAboveOriginal = (workload.viOriginalRate > 0) && (workloadConfig.targetRate > workload.viOriginalRate);
+                     generateInterpolatedFrames = !workload.paused && displayRateAboveOriginal && !interpolationTargetKey.isEmpty();
++#               if defined(__EMSCRIPTEN__)
++                    // A hidden page presents nothing (PresentQueue::threadLoop()), so nothing holds this thread to the presents
++                    // in flight, and the frames interpolated for presents that are skipped went to the GPU all the same, one per
++                    // slot of the display's rate. Firefox takes whatever a page submits, and on a busy GPU its GPU process queued
++                    // them: Mario Party 1-3's pages, uncapped at 3840x2000 (6 frames a game frame) on an RTX 2070 kept 84-97%
++                    // busy by other work, grew it from 2.1 GB to 9-11 GB while hidden 30 s and drew 0-7 frames a second for
++                    // 25-60 s after they were shown, and Rush 2049's grew to 25.6 GB until WebGPU ran out of memory. So a
++                    // hidden page draws its game's frames only, as at its original rate.
++                    generateInterpolatedFrames = generateInterpolatedFrames && !ext.presentQueue->ext.swapChain->isHidden();
++#               endif
+ 
+                     const bool resetTicks = !generateInterpolatedFrames || (originalRateForTicks != workload.viOriginalRate) || (displayRateForTicks != workloadConfig.targetRate) || !displayRateAboveOriginal;
+                     if (resetTicks) {
+@@ -1001,29 +1397,32 @@ namespace RT64 {
                  uint32_t displayFrames = 1;
                  if (generateInterpolatedFrames) {
                      logicalTicks += workloadConfig.targetRate;
@@ -5929,7 +6100,7 @@ index 5a331aa..c0b8ce3 100644
                      ext.sharedResources->interpolatedFramesIndex = ext.sharedResources->interpolatedFramesIndex ^ 1;
                      lastPresentId = workload.presentId;
                  }
-@@ -1037,17 +1426,38 @@ namespace RT64 {
+@@ -1037,17 +1436,38 @@ namespace RT64 {
                  }
  
                  InterpolatedFrameCounters &curFrameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
@@ -5968,7 +6139,7 @@ index 5a331aa..c0b8ce3 100644
                      uint32_t previousSize = uint32_t(interpolatedTargets.size());
                      interpolatedTargets.resize(requiredFrames);
                      for (uint32_t i = previousSize; i < requiredFrames; i++) {
-@@ -1055,7 +1465,7 @@ namespace RT64 {
+@@ -1055,7 +1475,7 @@ namespace RT64 {
                      }
                  }
                  
@@ -5977,7 +6148,7 @@ index 5a331aa..c0b8ce3 100644
                  const int64_t setupTimeMicro = workloadTimer.elapsedMicroseconds();
                  const int64_t adjustedTimeWindowMicro = originalTimeMicro - setupTimeMicro;
                  const int64_t maxTimePerFrameMicro = adjustedTimeWindowMicro / displayFrames;
-@@ -1063,6 +1473,21 @@ namespace RT64 {
+@@ -1063,6 +1483,21 @@ namespace RT64 {
                  bool skipWorkloadNow = false;
                  uint32_t targetIndex = 0;
                  uint32_t framesRendered = 0;
@@ -5999,7 +6170,7 @@ index 5a331aa..c0b8ce3 100644
                  int64_t renderTimeTotalMicro = 0;
                  for (uint32_t frame = 0; (frame < displayFrames) && !skipWorkloadNow; frame++) {
                      // Evaluate if this frame should be skipped. Measure the current time and compare it to what frame is estimated should be have been rendered by now.
-@@ -1071,7 +1496,7 @@ namespace RT64 {
+@@ -1071,7 +1506,7 @@ namespace RT64 {
                          const int64_t expectedTimeMicro = frame * maxTimePerFrameMicro;
                          const int64_t measuredFrameMicro = renderTimeTotalMicro / framesRendered;
                          if ((currentTimeMicro > expectedTimeMicro) || ((currentTimeMicro + measuredFrameMicro) > adjustedTimeWindowMicro)) {
@@ -6008,7 +6179,7 @@ index 5a331aa..c0b8ce3 100644
                              skippedFrames = true;
                              continue;
                          }
-@@ -1081,20 +1506,53 @@ namespace RT64 {
+@@ -1081,20 +1516,53 @@ namespace RT64 {
                      uint32_t overrideModifier = 0;
                      if (generateInterpolatedFrames) {
                          prevFrameWeight = std::clamp((workloadConfig.targetRate + displayTicks - logicalTicks) / float(workloadConfig.targetRate), 0.0f, 1.0f);
@@ -6068,7 +6239,7 @@ index 5a331aa..c0b8ce3 100644
                                  });
                              }
  
-@@ -1102,7 +1560,7 @@ namespace RT64 {
+@@ -1102,7 +1570,7 @@ namespace RT64 {
                          }
                      }
                      else if (workload.paused) {
@@ -6077,7 +6248,7 @@ index 5a331aa..c0b8ce3 100644
                          prevFrameWeight = 1.0f - curFrameWeight;
                      }
                      else {
-@@ -1112,28 +1570,30 @@ namespace RT64 {
+@@ -1112,28 +1580,30 @@ namespace RT64 {
  
                      const bool uploadExtras = (frame == 0) && workloadConfig.raytracingEnabled;
                      if (uploadExtras) {
@@ -6117,7 +6288,7 @@ index 5a331aa..c0b8ce3 100644
  
                          {
                              std::scoped_lock<std::mutex> managerLock(ext.sharedResources->interpolatedMutex);
-@@ -1143,7 +1603,7 @@ namespace RT64 {
+@@ -1143,7 +1613,7 @@ namespace RT64 {
  
                          // Add the amount of display ticks that correspond to the remaining frames.
                          if (skipWorkloadNow) {
@@ -6126,7 +6297,7 @@ index 5a331aa..c0b8ce3 100644
                          }
  
                          ext.sharedResources->interpolatedCondition.notify_all();
-@@ -1164,8 +1624,43 @@ namespace RT64 {
+@@ -1164,8 +1634,43 @@ namespace RT64 {
  
                  threadConfigurationValidate();
  
@@ -7977,7 +8148,7 @@ index 3b991ff..c17d089 100644
          static std::unique_ptr<RenderPipeline> createPipeline(const PipelineCreation &c);
          static RenderMultisampling generateMultisamplingPattern(uint32_t sampleCount, bool sampleLocationsSupported);
 diff --git a/src/render/rt64_raster_shader_cache.cpp b/src/render/rt64_raster_shader_cache.cpp
-index bf7b669..378cf0c 100644
+index bf7b669..28f7205 100644
 --- a/src/render/rt64_raster_shader_cache.cpp
 +++ b/src/render/rt64_raster_shader_cache.cpp
 @@ -6,6 +6,52 @@
@@ -8058,7 +8229,7 @@ index bf7b669..378cf0c 100644
      }
  
      void RasterShaderCache::setup(RenderDevice *device, RenderShaderFormat shaderFormat, const ShaderLibrary *shaderLibrary, const RenderMultisampling &multisampling) {
-@@ -105,13 +160,486 @@ namespace RT64 {
+@@ -105,13 +160,501 @@ namespace RT64 {
          shaderUber = std::make_unique<RasterShaderUber>(device, shaderFormat, multisampling, shaderLibrary, ubershaderThreadCount);
          usesHDR = shaderLibrary->usesHDR;
  
@@ -8127,12 +8298,12 @@ index bf7b669..378cf0c 100644
 +    // where with them in the boot it never had. So the first frame waits only for its own shaders, the panel the page showed for a whole section before the
 +    // game started is mostly gone, and a level reached after a minute of play is usually built before the game gets
 +    // there. Where building a pipeline holds up the device (Firefox, setup()), anything built behind the game would
-+    // stall its frames, so nothing is: section 0 is built before the game gets past its first frame, a round builds
-+    // every shader of its section not yet built, and the game waits for strays too.
++    // stall its frames, so nothing is: section 0 is built before the game's code first runs (prebuildForGame()), a round
++    // builds every shader of its section not yet built, and the game waits for strays too.
 +    //
-+    // A pipeline is built for the WebGPU layout a draw with its pipeline layout resolved (plume_webgpu.h), so section 0
-+    // waits for the first frame's draws; where pipelines build in the background (Chrome) that is the draw of nothing
-+    // at setup (State::warmUpPipelines()), and the list builds behind the launcher. A round is built on as many threads as the host has cores (2-16), since the
++    // A pipeline is built for the WebGPU layout a draw with its pipeline layout resolved (plume_webgpu.h), so the list
++    // waits for a draw: the draw of nothing (State::warmUpPipelines()), at setup where pipelines build in the background
++    // (Chrome), so that the list builds behind the launcher, and elsewhere just before the game starts. A round is built on as many threads as the host has cores (2-16), since the
 +    // game waits and the browser's GPU process has nothing else to do, largest first: a shader's WGSL size goes with
 +    // its build time, and the largest (370 KB against a median of 65 KB) started last would leave the other threads idle
 +    // while it finished. Rush 2049's 105 took 15.6-16.7 s six at a time in the list's order, and 6.9-7.2 s twelve at a
@@ -8239,9 +8410,6 @@ index bf7b669..378cf0c 100644
 +                    }
 +                }
 +            }
-+            else {
-+                startPrebuildRound(0, lock);
-+            }
 +        }
 +
 +        for (uint32_t t = 0; t < threads; t++) {
@@ -8254,8 +8422,10 @@ index bf7b669..378cf0c 100644
 +                (RT64PrebuiltShaderSectionCount > 1) ? RT64PrebuiltShaderSections[1].name : "(none)", prebuildBootThreads, threads);
 +        }
 +        else {
++            // The pages' play plans wait for this line's "once the game draws", Firefox's word that the list is set up,
++            // so it stays as it was when the round began at the game's first frames (prebuildForGame()).
 +            printf("RT64: %u prebuilt shaders, %u pipelines, in %u sections, and %u learned; the game waiting for the %u of section %s, built %u at a time once the game draws\n",
-+                RT64PrebuiltShaderCount, pipelineCount, RT64PrebuiltShaderSectionCount, uint32_t(prebuildLearned.size()), uint32_t(prebuildRound.size()),
++                RT64PrebuiltShaderCount, pipelineCount, RT64PrebuiltShaderSectionCount, uint32_t(prebuildLearned.size()), uint32_t(prebuildSections[0].size()),
 +                RT64PrebuiltShaderSections[0].name, threads);
 +        }
 +#   endif
@@ -8367,7 +8537,8 @@ index bf7b669..378cf0c 100644
 +            prebuildRoundSize += roundSize(index, dualSource);
 +        }
 +
-+        // Section 0's is reported once the game draws (getGPUShader()): nothing the launcher draws uses it.
++        // Section 0's is reported once the game is about to draw (prebuildForGame(), getGPUShader()): nothing the
++        // launcher draws uses it.
 +        prebuildRoundHeld = !prebuildRound.empty();
 +        if (prebuildRoundHeld && prebuildDrawn) {
 +            prebuildTimer.reset();
@@ -8526,6 +8697,21 @@ index bf7b669..378cf0c 100644
 +        return held;
 +    }
 +
++    // Where nothing is built behind the game (Firefox), the round of section 0, the boot, before the game's code first
++    // runs (Application::prepareForGame()), so that the game starts once it is built, its first sound included. A page
++    // whose renderer doesn't call it starts that round at the game's first frames instead, for what they want of it.
++    void RasterShaderCache::prebuildForGame() {
++#   if defined(RT64_PREBUILT_SHADERS)
++        if (specializedShaders || (prebuildCount == 0) || prebuildDrawn.exchange(true)) {
++            return;
++        }
++
++        std::unique_lock<std::mutex> lock(prebuildMutex);
++        startPrebuildRound(0, lock);
++        prebuildChanged.wait(lock, [this]() { return !prebuildRoundHeld; });
++#   endif
++    }
++
 +    // A draw asked for a prebuilt shader that isn't built yet.
 +    void RasterShaderCache::wantPrebuild(uint64_t shaderHash) {
 +        std::unique_lock<std::mutex> lock(prebuildMutex);
@@ -8546,7 +8732,7 @@ index bf7b669..378cf0c 100644
          {
              std::unique_lock<std::mutex> queueLock(submissionMutex);
  
-@@ -125,6 +653,28 @@ namespace RT64 {
+@@ -125,6 +668,28 @@ namespace RT64 {
              found = true;
          }
  
@@ -8575,7 +8761,7 @@ index bf7b669..378cf0c 100644
          // Push a new shader compilation to the queue.
          {
              const std::unique_lock<std::mutex> queueLock(descQueueMutex);
-@@ -134,6 +684,42 @@ namespace RT64 {
+@@ -134,6 +699,42 @@ namespace RT64 {
          descQueueChanged.notify_all();
      }
      
@@ -8618,7 +8804,7 @@ index bf7b669..378cf0c 100644
      void RasterShaderCache::waitForAll() {
          {
              std::unique_lock<std::mutex> queueLock(descQueueMutex);
-@@ -165,6 +751,18 @@ namespace RT64 {
+@@ -165,6 +766,18 @@ namespace RT64 {
          const std::unique_lock<std::mutex> lock(GPUShadersMutex);
          auto shaderIt = GPUShaders.find(shaderHash);
          if (shaderIt == GPUShaders.end()) {
@@ -8638,7 +8824,7 @@ index bf7b669..378cf0c 100644
          }
  
 diff --git a/src/render/rt64_raster_shader_cache.h b/src/render/rt64_raster_shader_cache.h
-index 5c40c18..50cb454 100644
+index 5c40c18..8601d46 100644
 --- a/src/render/rt64_raster_shader_cache.h
 +++ b/src/render/rt64_raster_shader_cache.h
 @@ -4,15 +4,24 @@
@@ -8682,7 +8868,7 @@ index 5c40c18..50cb454 100644
          std::mutex GPUShadersMutex;
          std::list<std::unique_ptr<CompilationThread>> compilationThreads;
          uint32_t threadCount;
-@@ -45,12 +55,62 @@ namespace RT64 {
+@@ -45,12 +55,63 @@ namespace RT64 {
          std::unique_ptr<ShaderCompiler> shaderCompiler;
          RenderMultisampling multisampling;
          bool usesHDR = false;
@@ -8740,6 +8926,7 @@ index 5c40c18..50cb454 100644
 +        void wantPrebuild(uint64_t shaderHash);
 +        void reportPrebuild(uint32_t done, uint32_t count, uint64_t sizeDone, uint64_t sizeStarted, uint64_t size);
 +        bool waitForPrebuild();
++        void prebuildForGame();
 +        void learnPrebuild();
 +        void reportMissed(const ShaderDescription &desc);
 +        bool buildMissed();
