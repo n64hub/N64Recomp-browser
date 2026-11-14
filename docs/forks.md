@@ -998,4 +998,9 @@ rt64 aabee0e, 2eb3bbd  the workload thread puts the color images a frame draws (
                        with the map open lacked it in each of three plays, interpolated or not; 0 of 666 in two plays
                        after (0 of 1,199 in four with aabee0e). 2eb3bbd drops aabee0e's locked copy in the present and the set's removal, which met game
                        forks' own rt64 lines (Beetle's, DKR's, Rogue Squadron's)
+rt64 ba4aa1c           render to RAM's late copy is dropped for the CPU's writes only where the copy writes, its rows
+                       from the drawn rect's top, not from the framebuffer's start: Perfect Dark's split screen points
+                       the bottom player's depth image half a screen before the z-buffer, over the players' structs
+                       the game writes every tick, and in a two-player match that player's depth rows were dropped in
+                       about one list of five (~250 times in 40 s)
 ```
