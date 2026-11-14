@@ -41,9 +41,9 @@ items by almost no game when the record began.
 | Game | New recomp: left | Web port: left |
 |---|---|---|
 | San Francisco Rush 2049 | 1a, 4c fails, 8a fails | W5, W6's Drive |
-| Perfect Dark | 2 fails, 4c, 8a fails | W5 fails, W6's Drive |
+| Perfect Dark | 1a, 2 fails, 4c, 8a fails | W5 fails, W6's Drive |
 | Super Mario 64 | | W5 fails, W6's Drive |
-| F-Zero X | 1a | W6's Drive |
+| F-Zero X | | W6's Drive |
 | Mario Party | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W6's Drive, W8 |
 | Mario Party 2 | 4c, 5b, 6a, 6b fails, 8a, 8b, 8c fails | W5 fails, W6's Drive, W8 |
 | Mario Party 3 | 4c, 5b, 6a, 8a, 8b, 8c fails | W6's Drive, W8 |
@@ -173,7 +173,10 @@ picture's.
   players, one above the other) is widened by RT64 as one player's is, so its culling and its HUD are widened with it,
   or the window's sides draw black and the radar is stretched; a view narrower than the frame (side by side, quarters)
   stays 4:3, and the window beside it is cleared once a frame, or it keeps an old frame stretched to the sides
-  (Perfect Dark's Combat Simulator showed both, its `patches/widescreen.c`).
+  (Perfect Dark's Combat Simulator showed both, its `patches/widescreen.c`). Look at the window's outermost columns
+  too: what a game sizes to its view can end just short of it where the console's border hid that, and widened it
+  leaves a strip of an old frame at the edge (F-Zero X's two-player sky, 0.4% narrower than the view: 2-3 columns of
+  a 1680x720 window, its `patches/widescreen.c`).
 
 ### 2. A graphics sweep, played past the first level
 
