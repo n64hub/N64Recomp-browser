@@ -142,9 +142,12 @@ What it looks for:
 - Flicker: a surface or the HUD blinking frame to frame, z-fighting, a frame of garbage or a stale framebuffer in a
   transition, a frame drawn without its HUD, text or characters, or with only the part of its world drawn first. A
   game that draws a frame in several RSP tasks needs `RT64_GAME_FRAME_WORKLOADS` on its desktop build too, as its page
-  has it, or RT64 interpolates each task as a frame of its own (docs/forks.md; the Mario Parties' and Paper Mario's
-  CMakeLists.txt: Paper Mario's opening at Mario's house showed the house's inside without its outer wall, roof and
-  trees in half the frames one host showed).
+  has it, or RT64 interpolates each task as a frame of its own (docs/forks.md; the Mario Parties', Paper Mario's and
+  Turok 1's and 2's CMakeLists.txt: Paper Mario's opening at Mario's house showed the house's inside without its outer
+  wall, roof and trees in half the frames one host showed, and Turok 2's map, a task of its own after the level's,
+  was missing from 5 of 75 captures at Manual 120). A page opened with `?frame-log` and read by `tools/frame_log.mjs`
+  tells: a frame drawn in several tasks reads as `drawn=2` or more, frame after frame, where the game draws it so. The
+  other own recomps drew each frame in one through their play plans, a frame or two at a screen change aside.
 - Interpolation: on the frame a level section, room or the world's origin changes, what is drawn snaps rather than
   blending between the two (Dinosaur Planet's, Perfect Dark's and GoldenEye's sections); characters' model parts carry
   ids of their own, or RT64 pairs one character's parts with a look-alike's (Mario Party's, Rayman 2's, Goin'
