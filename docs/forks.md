@@ -8,7 +8,7 @@ moves `forks.txt` onto it.
 
 ## Options off on a desktop build
 
-Seventeen options are off on a desktop build, on with Emscripten, and settable natively, each by the commit that adds it:
+Eighteen options are off on a desktop build, on with Emscripten, and settable natively, each by the commit that adds it:
 `RT64_FLIPPED_RECT_HIGH_RES` (rt64 fe91344), `RT64_UNEVEN_FRAME_RATES` (rt64 179adb8), `RT64_GAME_FRAME_WORKLOADS` (rt64
 bce5e11), `RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA_EYE` (rt64 2c4230e),
 `RT64_SCISSOR_INSIDE_FRAMEBUFFER` (rt64 cad03e4), `RT64_SKIP_COLLAPSED_MATCHES` (rt64 f6a01be),
@@ -17,8 +17,8 @@ bce5e11), `RT64_FREE_DISCARDED_TARGETS` (rt64 51c3fdd), `RT64_INTERPOLATE_CAMERA
 66539ab), `ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS` (N64ModernRuntime bf96a62), `ULTRAMODERN_RSP_TASKS_COPIED`
 (N64ModernRuntime 0ec6c51), `ULTRAMODERN_SCREEN_UPDATE_AFTER_VI` (N64ModernRuntime c700131),
 `ULTRAMODERN_VIS_WAIT_FOR_RENDERER` (N64ModernRuntime 05d95be), `ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS`
-(N64ModernRuntime 684377c) and `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED`
-(RecompFrontend bf01590).
+(N64ModernRuntime 684377c), `RECOMPINPUT_SINGLE_PLAYER_UNTIL_ASSIGNED` (RecompFrontend bf01590) and
+`RECOMPINPUT_RECONNECT_PLAYERS` (RecompFrontend 9fc3d68, on with `RECOMPINPUT_PADS_IN_ORDER` too).
 
 ## Every commit
 
@@ -920,7 +920,10 @@ N64ModernRuntime       ULTRAMODERN_YIELDS_END_QUEUED_GRAPHICS: a yield the game 
                        Adventure Racing's scheduler took one unanswered at the next VI for a hung RSP and sent itself
                        the RSP's and RDP's done: lists counted done before RT64 read them, RT64 ran from one into data
                        loaded since until the page ran out of memory, or the scheduler's thread queues broke. With
-                       render to RAM's late copy it came 33 times in a play, and the page never reached a race
+                       render to RAM's late copy it came 33 times in a play, and the page never reached a race. A
+                       game that reuses a list's buffer once the RSP is done can't take the early done, and its page
+                       takes the define out: Rage Wars' (docs/game-forks.md), and Turok 2's and Turok 3's (their
+                       CMakeLists.txt), which ran out of memory or stopped drawing in their first level from v0.192.0
 rt64 32e204c           the RAM of the framebuffer a VI shows changed to what render to RAM copied into it is no present
                        and no frame of its own (VIHistory::pushFactor), as with render to RAM off: Turok 2's second list
                        a frame draws into the framebuffer already shown, and its exact copy, landing a VI after the
@@ -933,4 +936,58 @@ rt64 fb507fc           dispatch, with createComputePipeline at the device's next
                        Firefox's GPU process compiled it in line, and Dinosaur Planet's render-to-RAM copy and sound
                        waited behind RT64's RSP pipelines as its first 3D drew (docs/findings.md, Compute pipelines
                        built at their first dispatch)
+rt64 1589517           with Emscripten a framebuffer's RAM stored into a workload (every RDRAM check stores every
+                       framebuffer RT64 knows) shares the bytes of its last store, in any workload, when they match:
+                       each of RT64_GAME_FRAME_WORKLOADS's 64 kept its own copies at 1.5 times its most, and Rogue
+                       Squadron's eight 640x480 framebuffers took 450 MB of its heap that way and ran it out at its
+                       first mission (docs/findings.md, Memory). A desktop build keeps a buffer a workload, as before
+plume a8e74eb,         Vulkan: no descriptor indexing on Mesa's lavapipe (Mesa's vendor ID), so RT64 binds each draw's
+rt64 038d240           textures as on WebGPU: lavapipe miscompiled the raster shaders' non-uniformly indexed texture
+                       array and crashed every recomp's Linux build seconds into its game (docs/findings.md, A desktop
+                       build on Mesa's lavapipe). Desktop only
+rt64 c5ced59,          where pipelines build in line with the browser's other GPU work (Firefox), the prebuilt list's
+N64ModernRuntime       boot section is built before the game's code first runs, so before its first sound:
+e9d688a,               librecomp's wait_for_game_started() calls ultramodern::renderer::prepare_for_game(), which has
+RecompFrontend d143d0a the graphics thread run the renderer's (RecompFrontend's, and this repo's renderer/), RT64's
+                       Application::prepareForGame(): the draw of nothing that resolves the pipelines' layout, section
+                       0's round, and a round trip on the device. Built at the game's first frame, the boot stopped
+                       the game with its sound started, 0.1-11.7 s of the first 10 s of sound lost on 37 pages of 38
+                       (docs/findings.md, Firefox's boot wait and the first sound). Chrome waits for nothing there.
+                       Web only
+N64ModernRuntime       ULTRAMODERN_VIS_WAIT_FOR_RENDERER's stall is two VIs (30 ms), not 100 ms: the 100 ms left a game
+d405b65 497dab9        six VIs behind every list that took about that long, and Paper Mario's page in Firefox, hidden on
+                       a busy host, its lists 50-230 ms each, freed what one pointed at as its intro handed over to its
+                       demo and trapped in its heap allocator or stopped drawing (docs/findings.md, Memory). d405b65
+                       held VIs while a graphics task was unfinished for two VIs, counted in submit_rsp_task and
+                       dp_complete, lines five game forks' runtimes change; 497dab9 puts those back and shortens the
+                       stall instead. Web only
+plume 0ac34ab,         WebGPU: where the device builds pipelines in line (Firefox), a draw of nothing builds the bound
+rt64 77e98da           pipeline for the layout it resolves, as a draw would, so RT64's warm-up in prepareForGame() has
+                       Firefox compile the ubershader's 245 KB shaders before the game starts; it built nothing there,
+                       and the game's first draw with the ubershader built it in line with the game's sound running
+                       (docs/findings.md, Compute pipelines built at their first dispatch). Chrome is as it was
+rt64 edd5da8           a hidden page draws no interpolated frames, only its game's own: it presents none, so nothing
+                       held the workload thread to the presents in flight, and the frames for every slot of the
+                       display's rate went to the GPU unseen. Firefox queued what a busy GPU couldn't finish, its GPU
+                       process grew to 9-21 GB while hidden and the page drew nothing for 25-60 s after it was shown
+                       (docs/findings.md, A page in a hidden tab). Web only
+RecompFrontend ebd361b RECOMPINPUT_PADS_IN_ORDER: a pad takes a port as it connects, the lowest no connected pad holds,
+                       and keeps it while connected, as in a console's socket: each pad's port was its place among
+                       SDL's instance ids, which rise with each connection, so a pad pulled out and plugged in again
+                       went last and the pads after its old port moved up one (two stand-in pads on a page: the first
+                       plugged in again played port 2, the second port 1). get_detected_controller_count() counts up
+                       to the highest port held, so a pad past an empty port still plays
+RecompFrontend 9fc3d68 RECOMPINPUT_RECONNECT_PLAYERS: a controller plugged in again goes back to the player who had it,
+                       the one whose controller is detached and of the same GUID hash (players.cpp,
+                       reconnect_player_controller): a player kept the SDL controller that went and read nothing until
+                       players were assigned again. Rush 2049's runtime patch RecompFrontend-0004 did the same; this
+                       sits apart from its lines, so it still applies over this until Rush 2049 drops it
+RecompFrontend 74eb087 a pad plugged in again rumbles itself: a joystick found its gamepad as the k-th of its name in
+                       the browser's order for the k-th joystick of the name by instance id, so one plugged in again
+                       at a lower place than an older pad of its model found that pad's gamepad, and both players'
+                       rumble went to one pad; the rank is now taken among the gamepads and joysticks no connected
+                       joystick has matched yet. Web only
+RecompFrontend 9753051 9fc3d68's reconnect_player_controller declared in a players namespace of its own after
+                       players.h's includes: beside the namespace's first line it conflicted in apply.cmake's
+                       three-way merge into a RecompFrontend whose header is formatted otherwise (1080 Snowboarding's)
 ```

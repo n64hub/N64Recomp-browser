@@ -5,7 +5,7 @@
 //     [--size <w>x<h>] [--shot <file>] [--interval <s>] [--query <?...>] [--port <n>] [--profile <dir>] [--json <file>]
 //     [--browser <path>] [--headed | --on-screen] [--uncapped] [--cpu-throttle <rate>] [--scale <n>] [--preload <file>]
 //     [--gecko-profile <file> | --chrome-trace <file>] [--firefox-pref <name>=<value>]... [--chrome-flag <flag>]...
-//     [--fault <device|resize|hidden|audio|reload>[,...]] [--affinity <n>] [--fallback-adapter]
+//     [--fault <device|resize|hidden|audio|reload|reopen>[,...]] [--affinity <n>] [--fallback-adapter] [--pad] [--backcheck]
 //     [--record <file> --game <name> [--build <label>] [--note <text>] [--set <id> --role <baseline|candidate>] [--host-reading <json>]]
 //
 // A build dir is served on 127.0.0.1 on a free port, and the browser's debugging port is a free one too, so plays
@@ -45,6 +45,25 @@
 // and is compared only with runs at the same one.
 // --preload runs a JavaScript file of your own in every document before the page's scripts, after play_page's own
 // (a probe that wraps a WebGPU call, a stand-in for a slow GPU's callbacks): its console lines come out with the rest.
+// --pad plays the plan with a stand-in pad (tools/gamepad_probe.js, preloaded) in place of the keyboard: one pad is
+// plugged in once the load steps are done (the launcher runs SDL), and from the start steps on each key step presses
+// what RecompFrontend's default mappings give the same N64 input on a pad (recompinput's input_mapping.cpp: Space A,
+// Left Shift B, the arrows the C buttons on the right stick, WASD the left stick, Enter Start), held 150 ms at least,
+// since SDL reads a pad's state where it queues a key's events; a plan's "padKeys" ({ code: button number or "x-",
+// "x+", "y-", "y+", "rx-", ... } for a stick) adds to or changes them for a game whose keys differ. A click in the start
+// steps (Start Game) is a press of the pad's A, which recompui's launcher takes for its focused option, pressed again
+// (twice at most) where the game hasn't started 5 s after, since a launcher can take a new pad's first press as the
+// switch to it, and clicked as the plan does where three didn't start it (W7 fails); and Enter, RecompFrontend's accept in its menus, is the pad's A until the game runs, its Start after. The setup's
+// Load ROM stays the mouse's: a browser opens a file picker only for a click or a key. A key with no pad button stays
+// the keyboard's and is named in the summary's pad, with the presses that went to the pad and what reached its rumble
+// (padRumbles()). Keys an eval or evalFile step dispatches itself are the keyboard's.
+// --backcheck plays the web port list's W2, W5, W6 and W7 (docs/new-recomp.md) in one visit and prints a verdict line
+// for each ("backcheck W5 pass: ..."), recorded as the run's backcheck. In Chrome: --scale 2, --pad, --fault
+// hidden,reload,reopen and --chrome-flag --disable-audio-output unless given: W2 is Load ROM opening the picker at its
+// first click at 2 device pixels a CSS pixel (not played where the plan's Load ROM is a key); W5 no sound frame short in the boot's first 10 s of sound (to the sample)
+// nor in the 30 s after the hidden tab; W6 the saves kept through the reload and the reopen; W7 the pad driving the
+// start steps and the play to the plan's end. In Firefox: the plan's play replaced by 20 s (--play 20) and --fault
+// hidden, for W5. Play it from Pages on a fresh profile; its note starts "backcheck".
 // --firefox-pref (Firefox only, repeated for more) sets one of Firefox's prefs in the profile before it starts, its value
 // JSON where it parses (true, 0) and a string otherwise: a compositor path to try on a laptop's screen
 // (gfx.webrender.dcomp-texture-overlay-win, docs/findings.md, A laptop, measured). A run records its prefs and is
@@ -54,15 +73,16 @@
 // hears a tab that plays sound and keeps it at a player's priority when it is hidden, which --fault hidden needs
 // (docs/findings.md, A page in a hidden tab). A run records its flags and is compared only with runs that set the same
 // ones.
-// --gecko-profile (Firefox only) runs the Gecko profiler from the page's navigate to the end of the play, so the boot
-// too, every process and the GPU process's CanvasRenderer thread among them (page_driver.mjs's geckoProfile), and
-// writes the profile to the file (a run that failed too, a page that stopped answering as it booted among them, once the
-// browser's own process answers, waiting up to 3 minutes for it), to open in profiler.firefox.com, which symbolicates
-// it. It samples every 10 ms: the profiler asks Windows for 1 ms timers
+// --gecko-profile (Firefox only) runs the Gecko profiler from the page's navigate to the end of the play, or of the
+// last fault with --fault, so the boot too, every process and the GPU process's CanvasRenderer thread among them
+// (page_driver.mjs's geckoProfile), and writes the profile to the file (a run that failed too, a page that stopped
+// answering as it booted among them, once the browser's own process answers, waiting up to 3 minutes for it), to open
+// in profiler.firefox.com, which symbolicates it. It samples every 10 ms: the profiler asks Windows for 1 ms timers
 // below that, which changes how Firefox's waits end (docs/playing.md, Uncapped, and the browsers' clocks).
 // --chrome-trace (Chrome only) records a Chrome trace over the play, every thread's JavaScript and wasm stacks sampled
 // (page_driver.mjs's chromeTrace), and writes it to the file, to open in DevTools' Performance panel or
-// ui.perfetto.dev; a wasm frame is named only in a page linked with --profiling-funcs. Sampling costs the page's
+// ui.perfetto.dev; a wasm frame is named only in a page linked with --profiling-funcs. With --fault it covers the
+// faults and not the play, what the page does as a fault comes being the reason to take one. Sampling costs the page's
 // threads, so a traced run's numbers are the trace's, not the page's, and are not recorded.
 // --fault does to the page, once the play is over (a plan's play ends in its level), what a player's browser or the
 // player does to one, then lets the game run by itself 30 s more, and a list (resize,hidden,audio,device,reload) does
@@ -71,12 +91,20 @@
 // (not with --on-screen), hidden puts another tab in front for 30 s, audio suspends the page's AudioContext for 10 s
 // and resumes it, and reload loads the page again over the browser's warm cache and service worker (a page from Pages:
 // a build dir is served uncached) and runs the plan's load and start steps, its setup's ROM kept: a player's way back
-// from a lost device, after one. For each it prints and records (in "faults") the presents a second before it (the last
+// from a lost device, after one; reopen closes the browser and starts it again on the same profile, then boots the
+// page as reload does: a player's next visit. Both compare the game's save files (<the program's folder>/saves/,
+// those frontend/save_sync.js syncs) as they were 2.5 s before (persistent_home.js writes HOME back every 2 s) with what
+// the page holds at its launcher after: savesKept is true where each is there with the same bytes, false where one
+// isn't, and null where there were none. Since a plan of 2-3 minutes seldom saves, the first of them first plants
+// saves/backcheck.bin (64 random bytes) in each folder in HOME that holds a stored ROM (the program's, where the runtime
+// keeps saves/), which the same write back keeps, so
+// the check always has a file: savesKept then says the storage kept it, and a save of the game's own beside it says the
+// game's. For each it prints and records (in "faults") the presents a second before it (the last
 // 3 samples), during and after, the WebGPU errors, exceptions and sound frames short after, the console's first 10
 // lines from it on, what the page's status line says once it has run 30 s more ("notice", null where it says nothing:
 // what frontend/shell.html tells the player, a lost device included), the canvas's size, the visibility, the AudioContext's state,
 // whether the picture stood still (two screenshots a second apart the same: a page whose device is gone still calls
-// getCurrentTexture), for reload both boots (seconds to the end of the load steps and to the first present: cold, then
+// getCurrentTexture), for reload and reopen both boots (seconds to the end of the load steps and to the first present: cold, then
 // warm), and whether the page came through: presenting at half the rate before or more after, a picture that moves, no
 // error or exception (the lost device's own "WebGPU device lost" line aside), and after a lost device with a new one and
 // no notice. One that fails the run (the game stopped) ends the list
@@ -167,7 +195,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
-import { browserExecutable, firefoxUncappedRate, missingPlanFiles, open, option, serve, sleep } from './page_driver.mjs';
+import { browserExecutable, firefoxUncappedRate, missingPlanFiles, open, option, rdramHelpers, serve, sleep } from './page_driver.mjs';
 
 const args = process.argv.slice(2);
 const headed = args.includes('--headed');
@@ -180,12 +208,17 @@ const cpuThrottle = Number(option(args, '--cpu-throttle', '0'));
 const affinity = Number(option(args, '--affinity', '0'));
 const fallbackAdapter = args.includes('--fallback-adapter');
 if (fallbackAdapter) args.splice(args.indexOf('--fallback-adapter'), 1);
-const scale = Number(option(args, '--scale', '1'));
+const backcheck = args.includes('--backcheck');
+if (backcheck) args.splice(args.indexOf('--backcheck'), 1);
+const chromeBackcheck = backcheck && args.includes('chrome'), firefoxBackcheck = backcheck && args.includes('firefox');
+const pad = args.includes('--pad') || chromeBackcheck;
+if (args.includes('--pad')) args.splice(args.indexOf('--pad'), 1);
+const scale = Number(option(args, '--scale', chromeBackcheck ? '2' : '1'));
 const portOption = option(args, '--port', null);
 const profileOption = option(args, '--profile', null);
 const port = portOption ? Number(portOption) : profileOption !== null ? 8937 : 0;
 const section = option(args, '--section', null);
-const playFor = option(args, '--play', null);
+const playFor = option(args, '--play', firefoxBackcheck && section === null ? '20' : null);
 const shotFile = option(args, '--shot', null);
 const size = option(args, '--size', '1256x645').split('x').map(Number);
 const interval = Number(option(args, '--interval', '5'));
@@ -196,10 +229,11 @@ const executable = option(args, '--browser', undefined);
 const recordFile = option(args, '--record', null);
 const game = option(args, '--game', null);
 const build = option(args, '--build', null);
-const faultList = option(args, '--fault', '').split(',').filter(Boolean);
-const faults = ['device', 'resize', 'hidden', 'audio', 'reload'];
+const faultList = option(args, '--fault', chromeBackcheck ? 'hidden,reload,reopen' : firefoxBackcheck ? 'hidden' : '').split(',').filter(Boolean);
+const faults = ['device', 'resize', 'hidden', 'audio', 'reload', 'reopen'];
 const noteOption = option(args, '--note', null);
-const note = faultList.length ? [`fault ${faultList.join(',')}`, noteOption].filter(Boolean).join('; ') : noteOption;
+const note = [backcheck ? 'backcheck' : pad ? 'pad' : null, faultList.length ? `fault ${faultList.join(',')}` : null, noteOption]
+  .filter(Boolean).join('; ') || null;
 const set = option(args, '--set', null);
 const role = option(args, '--role', null);
 const hostReadingOption = option(args, '--host-reading', null);
@@ -214,6 +248,7 @@ for (let pref; (pref = option(args, '--firefox-pref', null)) !== null;) {
 }
 const chromeFlags = [];
 for (let flag; (flag = option(args, '--chrome-flag', null)) !== null;) chromeFlags.push(flag);
+if (chromeBackcheck && !chromeFlags.includes('--disable-audio-output')) chromeFlags.push('--disable-audio-output');
 if (recordFile && !/^[a-z0-9]+$/.test(game ?? '')) {
   console.error('--record needs --game <name>: rush, ge, mm, banjo, cbfd, dk64, wr, pw, bt, mk64, sf64, oot, dkr, jfg, snap, rush2, pd, sm64 (publish_pages.sh\'s names)');
   process.exit(1);
@@ -235,7 +270,7 @@ if (hostReadingOption !== null) {
 if (args.length !== 4 || !['chrome', 'firefox'].includes(args[0])) {
   console.error('usage: node tools/play_page.mjs <chrome|firefox> <build dir or URL> <rom> <plan.json> [--section <name>] ' +
     '[--play <s>] [--size <w>x<h>] [--shot <file>] [--interval <s>] [--query <?...>] [--port <n>] [--profile <dir>] ' +
-    '[--json <file>] [--browser <path>] [--headed | --on-screen] [--uncapped] [--cpu-throttle <rate>] [--scale <n>] [--preload <file>] [--gecko-profile <file> | --chrome-trace <file>] [--firefox-pref <name>=<value>]... [--chrome-flag <flag>]... [--affinity <n>] [--fallback-adapter] [--fault <device|resize|hidden|audio|reload>[,...]] [--record <file> --game <name> [--build <label>] [--note <text>] [--set <id> --role <baseline|candidate>] [--host-reading <json>]]');
+    '[--json <file>] [--browser <path>] [--headed | --on-screen] [--uncapped] [--cpu-throttle <rate>] [--scale <n>] [--preload <file>] [--gecko-profile <file> | --chrome-trace <file>] [--firefox-pref <name>=<value>]... [--chrome-flag <flag>]... [--affinity <n>] [--fallback-adapter] [--fault <device|resize|hidden|audio|reload|reopen>[,...]] [--pad] [--backcheck] [--record <file> --game <name> [--build <label>] [--note <text>] [--set <id> --role <baseline|candidate>] [--host-reading <json>]]');
   process.exit(1);
 }
 const [browser, where, rom, planFile] = args;
@@ -369,9 +404,10 @@ const ownPreload = `() => {
     };
   }
 }`;
-const preload = preloadFile ? `() => {
+const preload = preloadFile || pad ? `() => {
 (${ownPreload})();
-${fs.readFileSync(preloadFile, 'utf8')}
+${pad ? fs.readFileSync(new URL('./gamepad_probe.js', import.meta.url), 'utf8') : ''}
+${preloadFile ? fs.readFileSync(preloadFile, 'utf8') : ''}
 }` : ownPreload;
 
 // Each whole line a helper process prints: a pipe's chunk can end mid-line.
@@ -549,8 +585,77 @@ const remote = /^https?:\/\//.test(where);
 const server = remote ? null : await serve(/\.html$/.test(where) ? path.dirname(where) : where, port);
 const base = server ? `http://127.0.0.1:${server.address().port}/` : (where.endsWith('/') ? where : where + '/');
 const pageUrl = /\.html$/.test(where) ? (remote ? where : base + path.basename(where)) + query : base + (plan.page ?? '') + query;
-const page = await open(browser, { profile, port: portOption ? port + 1 : undefined, size, executable, rom, planDir: path.dirname(planFile),
-  preload, headed, onScreen, uncapped, cpuThrottle, scale, firefoxPrefs, chromeFlags, affinity, fallbackAdapter, onLine, log });
+// --pad: the keys RecompFrontend's default mappings give an N64 input, as the stand-in pad's standard-mapping button
+// (a number) or left or right stick ("x-" left, "y-" up, "rx-" ...) that gives the same input (the header says more).
+const padKeys = { Space: 0, ShiftLeft: 2, KeyE: 4, KeyR: 7, KeyQ: 6, Enter: 9, Escape: 8, KeyJ: 14, KeyL: 15, KeyI: 12,
+  KeyK: 13, KeyA: 'x-', KeyD: 'x+', KeyW: 'y-', KeyS: 'y+', ArrowLeft: 'rx-', ArrowRight: 'rx+', ArrowUp: 'ry-',
+  ArrowDown: 'ry+', ...(plan.padKeys ?? {}) };
+// Whether the steps running now are the pad's (the start steps and the play), the codes held on it and since when, and
+// what went where.
+let padDriving = false;
+const padHeld = new Map();
+const padUse = { presses: 0, launcher: 0, launcherRefused: false, keyboard: new Set(), rumble: null, rumbleCalls: null };
+const padState = () => {
+  const axes = [0, 0, 0, 0], buttons = Object.fromEntries(Array.from({ length: 17 }, (_, i) => [i, 0]));
+  for (const code of padHeld.keys()) {
+    const to = padKeys[code];
+    if (typeof to === 'number') buttons[to] = 1;
+    else axes[['x', 'y', 'rx', 'ry'].indexOf(to.slice(0, -1))] = to.endsWith('-') ? -1 : 1;
+  }
+  return { axes, buttons };
+};
+const padPress = async (p, upDown, code) => {
+  if (upDown === 'down') { padHeld.set(code, Date.now()); padUse.presses++; }
+  else {
+    const left = (padHeld.get(code) ?? 0) + 150 - Date.now();
+    if (left > 0) await sleep(left);
+    padHeld.delete(code);
+  }
+  await p.evaluate(`padSet(0, ${JSON.stringify(padState())})`);
+};
+// A page as play_page drives it: with --pad its keys and the start steps' clicks go to the pad while padDriving.
+const openPage = async () => {
+  const p = await open(browser, { profile, port: portOption ? port + 1 : undefined, size, executable, rom, planDir: path.dirname(planFile),
+    preload, headed, onScreen, uncapped, cpuThrottle, scale, firefoxPrefs, chromeFlags, affinity, fallbackAdapter, onLine, log });
+  if (pad) {
+    const keyboard = p.key, mouse = p.click;
+    const started = async () => {
+      try { await p.evaluate(rdramHelpers); return await p.evaluate('(() => { try { n64r(0x80000300); return true; } catch { return false; } })()'); }
+      catch { return false; }
+    };
+    // Enter is RecompFrontend's accept in its menus as well as the N64's Start, and a pad's accept is A: so until the
+    // game runs (the launcher) it is the pad's A.
+    p.key = async (upDown, a) => {
+      if (!padDriving || padKeys[a[0]] === undefined) {
+        if (padDriving) padUse.keyboard.add(a[0]);
+        return keyboard(upDown, a);
+      }
+      if (a[0] === 'Enter' && upDown === 'down' && !p.gameRunning) p.gameRunning = await started();
+      return padPress(p, upDown, a[0] === 'Enter' && !p.gameRunning ? 'padA' : a[0]);
+    };
+    // A launcher's first press of a new pad can be taken as the switch to the pad (its focus shown), as a player's is,
+    // so A is pressed again, twice at most, while the game hasn't started (no RDRAM) 5 s after.
+    p.click = async (x, y) => {
+      if (!padDriving) return mouse(x, y);
+      const running = await started();
+      for (let tries = 1; tries <= 3; tries++) {
+        padUse.launcher++;
+        await padPress(p, 'down', 'padA');
+        await padPress(p, 'up', 'padA');
+        if (running) return;
+        for (const until = Date.now() + 5000; Date.now() < until; await sleep(250)) if (await started()) return;
+        if (tries < 3) log("play_page: the game hadn't started 5 s after the pad's A: pressing it again");
+      }
+      // A launcher of the page's own that takes no pad (W7 fails): the plan's click, so the rest is played.
+      padUse.launcherRefused = true;
+      log("play_page: the game didn't start for the pad's A: clicking as the plan does");
+      await mouse(x, y);
+    };
+  }
+  return p;
+};
+padKeys.padA = 0;
+let page = await openPage();
 log(`${browser}${headed && browser === 'chrome' ? ' (headed)' : ''}${uncapped ? ' uncapped' : ''}${cpuThrottle > 1 ? ` CPU throttled ${cpuThrottle}x` : ''}` +
   `${affinity ? ` on ${affinity} logical processors` : ''}${fallbackAdapter ? ' on the software adapter' : ''} pid ${page.pid}, ${onScreen ? 'on screen, maximized' : `${size[0]}x${size[1]}${scale !== 1 ? ` at ${scale}x` : ''}`}, ${freshProfile ? 'a fresh profile' : 'profile ' + profile}${Object.keys(firefoxPrefs).length ? ', prefs ' + JSON.stringify(firefoxPrefs) : ''}${chromeFlags.length ? ', flags ' + chromeFlags.join(' ') : ''}`);
 
@@ -572,8 +677,11 @@ const audioStats = `(() => {
   return stats ? Promise.race([stats(), new Promise((resolve) => setTimeout(() => resolve(null), 1000))]) : null;
 })()`;
 let sampleBusy = false;
+// Sound from the boot on: when the first frame played (in seconds, to the sample) and the frames short to 10 s after it.
+let soundFrom = null, bootShort = null;
+let reopening = false;
 const sample = async () => {
-  if (sampleBusy) return;
+  if (sampleBusy || reopening) return;
   sampleBusy = true;
   let presents = null, animationFrames = null, audio = null, gaps = [];
   const answer = stalledSeconds * 1000;
@@ -597,6 +705,10 @@ const sample = async () => {
     }
   }
   const now = { at: seconds(), presents, animationFrames, audio, cpu: procCpu() };
+  if (audio?.played > 0) {
+    soundFrom ??= now.at;
+    if (now.at - soundFrom <= 10.5) bootShort = audio.short;
+  }
   const gpu = gpuNow();
   const nvidia = countersAnswered ? smiGpu : null;
   if (last) {
@@ -650,7 +762,8 @@ const finish = async (code) => {
   if (profileOption === null) { try { fs.rmSync(profile, { recursive: true, force: true }); } catch {} }
   process.exit(code);
 };
-let audioBefore = null;
+// The sound's counters as the play starts and ends, so its frames short are the play's alone, not a fault's after it.
+let audioBefore = null, audioAfter = null;
 // Firefox's report of its GPU process when the play starts and ends (page_driver.mjs's gpuProcessMemory).
 let memoryBefore = null, memoryAfter = null;
 let failure = null;
@@ -669,33 +782,73 @@ const boot = async () => {
   await page.navigate(pageUrl);
   await page.run(plan.load ?? [], steps);
   const loaded = (Date.now() - from) / 1000;
+  if (pad) { page.gameRunning = false; await page.evaluate('plugPads(1)'); }
   const first = await page.evaluate('window.__firstPresent ? performance.timeOrigin + window.__firstPresent : null').catch(() => null);
   return { loaded: tenths(loaded), firstPresent: first ? tenths((first - from) / 1000) : null };
 };
 let firstBoot = null;
+// How many presses of Load ROM the setup took to open the file picker (page_driver.mjs's rom step), 3 where none did.
+let romPresses, romByKey = false;
+// The steps the pad plays with --pad.
+const padRun = async (stepList) => {
+  padDriving = pad;
+  try { await page.run(stepList, steps); } finally { padDriving = false; }
+};
+// The files in HOME (/home/web_user), each [path, size], for the saves and the folders that hold a stored ROM.
+const homeFiles = `(() => {
+  const files = [];
+  const walk = (dir) => {
+    for (const name of FS.readdir(dir)) {
+      if (name === '.' || name === '..') continue;
+      const p = dir + '/' + name;
+      let st;
+      try { st = FS.stat(p); } catch { continue; }
+      if (FS.isDir(st.mode)) walk(p);
+      else files.push([p, st.size]);
+    }
+  };
+  walk('/home/web_user');
+  return files;
+})()`;
+// The game's save files (<the program's folder>/saves/, as save_sync.js takes them) by path, each its size and an FNV-1a
+// hash of its bytes; null where they can't be read.
+const savesNow = () => page.evaluate(`${homeFiles}.filter(([p, size]) => p.includes('/saves/') && !p.endsWith('.temp') &&
+  !p.endsWith('.bak') && size < (1 << 20)).reduce((saves, [p, size]) => {
+    let h = 0x811c9dc5;
+    for (const b of FS.readFile(p)) h = Math.imul(h ^ b, 16777619) >>> 0;
+    saves[p] = size + ' ' + h.toString(16);
+    return saves;
+  }, {})`).catch((error) => { log(`the saves couldn't be read: ${error.message}`); return null; });
 let profiling = false;
 try {
   if (geckoProfileFile) { await page.geckoProfile.start(); profiling = true; }
   firstBoot = await boot();
-  await page.run([...(freshProfile ? (plan.setup ?? []) : []), ...(plan.start ?? [])], steps);
-  audioBefore = last?.audio ?? null;
+  await page.run(freshProfile ? (plan.setup ?? []) : [], steps);
+  romByKey = (plan.setup ?? []).some((step) => step[0] === 'rom' && typeof step[1] === 'string');
+  romPresses = page.romPresses;
+  await padRun(plan.start ?? []);
   memoryBefore = page.gpuProcessMemory ? await page.gpuProcessMemory().catch(() => null) : null;
-  // That report runs every process's memory reporters, which held a Firefox page's presents and animation frames 120-203
-  // ms (Banjo's and Conker's launchers; counted, it was a settled launcher's longest gap), so the play's gaps start once
-  // it has passed, and none from before the play comes into them.
-  if (memoryBefore) await sleep(500);
+  // That report runs every process's memory reporters, the page's too, which held a Firefox page's presents and animation
+  // frames 120-203 ms (Banjo's and Conker's launchers; counted, it was a settled launcher's longest gap) and its thread,
+  // which runs the game's WebGPU calls, 444-473 ms in Paper Mario's intro, its sound running dry for 0.3-0.4 s. So the
+  // play's gaps and sound start once it has passed: a sample after it ends the one it fell in, which the play leaves out.
+  if (memoryBefore) { await sleep(500); await sample(); }
+  audioBefore = last?.audio ?? null;
   await page.evaluate('window.__gaps = []; undefined').catch(() => {});
-  if (chromeTraceFile) await page.chromeTrace.start();
+  if (chromeTraceFile && !faultList.length) await page.chromeTrace.start();
   playing = true;
   hostBefore = hostTimes();
   viewport = await page.viewport();
   log(`play, the page's viewport ${viewport[0]}x${viewport[1]} at ${viewport[2]} device pixels a CSS pixel`);
-  await page.run(shotFile ? [...play, ['shot', path.resolve(shotFile)]] : play, steps);
+  await padRun(shotFile ? [...play, ['shot', path.resolve(shotFile)]] : play);
   await sample();
   playing = false;
-  if (geckoProfileFile) { profiling = false; await page.geckoProfile.dump(geckoProfileFile); }
-  if (chromeTraceFile) await page.chromeTrace.stop(path.resolve(chromeTraceFile));
+  audioAfter = last?.audio ?? null;
+  if (geckoProfileFile && !faultList.length) { profiling = false; await page.geckoProfile.dump(geckoProfileFile); }
+  if (chromeTraceFile && !faultList.length) await page.chromeTrace.stop(path.resolve(chromeTraceFile));
   memoryAfter = page.gpuProcessMemory ? await page.gpuProcessMemory().catch(() => null) : null;
+  // And the faults' samples start after it: its 0.3-0.4 s of sound read as a hidden tab's in Firefox.
+  if (memoryAfter && faultList.length) { await sleep(500); await sample(); }
 } catch (error) {
   log(`failed: ${error.message}`);
   failure = error.message;
@@ -703,6 +856,7 @@ try {
   // process is what stopped answering (docs/findings.md, A page that stops answering) it comes once that process
   // answers again, if it does within 3 minutes.
   if (profiling) {
+    profiling = false;
     const from = Date.now();
     await Promise.race([page.geckoProfile.dump(geckoProfileFile),
       sleep(180000).then(() => { throw new Error('the browser gave no answer in 3 minutes'); })]).then(
@@ -723,6 +877,10 @@ const hostAfter = hostTimes();
 // --fault, once the play is over (in its level): each fault in turn, then 30 s of the game running by itself.
 const playErrors = errors.slice(), playExceptions = exceptions;
 const faultResults = [];
+let planted = null;
+const tracingFaults = Boolean(chromeTraceFile && faultList.length && !failure);
+// Its start holds every thread of the page's 100-150 ms (V8's sampler starting), so the first fault comes 5 s after.
+if (tracingFaults) { await page.chromeTrace.start(); await sleep(5000); }
 for (const [i, name] of (failure ? [] : faultList).entries()) {
   const faultResult = { name, at: Math.round(seconds()),
     presentsBefore: median(samples.filter((s) => i ? s.fault === `${i - 1} after` : s.playing).slice(-3).map((s) => s.presents)) };
@@ -751,9 +909,32 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
       faultResult.audioSuspended = await page.evaluate(`${audioContext}?.suspend().then(() => ${audioContext}.state) ?? null`);
       await page.run([['wait', 10000]]);
       await page.evaluate(`${audioContext}?.resume()`);
-    } else if (name === 'reload') {
+    } else if (name === 'reload' || name === 'reopen') {
+      if (!planted) {
+        // Beside the stored ROM (4 MB or more): the program's folder, where the runtime keeps saves/.
+        planted = await page.evaluate(`[...new Set(${homeFiles}.filter(([p, size]) => size >= (4 << 20) && !p.includes('/saves/'))
+          .map(([p]) => p.slice(0, p.lastIndexOf('/'))))].map((dir) => {
+            FS.mkdirTree(dir + '/saves');
+            FS.writeFile(dir + '/saves/backcheck.bin', crypto.getRandomValues(new Uint8Array(64)));
+            return dir;
+          })`).catch((error) => `none: ${error.message}`);
+        log(`planted saves/backcheck.bin in ${JSON.stringify(planted)}`);
+      }
+      await sleep(2500);
+      faultResult.savesBefore = await savesNow();
+      if (name === 'reopen') {
+        reopening = true;
+        try {
+          await page.close();
+          page = await openPage();
+          last = null;
+        } finally { reopening = false; }
+      }
       faultResult.boots = [firstBoot, await boot()];
-      await page.run(plan.start ?? [], steps);
+      faultResult.savesAfter = await savesNow();
+      const before = Object.entries(faultResult.savesBefore ?? {});
+      faultResult.savesKept = before.length ? before.every(([p, v]) => faultResult.savesAfter?.[p] === v) : null;
+      await padRun(plan.start ?? []);
     }
     faultPhase = `${i} after`;
     await page.run([['wait', 30000]]);
@@ -795,6 +976,61 @@ for (const [i, name] of (failure ? [] : faultList).entries()) {
   for (const text of faultResult.lines) console.log(`  console ${text}`);
   if (faultResult.failed) break;
 }
+if (tracingFaults) await page.chromeTrace.stop(path.resolve(chromeTraceFile)).then(() => log(`chrome trace written to ${chromeTraceFile}`),
+  (e) => log(`no chrome trace: ${e.message}`));
+// A profile of a run with faults runs on through them: what a hidden page's threads do is the reason to take one.
+if (profiling) {
+  profiling = false;
+  await page.geckoProfile.dump(geckoProfileFile).then(() => log(`gecko profile written to ${geckoProfileFile}`),
+    (e) => log(`no gecko profile: ${e.message}`));
+}
+
+// What reached the pad's rumble, and the sound's rate, to give frames short as ms.
+if (pad) {
+  padUse.rumble = await page.evaluate('padRumbles()').catch(() => null);
+  padUse.rumbleCalls = await page.evaluate('padRumbleCalls()').catch(() => null);
+}
+const sampleRate = await page.evaluate('Module.SDL2?.audioContext?.sampleRate ?? null').catch(() => null);
+const ms = (frames) => frames === null || !sampleRate ? '' : ` (${Math.round(frames * 1000 / sampleRate)} ms)`;
+const padSummary = pad ? { presses: padUse.presses, launcher: padUse.launcher, launcherRefused: padUse.launcherRefused, keyboard: [...padUse.keyboard],
+  rumble: padUse.rumble, rumbleCalls: padUse.rumbleCalls } : null;
+if (padSummary) console.log(`pad: ${padSummary.presses} presses on the pad, ${padSummary.launcher} of them the launcher's; ` +
+  `${padSummary.keyboard.length ? 'keys left on the keyboard ' + padSummary.keyboard.join(' ') : 'no key left on the keyboard'}; ` +
+  `rumble ${padSummary.rumble ?? '-'}, ${padSummary.rumbleCalls ?? '-'} calls`);
+// --backcheck's verdicts: "pass", "fails" or "not played", and why.
+const verdicts = {};
+if (backcheck) {
+  const fault = (name) => faultResults.find((f) => f.name === name);
+  const why = (text) => failure ? `${text} (the run failed: ${failure})` : text;
+  if (romPresses === undefined && /no file chooser opened|never asked for a file/.test(failure ?? '')) romPresses = 3;
+  if (browser === 'chrome') {
+    verdicts.W2 = romByKey ? ['not played', 'the plan presses a key for Load ROM, so no click was played']
+      : romPresses === undefined ? ['not played', why('no Load ROM pressed (a kept profile?)')]
+      : romPresses === 1 ? ['pass', `Load ROM opened the picker at its first click at ${scale}x`]
+      : ['fails', why(`Load ROM took ${romPresses} presses to open the picker at ${scale}x`)];
+  }
+  const hidden = fault('hidden');
+  // W5 is the sound's: whether the page came through the hidden tab otherwise is the fault's own line.
+  verdicts.W5 = soundFrom === null ? ['fails', why('no sound played')]
+    : !hidden ? ['not played', why(`the hidden tab never came; ${bootShort} frames short in the boot`)]
+    : bootShort === 0 && hidden.audioShortAfter === 0 ? ['pass', "no sound frame short in the boot's first 10 s nor after the hidden tab"]
+    : ['fails', `${bootShort} frames short in the boot's first 10 s${ms(bootShort)}, ${hidden.audioShortAfter} in the 30 s after the hidden tab` +
+      `${ms(hidden.audioShortAfter)}`];
+  if (browser === 'chrome') {
+    const kept = ['reload', 'reopen'].map(fault);
+    verdicts.W6 = kept.some((f) => !f) ? ['not played', why('the reload or the reopen never came')]
+      : kept.some((f) => f.savesKept === false) ? ['fails', kept.filter((f) => f.savesKept === false).map((f) => `the ${f.name} lost ` +
+        Object.keys(f.savesBefore).filter((k) => f.savesAfter?.[k] !== f.savesBefore[k]).join(', ')).join('; ')]
+      : kept.every((f) => f.savesKept === null) ? ['not played', 'no save file, not even the planted one']
+      : ['pass', `${Object.keys(kept[1].savesBefore).map((k) => k.replace('/home/web_user/', '')).join(', ')} kept through the reload and the reopen` +
+        (Object.keys(kept[1].savesBefore).every((k) => k.endsWith('/backcheck.bin')) ? " (the planted file only: the plan wrote no save of the game's)" : '')];
+    verdicts.W7 = padUse.launcherRefused ? ['fails', why("the launcher didn't start the game for three presses of the pad's A")]
+      : failure ? ['fails', why('the pad drove the plan')]
+      : padUse.keyboard.size ? ['fails', `keys with no pad button: ${[...padUse.keyboard].join(' ')}`]
+      : ['pass', `${padUse.presses} presses on the pad drove the launcher (${padUse.launcher}) and the plan; rumble ${padUse.rumble}`];
+  }
+  for (const [item, [verdict, text]] of Object.entries(verdicts)) console.log(`backcheck ${item} ${verdict}: ${text}`);
+}
 
 const during = samples.filter((s) => s.playing);
 const presents = during.map((s) => s.presents).filter((p) => p !== null);
@@ -803,7 +1039,7 @@ const animationFrames = median(during.map((s) => s.animationFrames));
 // Uncapped, and the browsers' clocks): Chrome on Windows then sleeps 17 ms and a timer tick between frames, and
 // plume takes that for the display.
 const noDisplay = !uncapped && animationFrames !== null && animationFrames < 57;
-const audioAfter = last?.audio ?? null;
+audioAfter ??= last?.audio ?? null;  // a play that failed partway: its sound until then
 const percentile = (values, q) => {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] : null;
@@ -839,6 +1075,7 @@ const summary = {
     perSecond: Math.round(100 * (memory.at(-1).gpuProcessMB - memory[0].gpuProcessMB) / (memory.at(-1).at - memory[0].at)) / 100 } : null,
   gpuProcessMemory: memoryBefore && memoryAfter ? { before: memoryBefore, after: memoryAfter } : null,
   faults: faultResults.length ? faultResults : null,
+  bootShort, pad: padSummary, backcheck: backcheck ? verdicts : null,
 };
 const r = (x, digits = 1) => x?.toFixed(digits) ?? '-';
 console.log(`summary: ${browser} ${summary.size}${uncapped ? ' uncapped' : ''}, ${during.length} samples of ${interval} s played`);
@@ -889,6 +1126,7 @@ if (recordFile) {
     ...(summary.gpuProcessMemory ? { gpuProcessMemory: summary.gpuProcessMemory } : {}),
     host: { cores: os.cpus().length, busy: host ? Math.round(100 * (1 - (hostAfter.idle - hostBefore.idle) / host)) : null },
     ...(faultResults.length ? { faults: faultResults } : {}),
+    ...(bootShort !== null ? { bootShort } : {}), ...(padSummary ? { pad: padSummary } : {}), ...(backcheck ? { backcheck: verdicts } : {}),
     failed: failure,
   };
   if (!note) regressions = compare(run, fs.existsSync(recordFile) ? fs.readFileSync(recordFile, 'utf8') : '');

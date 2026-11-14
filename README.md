@@ -92,19 +92,22 @@ somewhere else is patched by name: `cmake -P lib/N64Recomp-browser/patches/apply
 
 ### 3. The web build in CMakeLists.txt
 
-In the recomp's CMakeLists.txt, in an `if (EMSCRIPTEN)` block (the desktop build doesn't change):
+In the recomp's CMakeLists.txt, `build_speed.cmake` before rt64 and the others are added, for the page and the desktop
+build alike, then an `if (EMSCRIPTEN)` block (the desktop build doesn't change otherwise):
 
 ```cmake
-include(lib/N64Recomp-browser/patches/apply.cmake)       # patches the checkouts, if they aren't already
-n64recomp_browser_apply_patches(${CMAKE_SOURCE_DIR}/lib)
-add_compile_options(-pthread -fwasm-exceptions -msimd128 -mtail-call "-DXXH_HAS_INCLUDE(x)=0")
-add_link_options(-pthread -fwasm-exceptions -mtail-call)
 include(lib/N64Recomp-browser/frontend/build_speed.cmake)   # ccache, if it is on PATH
-set(RT64_PREBUILT_SHADER_LIST ${CMAKE_SOURCE_DIR}/<the game's shader list>)   # required: step 4
-# ... add rt64 (RT64_STATIC), N64ModernRuntime and RecompFrontend as for the desktop ...
-add_subdirectory(lib/N64Recomp-browser/frontend ${CMAKE_BINARY_DIR}/web_frontend)
-n64recomp_browser_frontend_page(<the recomp's executable>)
-target_link_options(<the recomp's executable> PRIVATE -sINITIAL_MEMORY=2GB)   # if 1536MB, frontend/'s, isn't enough
+if (EMSCRIPTEN)
+    include(lib/N64Recomp-browser/patches/apply.cmake)       # patches the checkouts, if they aren't already
+    n64recomp_browser_apply_patches(${CMAKE_SOURCE_DIR}/lib)
+    add_compile_options(-pthread -fwasm-exceptions -msimd128 -mtail-call "-DXXH_HAS_INCLUDE(x)=0")
+    add_link_options(-pthread -fwasm-exceptions -mtail-call)
+    set(RT64_PREBUILT_SHADER_LIST ${CMAKE_SOURCE_DIR}/<the game's shader list>)   # required: step 4
+    # ... add rt64 (RT64_STATIC), N64ModernRuntime and RecompFrontend as for the desktop ...
+    add_subdirectory(lib/N64Recomp-browser/frontend ${CMAKE_BINARY_DIR}/web_frontend)
+    n64recomp_browser_frontend_page(<the recomp's executable>)
+    target_link_options(<the recomp's executable> PRIVATE -sINITIAL_MEMORY=2GB)   # if 1536MB, frontend/'s, isn't enough
+endif()
 ```
 
 Build with `emcmake cmake ... -DRT64_NAGA_EXECUTABLE=<naga>` (`cargo install naga-cli`), with `spirv-opt` on
@@ -213,8 +216,8 @@ What changes in the game's own code (behind `__EMSCRIPTEN__`) and files:
   built, for those, holding its frame under a small "Preparing graphics" indicator in a corner; the rest of that
   section is built next. Rush 2049's page, cold, has its 75 pipelines built ~5 s after it opens, behind the
   launcher. Firefox waits instead, since anything built behind the game stalls its
-  frames: for the boot before the game's first frame, and for a whole section when a frame first asks for 4 of its
-  shaders. So a list's boot is what the game shows before its first level, and the rest goes in sections: Rush
+  frames: for the boot before the game starts, so that its first sound plays on through the boot, and for a whole
+  section when a frame first asks for 4 of its shaders. So a list's boot is what the game shows before its first level, and the rest goes in sections: Rush
   2049's boot (logos, title, menus) is 21 pipelines and 2 s in Firefox, against 75 and 9.8 s as one list, and its
   race section's 41 take 7 s when the first race starts. A boot that would still be long can end at the title, with
   the menus the next section: Pilotwings 64's title and menus were 80 pipelines and 24-37 s in Firefox before its
@@ -403,7 +406,9 @@ n64hub/RecompFrontend-web           N64Recomp/RecompFrontend recompui on WebGPU,
                                                                   list late as another; a game of several
                                                                   players plays as one until they are
                                                                   assigned, or with RECOMPINPUT_PADS_IN_ORDER,
-                                                                  an option it turns on, each pad its own port
+                                                                  an option it turns on, each pad its own port,
+                                                                  kept while it is plugged in; a pad plugged
+                                                                  in again goes back to its player
 n64hub/hlslpp-web                   redorav/hlslpp           fixes to the WebAssembly SIMD backend RT64's
                                                                   CPU-side matrices use with -msimd128
 ```
@@ -466,7 +471,8 @@ take the web support without moving its submodules to the forks (Using it in a r
   `frame_lengths.js`, a preload too, logs how long the game's frames are against the page's presents, and
   `frame_lengths.mjs` counts from that what each guess at a frame's length would hold and cut. `wait_probe.js` logs
   whether a timed wait off the page's thread ends on time, each second of a play, and `heap_probe.js` how much of its
-  heap the page has taken, and the request that ran it out.
+  heap the page has taken, and the request that ran it out. `audio_probe.js` logs each render quantum the sound ran
+  short in, with the ring's fill and the loudest sample played before it, so a loss in the game's own silence shows.
   `page_driver.mjs` drives both browsers for them (each header says how), and in Chrome reports an exception on any
   of the page's threads with its stack, which the page itself gets only as an ErrorEvent without one. `wasm_offset.mjs`
   names the function of a page's wasm at the offset a trap gives.

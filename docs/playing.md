@@ -30,10 +30,11 @@ options; `docs/findings.md` has what was measured this way.
 ## Plans
 
 - A game's `tools/play_plan.json` (DKR-R's, Snap's and Rush 2's in `web/`) is its regular play, 2-3 minutes with
-  every timeout counted, and every play of the game is by it unless a card needs more. Its
-  `play_plan_extended.json` beside it starts the same and goes on to two or three more levels in 5 minutes or less,
-  played only when a change needs a longer play (one to a level or screen only it reaches). The shaders an extended play
-  misses go into the game's list, in the same work. Each plan's header says what it plays.
+  every timeout counted, and every play of the game is by it unless a card needs more. A change that needs a longer
+  play (one to a level or screen only it reaches) is played by the game's `play_plan_extended.json` beside it, which
+  the card writes if the game has none: it starts the same and goes on to two or three more levels in 5 minutes or
+  less. The shaders an extended play misses go into the game's list, in the same work. Each plan's header says what it
+  plays.
 - A plan reaches a level as a player does (the menus where quick, the survey's warp or stage start where not; its
   header says which) and plays a minute or more in its levels, the whole run 2-5 minutes (Which browser, how long). A
   walk sways out and back by as much each way about a spot it was played to and looked at: a blind walk in one
@@ -189,23 +190,34 @@ work, naming the game, the browser, the time and the curve.
 - Whether timed waits off its thread end on time all through a play: `--preload tools/wait_probe.js` logs, each
   second, a worker's shortest of three 100 us waits (`waitprobe <ms>`), what plume and the VI thread measure once as
   the page starts (docs/findings.md, A host that holds Chrome's presents).
+- What holds its GPU work as it boots or reaches somewhere new: `--preload tools/pipeline_probe.js` logs each shader
+  module and pipeline the page makes (`pipeprobe <s> render|compute`, with its modules, depth, blend and cull state)
+  and each queue round trip of 200 ms or more (`pipeprobe <s> roundtrip <ms>`): a pipeline Firefox's GPU process
+  builds in line shows as a long round trip right after its line (docs/findings.md, Compute pipelines built at their
+  first dispatch).
 - How much of its heap a page has taken, and what ran it out: `--preload tools/heap_probe.js` logs the heap's break
   and length each second (`heap <s> sbrk <MB> len <MB>`) and, before an `Aborted(OOM)`, the request's size and the
   stack that made it (`heapoom`) (docs/findings.md, Memory). With `--query ?heapwalk` it also walks dlmalloc's chunks
   every 20 s (`heapwalk`): the sizes that hold the most and that grew, and what points at the most grown, which names
   the vector or map a leak piles into.
 - What a game makes of several controllers, and where its rumble goes: `--preload tools/gamepad_probe.js` gives the
-  page stand-in pads, plugged in by a plan's `plugPads()` once SDL runs (before Start Game), and says what reached
-  each pad's vibrationActuator (`padRumbles()`) and which pad the page looked for (its header).
+  page stand-in pads, plugged in by a plan's `plugPads()` once SDL runs (before Start Game), pulled out and plugged
+  in again by `unplugPad()` and `replugPad()`, and says what reached each pad's vibrationActuator (`padRumbles()`)
+  and which pad the page looked for (its header).
 - Video memory: read the adapter's `\GPU Adapter Memory(*)\Dedicated Usage` and nvidia-smi, never
   `\GPU Process Memory(*)\Dedicated Usage`, which climbs by a canvas a frame in Firefox (Windows 10 counts every reopen
   of its shared canvas texture, KB4490156). nvidia-smi's is the whole GPU's, so a page filling video memory beside
   another shows as the other page's climb and its "Out of Memory". play_page reads the GPU process's private bytes each
   sample, and in Firefox about:memory's split of them at the play's start and end (`gpuProcessMemory`); each read holds
-  Firefox's page 120-200 ms, so a play's gaps start after the first (docs/findings.md, Memory). Which kind of WebGPU
+  Firefox's page and its thread 120-470 ms, its sound too, so a play's gaps and sound start after the first, and a
+  fault's after the second (docs/findings.md, Memory, A page in a hidden tab). Which kind of WebGPU
   work grows it: `tools/gpu_growth.mjs` (its header) plays each kind of a page's calls alone, at the rates
   `--preload tools/webgpu_census.js` reads off the page; whose code made what it grows (D3D12's, a driver's, DXC's,
   Firefox's): `tools/memory_scan.ps1`, unelevated, from outside the process.
+- The web port list's W2, W5, W6 and W7 (docs/new-recomp.md): `--backcheck` (play_page's header), in Chrome at 2
+  device pixels a CSS pixel with a stand-in pad driving the plan, then a hidden tab, a reload and the browser closed
+  and opened again (`--fault reopen`) with the saves compared, and in Firefox the boot's sound and a hidden tab;
+  `play_pages.sh --backcheck` plays it on each page from Pages. `--pad` alone plays a plan with the pad.
 - How it comes through what a player's browser does to it: `--fault resize,hidden,audio,device,reload` (play_page's
   header) does each in turn once the play is in its level (a resized window, another tab in front for 30 s, its
   AudioContext suspended, its WebGPU device lost, then a reload over a warm cache and service worker), and records
