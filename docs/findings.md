@@ -640,6 +640,24 @@ as much as Pages in as many hides: Paper Mario 4 of 9 hides (464-1,384 frames, a
 (732-1,308), Mario Kart 64 3 of 6 (256-1,207) against 3 of 6 (570-1,699). Chrome's work comes before
 visibilitychange fires, so the page can't see it coming, and plume's wait wasn't what held the game.
 
+Rush 2049's page lost sound after its tab was shown again, and none while it was hidden, but not for the hide (main
+485de90 on v0.201.0, 3840x2000, an RTX 2070, `tools/audio_probe.js` and `?frame-log`). Its race lost as much before the hide
+as after it, 7,544 frames in the 0.7 s before one, and every loss came at a game frame RT64 took 60-140 ms over or at
+the attract race's end, 30 s after the show, where the page's thread stalled 100-200 ms (`pagestall`) as the next mode
+loaded. Each is the runtime's hold: the VI thread sends no VI while the graphics thread spends 30 ms in one action
+(N64ModernRuntime-web's renderer_stalled), so the game's clock stops and its sound with it, and the sound for that
+time is never made. The ring, about 2,000 frames (42 ms) all through the race, ran dry and was back at that level a
+quantum later, with no burst of held buffers; the game's audio thread waits only for its own last audio task (the
+task its scheduler keeps at 0x8002AFA0), not for the graphics task in hand. Uncapped, RT64's frames interpolated for
+360 a second kept the GPU 95-98% busy with nothing else on it, and each game frame waits for the workload that last
+drew its framebuffer, so most race frames past 33 ms lost time to the hold: 1,013 frames short after the show on a
+whole GPU turn, 1,350-7,740 on shared ones. A game can only ride out a hold on what it has queued, so the page keeps
+100 ms (its src/main.cpp): capped and hidden 30 s, Firefox lost none after the show in 4 plays against main's 3,935
+and 110 in 2 of 4, all at the race's end (plays.jsonl set rush-queue-100-capped). A clock slow for seconds drains any
+queue: in the one uncapped Firefox play of 2 where the 100 ms build lost 1,689, its ring fell from 4,400 frames to 0
+over 5 s. Mario Party 2's 40 ms in Chrome 2.2 s after a show (docs/new-recomp.md) may be the same hold against a
+thinner ring.
+
 ## A host that holds Chrome's presents
 
 For half an hour of 2026-10-19 (11:25-11:50 UTC) an RTX 5080 desktop held headless Chrome 155's pages uncapped at
