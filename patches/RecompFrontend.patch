@@ -1,4 +1,4 @@
-RecompFrontend: https://github.com/n64hub/RecompFrontend-web bc75107fd4cc584e4bbf3f1afe4b1004c439c350
+RecompFrontend: https://github.com/n64hub/RecompFrontend-web 9fc3d680f123495d4996daf16b26f5049a25840c
 on upstream b2c5c18d73054416c844486611fd2c2b9d8a4927 (tools/export_patches.sh)
 
 diff --git a/recompinput/CMakeLists.txt b/recompinput/CMakeLists.txt
@@ -248,7 +248,7 @@ index c76a1dc..bdebb14 100644
          exited = sdl_event_filter(nullptr, &cur_event);
  
 diff --git a/recompinput/src/input_state.cpp b/recompinput/src/input_state.cpp
-index 03ed871..873a199 100644
+index 03ed871..ee8b366 100644
 --- a/recompinput/src/input_state.cpp
 +++ b/recompinput/src/input_state.cpp
 @@ -21,6 +21,8 @@ static struct {
@@ -513,7 +513,7 @@ index 03ed871..873a199 100644
          }
  
      } else {
-@@ -391,6 +565,25 @@ SDL_GameController *recompinput::get_controller_from_joystick_id(SDL_JoystickID
+@@ -391,6 +565,24 @@ SDL_GameController *recompinput::get_controller_from_joystick_id(SDL_JoystickID
  void recompinput::add_controller_state(SDL_JoystickID joystick_id, SDL_GameController* controller) {
      std::lock_guard lock{ InputState.controllers_mutex };
      ControllerState& state = InputState.controller_states[SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller))];
@@ -532,15 +532,14 @@ index 03ed871..873a199 100644
 +                }
 +            }
 +        }
-+        printf("  Port: %d
-+", state.port + 1);
++        printf("  Port: %d\n", state.port + 1);
 +    }
 +#endif
      state.controller = controller;
  }
  
 diff --git a/recompinput/src/players.cpp b/recompinput/src/players.cpp
-index 08cb3f3..04b9153 100644
+index 08cb3f3..3d5e121 100644
 --- a/recompinput/src/players.cpp
 +++ b/recompinput/src/players.cpp
 @@ -74,7 +74,15 @@ size_t players::get_max_number_of_players() {
@@ -559,7 +558,7 @@ index 08cb3f3..04b9153 100644
  }
  
  void players::set_single_player_mode(bool single_player) {
-@@ -113,6 +121,35 @@ bool players::has_enough_players_assigned() {
+@@ -113,6 +121,34 @@ bool players::has_enough_players_assigned() {
      return PlayerState.players.get_count() >= PlayerState.min_players;
  }
  
@@ -579,8 +578,7 @@ index 08cb3f3..04b9153 100644
 +                !SDL_GameControllerGetAttached(player.controller) &&
 +                profiles::get_guid_from_sdl_controller(player.controller).hash == hash) {
 +                if (player_array == &PlayerState.players) {
-+                    printf("  Back as player %zu's controller
-+", i + 1);
++                    printf("  Back as player %zu's controller\n", i + 1);
 +                }
 +                player.controller = controller;
 +                break;
