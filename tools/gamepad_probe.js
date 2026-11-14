@@ -7,6 +7,14 @@
 //                             the program has started SDL (the launcher is SDL's), say at the start of the plan's
 //                             "start" steps, before Start Game: a page whose RecompFrontend is older than 060709f
 //                             never opens a pad that is there as SDL starts (site/touch_pad.js).
+//   unplugPad(index)          pulls pad <index> out, as Chrome sees one go: its place in navigator.getGamepads() is null
+//                             from then on, the Gamepad the page holds says connected false, and a
+//                             gamepaddisconnected event says so. true, or false while no pad <index> is in.
+//   replugPad(index, at)      plugs the pad last pulled out of place <index> in again, the same id, as Chrome sees one
+//                             come back: a new Gamepad at place <at>, or the lowest free place if none is given (Chrome
+//                             gives a pad the first free one, so a pad another took the place of comes back at another),
+//                             and a gamepadconnected event. Its place, or -1 while it is in or <at> is taken. SDL makes
+//                             it a new joystick, its instance id the next, whatever place it comes back at.
 //   padSet(index, state)      moves pad <index>'s sticks and buttons and leaves them there, as a player holds them:
 //                             state.axes is the standard mapping's [left x, left y, right x, right y], -1 to 1, down
 //                             positive, a null left as it is, and state.buttons an object of the standard mapping's
@@ -22,7 +30,8 @@
 //                             ids beside them. A pad a port plays on that gets no plays or resets is one the page
 //                             didn't find behind its joystick.
 //
-// Each pad's id is "Xbox 360 Controller (XInput STANDARD GAMEPAD)", Chrome's for an Xbox pad on Windows, unless given, so
+// navigator.getGamepads() is Chrome's four places (more if more pads are plugged in), null where no pad is in. Each
+// pad's id is "Xbox 360 Controller (XInput STANDARD GAMEPAD)", Chrome's for an Xbox pad on Windows, unless given, so
 // four pads plugged in are four of one name, which the page tells apart by the order they connected. SDL names a pad
 // after its id as it comes over Emscripten's EmscriptenGamepadEvent, 63 bytes at most, and renames it
 // (SDL_CreateJoystickName: spaces, a maker's name, a word it finds again later cut off the front), so the ids a real
@@ -32,8 +41,9 @@
 // strict mode doesn't allow; then it logs that it can't.
 if (navigator.getGamepads && !self.__gamepadProbe) {
   self.__gamepadProbe = true;
-  let pads = [];
-  const plays = [], resets = [], peak = [];
+  let pads = [null, null, null, null];
+  const plays = [0, 0, 0, 0], resets = [0, 0, 0, 0], peak = [0, 0, 0, 0];
+  const unplugged = {};
   let calls = 0, logged = 0;
   const pad = (index, id) => ({
     id, index, connected: true, mapping: 'standard', timestamp: performance.now(), axes: [0, 0, 0, 0],
@@ -56,7 +66,7 @@ if (navigator.getGamepads && !self.__gamepadProbe) {
         try {
           const args = gamepadProbe.caller.arguments;
           console.log('gamepadprobe rumble pad', args[0], 'strength', args[1],
-            'pads', JSON.stringify(pads.map((g) => g.id)));
+            'pads', JSON.stringify(pads.map((g) => g && g.id)));
         } catch (e) {
           logged = 12;
           console.log('gamepadprobe rumble: its arguments can\'t be read here,', String(e));
@@ -68,13 +78,39 @@ if (navigator.getGamepads && !self.__gamepadProbe) {
   self.plugPads = (what = 4) => {
     const ids = Array.isArray(what) ? what : Array.from({ length: what }, (_, i) => 'Xbox 360 Controller (XInput STANDARD GAMEPAD)');
     pads = ids.map((id, i) => pad(i, id));
+    while (pads.length < 4) pads.push(null);
     plays.length = resets.length = peak.length = 0;
     for (const p of pads) {
       plays.push(0); resets.push(0); peak.push(0);
-      dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: p }));
+      if (p) dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: p }));
     }
-    console.log('gamepadprobe plugged', pads.length);
+    for (const k of Object.keys(unplugged)) delete unplugged[k];
+    console.log('gamepadprobe plugged', ids.length);
     return true;
+  };
+  self.unplugPad = (index) => {
+    const p = pads[index];
+    if (!p) return false;
+    pads[index] = null;
+    unplugged[index] = p.id;
+    p.connected = false;
+    p.timestamp = performance.now();
+    dispatchEvent(Object.assign(new Event('gamepaddisconnected'), { gamepad: p }));
+    console.log('gamepadprobe unplugged', index);
+    return true;
+  };
+  self.replugPad = (index, at) => {
+    const id = unplugged[index];
+    if (id === undefined) return -1;
+    if (at === undefined) at = pads.indexOf(null) < 0 ? pads.length : pads.indexOf(null);
+    if (pads[at]) return -1;
+    delete unplugged[index];
+    const p = pad(at, id);
+    pads[at] = p;
+    while (plays.length <= at) { plays.push(0); resets.push(0); peak.push(0); }
+    dispatchEvent(Object.assign(new Event('gamepadconnected'), { gamepad: p }));
+    console.log('gamepadprobe replugged', index, 'at', at);
+    return at;
   };
   self.padSet = (index, state) => {
     const p = pads[index];
