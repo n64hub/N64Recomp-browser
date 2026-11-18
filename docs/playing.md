@@ -50,7 +50,7 @@ How a page is played and measured. `tools/play_page.mjs`'s and `tools/page_drive
   game's Linux build by the same plan in all three windows, runs frame_check there and brings back only its text, the
   logs, the plan's shots and the flagged frames (its header and `tools/frame_dump.mjs`'s say how), since a dump is too
   big to move and the check holds a third of a machine's cores for minutes. Its verdicts match a dump made on Windows
-  by `capture_window.ps1`. A present slower than the rate asked of it (a busy GPU, a large window) doesn't slow the
+  by `capture_window.ps1`. A present slower than the rate asked of it (a busy GPU or host) doesn't slow the
   game: RT64 skips the presents it can't make, and the dump keeps only some of the game's frames. Each run's line in
   frame_dump's output says how many a second it kept, and frame_check leaves a dump that lacks over a tenth of them
   untested.

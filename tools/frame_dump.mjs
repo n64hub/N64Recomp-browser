@@ -772,7 +772,9 @@ function check(made) {
   log(`${path.basename(a[0], '.mjs')} ${a.slice(1).join(' ')}`);
   let code = 0, text;
   try { text = execFileSync(process.execPath, a, { maxBuffer: 1 << 28 }).toString(); }
-  catch (e) { code = e.status ?? 1; text = (e.stdout ?? '').toString() + (e.stderr ?? '').toString(); }
+  catch (e) { // a check killed (by its container's memory cap) says so, not just exits 1 with no text
+    code = e.status ?? 1; text = (e.stdout ?? '').toString() + (e.stderr ?? '').toString() + (e.signal ? `killed by ${e.signal}\n` : '');
+  }
   fs.writeFileSync(path.join(out, `${path.basename(a[0], '.mjs')}.txt`), text);
   process.stdout.write(text);
   log(`${path.basename(a[0], '.mjs')} exited ${code}`);
@@ -786,7 +788,9 @@ function soundCheck(made) {
   log(`sound_check ${a.slice(1).join(' ')}`);
   let code = 0, text;
   try { text = execFileSync(process.execPath, a, { maxBuffer: 1 << 24 }).toString(); }
-  catch (e) { code = e.status ?? 1; text = (e.stdout ?? '').toString() + (e.stderr ?? '').toString(); }
+  catch (e) { // a check killed (by its container's memory cap) says so, not just exits 1 with no text
+    code = e.status ?? 1; text = (e.stdout ?? '').toString() + (e.stderr ?? '').toString() + (e.signal ? `killed by ${e.signal}\n` : '');
+  }
   fs.writeFileSync(path.join(out, 'sound_check.txt'), text);
   process.stdout.write(text);
   log(`sound_check exited ${code}`);
