@@ -28,7 +28,7 @@
 # It runs in the image of tools/frame_dump.Dockerfile, tagged with a hash of that file and built on the host the first
 # time a run needs it, in a container named frame-dump-<out dir's name> (`docker stop` that name to end one), as the
 # host's own user, with the host's GPUs, $FRAME_DUMP_CPUS of its cores (8: a run draws on 2-3, frame_check takes
-# the rest) and $FRAME_DUMP_MEMORY of its memory (2g: a game's dumps held 0.3-0.6 GB, frame_check 0.6), which is also
+# the rest) and $FRAME_DUMP_MEMORY of its memory (4g: a game's dumps held 0.3-0.6 GB, frame_check up to 3.0, and was killed at 2g), which is also
 # the host memory each of its jobs asks the queue for, so several fit beside each other. Its files are in $FRAME_DUMP_DIR/<out dir's name> under the host's home
 # (frame-dumps), deleted when it ends unless --keep is given (which keeps the dumps too, for another check there).
 # With --reuse beside --keep the folder isn't emptied first, so the dumps a run before kept are checked again and only
@@ -98,7 +98,7 @@ tar -C "$stage" -cf - . | remote "tar -C $dir -xf -"
 # The command the host runs, each argument quoted for its shell.
 q() { printf '%q ' "$@"; }
 cpus="${FRAME_DUMP_CPUS:-8}"
-run=(docker run --rm --name "frame-dump-$name" --gpus all --cpus "$cpus" --memory "${FRAME_DUMP_MEMORY:-2g}" --shm-size 1g -e HOME=/work/home)
+run=(docker run --rm --name "frame-dump-$name" --gpus all --cpus "$cpus" --memory "${FRAME_DUMP_MEMORY:-4g}" --shm-size 1g -e HOME=/work/home)
 [[ -n "${FRAME_DUMP_NETWORK:-}" ]] && run+=(--network "$FRAME_DUMP_NETWORK")
 [[ -n "${GPU_QUEUE_URL:-}" ]] && run+=(-e "GPU_QUEUE_URL=$GPU_QUEUE_URL")
 cmd=(node /work/frame_dump.mjs --game /game --exe "$exe" --game-id "$game_id" --rom /rom.z64 --plan /work/plan.txt
@@ -117,7 +117,7 @@ if [[ $code == 137 ]]; then
     code=3
     for a in "$@"; do [[ "$a" == --soak ]] && code=1; done
     [[ $code == 1 ]] && echo -n "soak FAILED: " || echo -n "frame_dump: "
-    echo "the container was killed (137), most likely at its ${FRAME_DUMP_MEMORY:-2g} memory cap"
+    echo "the container was killed (137), most likely at its ${FRAME_DUMP_MEMORY:-4g} memory cap"
 fi
 trap 'rm -rf "$stage"' EXIT
 trap - INT TERM

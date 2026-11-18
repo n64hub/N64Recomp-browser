@@ -102,7 +102,8 @@
 // each game's jobs from that game's own runs: the dumps ask --vram MiB, or by default what the queue reads off them
 // (1024 before it has any; Mario Golf's three windows held 662), so many runs fit on one GPU side by side. Each asks
 // the host memory of the container's cap (its docker run's --memory, read from its cgroup; a game's dumps held
-// 0.3-0.6 GB, frame_check 0.6), never the queue's 8 GiB for a game it hasn't measured. A stop the queue asks for ends
+// 0.3-0.6 GB, frame_check up to 3.0 on Mario Golf's three windows with their frames between), never the queue's
+// 8 GiB for a game it hasn't measured. A stop the queue asks for ends
 // the run in progress, and the tool, with 75. Without --queue it runs at once.
 //
 // --reuse checks the dumps a run before with --keep left in --out, and makes only those it lacks (a run that didn't
