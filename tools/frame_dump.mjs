@@ -23,16 +23,13 @@
 // of an earlier dump, by the same plan, of a build whose sound is right), its text in sound_check.txt. The recording
 // stays (about 23 MB a minute) for a later check against another.
 // RT64's refresh rate is set to Manual at --rate (60) in its graphics.json, made by a first start of the program
-// when --config has none: Xvfb has no refresh rate of its own, and at Display the program presents only the game's own
+// when --config has none: an X server with no display has no refresh rate of its own, and at Display the program presents only the game's own
 // frames, which test nothing of the frames between. 60 is a 60 Hz display's, where a game of 30 shows each frame twice,
 // once between, as on Windows, where the checks were measured; a game of 60 needs 120. A rate the presents can't keep
 // up with doesn't slow the game: RT64 skips a present whose next one is already queued, so the dump keeps only some of
-// the game's frames, each at its pace, and the checks read its motion 0.1-0.5 s apart. Mario Golf's at Manual 240 in a
-// 1280x960 window, under Xvfb on an RTX 5090 a training job held, presented 31 a second (157 at 320x240), so 12 of the
-// 25 presents a second its game queued and 3.3 of its own frames a second, each shown 7 times, came out, against 22 of
-// 30 at Manual 60 and all 30 at Manual 30 (none between). What a present costs there goes with the window's size, not
-// with what RT64 draws: at Original in the 1280x960 window (its targets 320x240) it presented 32.5 a second, so a large
-// window falls behind at any rate with frames between. Each run's line says how fast its dump came: presents and the
+// the game's frames, each at its pace, and the checks read its motion 0.1-0.5 s apart (Mario Golf's at Manual 240 in a
+// 1280x960 window under Xvfb, which copied each present on the CPU, kept 3.3 of its own frames a second, each shown 7
+// times). Each run's line says how fast its dump came: presents and the
 // game's own frames a second, and the presents the game queued against those in the dump, and frame_check leaves a
 // dump that lacks over a tenth of them untested (exit 2).
 //
@@ -150,10 +147,27 @@ const dumping = !flag('--no-dump') && !soak;
 const plan = fs.readFileSync(planFile, 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
   .map((l) => l.split(/\s+/));
 
-// The X server every run draws into, larger than any window a plan asks for.
+// The X server every run draws into, larger than any window a plan asks for: Xorg on NVIDIA's own X driver with no
+// display (tools/frame_dump.Dockerfile's /etc/X11/frame-dump.conf), so a present stays on the GPU. Into an X server
+// without NVIDIA's driver (Xvfb, Xorg's dummy) NVIDIA's Vulkan sends every present down the X socket as XPutImage, MIT-SHM
+// or not, its CPU reading the image at ~150-190 MB/s: vkcube on an RTX 5090 presented in 2.8 ms at 320x240, 19 at
+// 1280x720, 35 at 1280x960 and 83 at 2560x1440, whatever the screen's size or depth, and on this server in 1.0-1.4 ms
+// at every size. Started at the first run that needs it, not while the job waits for its turn on the GPU; its log is
+// <out>/xorg.log.
 const display = ':7';
-const xvfb = spawn('Xvfb', [display, '-screen', '0', '7680x2160x24', '-nolisten', 'tcp'], { stdio: 'ignore' });
-process.on('exit', () => xvfb.kill());
+let xorg = null;
+const xServer = () => (xorg ??= (async () => {
+  const proc = spawn('/usr/lib/xorg/Xorg', [display, '-config', 'frame-dump.conf', '-logfile', path.join(out, 'xorg.log'),
+    '-noreset', '-nolisten', 'tcp', '-novtswitch', '-sharevts'], { stdio: 'ignore' });
+  process.on('exit', () => proc.kill());
+  for (const end = Date.now() + 30000; Date.now() < end; await sleep(250)) {
+    if (proc.exitCode !== null) break;
+    try { execFileSync('xdpyinfo', ['-display', display], { stdio: 'ignore' }); return proc; } catch { /* not up yet */ }
+  }
+  const errors = fs.existsSync(path.join(out, 'xorg.log')) ? fs.readFileSync(path.join(out, 'xorg.log'), 'utf8')
+    .split('\n').filter((l) => /\(EE\)|Fatal/.test(l)).join('\n') : '';
+  throw new RunFailed(`no X server: Xorg on NVIDIA's X driver didn't start in 30 s${errors ? `:\n${errors}` : ''}`);
+})());
 const xdo = (...a) => execFileSync('xdotool', a, { env: { ...process.env, DISPLAY: display } }).toString().trim();
 
 const keyNames = { Enter: 'Return', Space: 'space', Shift: 'Shift_L', Escape: 'Escape', Tab: 'Tab', Up: 'Up',
@@ -206,6 +220,7 @@ async function playRun(name, size, signal, { config, work: keptWork }) {
     fs.copyFileSync(rom, path.join(work, `${gameId}.z64`));
     for (const f of config ? fs.readdirSync(config) : []) fs.copyFileSync(path.join(config, f), path.join(work, f));
   }
+  await xServer();
   const env = { ...process.env, DISPLAY: display, SDL_AUDIODRIVER: 'dummy' };
   if (dumping) env.RT64_FRAME_DUMP = path.join(dir, 'dump');
   if (recorder) Object.assign(env, { LD_PRELOAD: recorder, SDL_AUDIO_RECORD: path.join(dir, 'sound') });
@@ -495,6 +510,7 @@ async function makeConfig() {
     fs.rmSync(work, { recursive: true, force: true });
     fs.cpSync(game, work, { recursive: true });
     fs.writeFileSync(path.join(work, 'portable.txt'), '');
+    await xServer();
     const proc = spawn(path.join(work, exe), [], { cwd: work, stdio: 'ignore',
       env: { ...process.env, DISPLAY: display, SDL_AUDIODRIVER: 'dummy' } });
     for (let n = 0; n < 300 && !fs.existsSync(path.join(work, 'graphics.json')); n++) await sleep(100);
@@ -716,5 +732,4 @@ for (const n of [...runNames, ...restartNames, 'soak', 'first-start']) {
   if (!flag('--keep')) fs.rmSync(path.join(out, n, 'dump'), { recursive: true, force: true });
   fs.rmSync(path.join(out, n, 'run'), { recursive: true, force: true });
 }
-xvfb.kill();
 process.exit(code);
