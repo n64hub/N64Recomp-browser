@@ -70,6 +70,13 @@ How a page is played and measured. `tools/play_page.mjs`'s and `tools/page_drive
   across a rewind showed only in a plan that skids while it holds Rewind. Both runs are recorded on an idle host: on a
   busy one the game falls behind real time, the plan's keys meet it at other moments, and sound_check checks nothing.
   Its header says what it was measured on.
+- Check that a desktop build finds its save again with `tools/frame_dump.mjs --saves` (or `remote_frame_dump.sh` with
+  `--saves`), by two plans of the game's: one makes a save the game's own way and waits for the file (`saves
+  changed`), the other, after a restart in the same folder, has the game read it back and checks it did (a find of
+  what only the save holds, an until on the game's state) and that the bytes stayed as they were (`saves same`), then
+  saves again. Between the two, `saves/` and each file in it are put behind symlinks, as a player shares saves through
+  a synced folder, and a write that replaces a link fails the check. The page's own check of its saves is
+  `play_page.mjs --backcheck`.
 - Check a game's speed against its console's with a plan's `clock` step, in a desktop plan (`capture_window.ps1`,
   `frame_dump.mjs`) and a page's (page_driver's): it reads a counter the game keeps every 100 ms against real time,
   and `tools/game_speed.mjs` fails a game that ran faster than its console in any 5 s, and says where it ran slower,

@@ -6,6 +6,10 @@
 #
 #   DUMP_HOST=<host> tools/remote_frame_dump.sh [-c <config dir>] [-r <sound reference>] <game dir> <exe> <game id>
 #       <rom> <plan> <out dir> [tools/frame_dump.mjs options: --window 1280x720,960x720,2560x720 --seconds 10-70 ...]
+#   DUMP_HOST=<host> tools/remote_frame_dump.sh <game dir> <exe> <game id> <rom> <save plan> <out dir> --saves <load plan>
+#
+# The second form is frame_dump.mjs's save check (its header says what it does): a save, a restart and the save found
+# again, through symlinks, with no dumps and no frame_check; <load plan> is a plan here, sent with the run.
 #
 # <game dir> and <rom> are paths on the host (relative to its home): the recomp's Linux build, its release archive
 # unpacked or a build folder with assets/, and its ROM. <exe> is the program in <game dir>, <game id> the name its
@@ -68,6 +72,14 @@ trap 'rm -rf "$stage"' EXIT
 cp "$here/frame_dump.mjs" "$here/frame_check.mjs" "$here/frame_pace.mjs" "$here/seam_check.mjs" "$here/sound_check.mjs" \
     "$here/game_speed.mjs" "$here/sdl_audio_record.c" "$stage/"
 cp "$plan" "$stage/plan.txt"
+args=()
+while [[ $# -gt 0 ]]; do
+    if [[ "$1" == --saves ]]; then
+        [[ -f "${2:-}" ]] || { echo "no load plan ${2:-}" >&2; exit 3; }
+        cp "$2" "$stage/saves.txt"; args+=(--saves /work/saves.txt); shift 2
+    else args+=("$1"); shift; fi
+done
+set -- "${args[@]}"
 mkdir -p "$stage/config-in"
 [[ -n "$config" ]] && cp -r "$config/." "$stage/config-in/"
 if [[ -n "$reference" ]]; then
@@ -111,7 +123,7 @@ trap 'rm -rf "$stage"' EXIT
 trap - INT TERM
 
 # Everything but the dumps and the runs' copies of the game comes back.
-remote "tar -C $dir/out -cf - --exclude=./*/dump --exclude=./*/run --exclude=./config --exclude=./sdl_audio_record.so ." 2>/dev/null | tar -C "$out" -xf - \
+remote "tar -C $dir/out -cf - --exclude=./*/dump --exclude=./*/run --exclude=./config --exclude=./game --exclude=./sdl_audio_record.so ." 2>/dev/null | tar -C "$out" -xf - \
     || echo "nothing came back from $host:$dir/out" >&2
 [[ -n "$keep" ]] || remote "rm -rf $dir"
 echo "results in $out (exit $code)"

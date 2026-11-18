@@ -8,7 +8,7 @@
 //       [--window <w>x<h>[,<w>x<h>,<w>x<h>]] [--rate <hz>] [--seconds <from>-<to>] [--args "<program args>"]
 //       [--env K=V,...] [--config <dir>] [--check "<frame_check args>"] [--workers <n>] [--keep]
 //       [--reuse] [--queue <module>] [--vram <MiB>|auto] [--priority low] [--url <url>] [--sound-reference <dir>]
-//       [--launcher] [--no-dump] [--slow]
+//       [--launcher] [--no-dump] [--slow] [--saves <plan>]
 //       [--restart]
 //       [--soak <seconds> [--still <seconds>] [--seed <n>]]
 //
@@ -63,7 +63,7 @@
 // do what they do there, keys through XTEST into the window and RDRAM through /proc/<pid>/mem (the runtime maps it as
 // one 512 MB region, 0x80000000 at its first byte, each 32-bit word in the host's order). burst, record and stop are
 // captures, which the dump replaces: they are skipped. drag, Windows' move loop, has no counterpart and fails the run.
-// Two steps are this tool's own:
+// Three steps are this tool's own:
 //   <s> clock <addr> <per second>  from here to the run's end, reads the game's 32-bit counter at addr every 100 ms
 //                                  against real time, a counter that counts that many a second on a console (Mario
 //                                  Golf's frame counter, 0x800B67F0, 30; Donald Duck's clock, 0x800C3D24, 60), and
@@ -72,11 +72,29 @@
 //                                  1), and one slower too with --slow, for a host known to draw the game at its pace
 //   <s> click <x> <y>              clicks at x, y in the window, through XTEST as a mouse does: with --launcher a plan
 //                                  starts the game with a click on Start Game (Enter under the pointer doesn't, on X)
+//   <s> saves same                 every file in the run's saves/ holds the bytes it held when the run started
+//   <s> saves changed <timeout>    waits up to <timeout> seconds (10) for one to differ or a new one to appear (the
+//                                  runtime gathers a game's writes for a moment before it writes them); either fails
+//                                  the run when it isn't so
 // --launcher starts the program without --boot, at its launcher, so a plan can wait there as a player who leaves it
 // open does before Start Game (a game whose clock counted the launcher's time played its demos with no title).
 // --no-dump plays the plan with RT64's frame dump off and no frame_check, for the clock alone: a dump writes every
 // frame, which slows a large window's game below its pace. Its exit is then the clock's: 0 passes, 1 fails, 3 a
 // run failed.
+//
+// --saves <plan> checks that the game finds its save after a restart, in place of the dumps and frame_check: the save
+// run plays --plan (which makes a save the game's own way, and ends with `saves changed` once it is written), and the
+// program is stopped as a player quits it (SIGTERM, which SDL hands the program as a quit). Then saves/ is moved aside
+// and reached through a symlink, and each file in it through a symlink of its own, as a player shares saves through a
+// synced folder, and the load run starts the program again in the same folder and plays --saves' plan: it has the game
+// load the save and reads that it did (an until on its RAM, a find, a shot), `saves same` once it has loaded (a
+// restart that saves nothing leaves the bytes alone; a game that rewrites its save as it boots or on a screen the plan
+// crosses, the same bytes as on a console, writes all the same, and the runtime's .bak then moves on to the last save,
+// so `saves same` goes before that: Excitebike 64 rewrites its EEPROM leaving its title), and it may save again
+// (`saves changed`) to check a write goes through the links. Then every link must still be the link it was, to the
+// same file. It runs once, at --window's first size (1280x720). Exit 0 passes; 1 fails (the save run left nothing in
+// saves/, the load run's plan unmet or the program crashed, a link replaced); 3 the save run itself failed, which
+// checks nothing.
 //
 // --queue names a JavaScript module exporting gpuRun(spec, run) of a GPU queue the host's GPU work takes turns in: the
 // runs then go as one job of type frame-dump and frame_check as a second, frame-check, asking no GPU memory (its
@@ -144,8 +162,26 @@ let stopped = false; // the queue asked for a stop
 let speedFails = false; // a clock step's run judged the game's speed wrong
 const dumping = !flag('--no-dump') && !soak;
 
-const plan = fs.readFileSync(planFile, 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
-  .map((l) => l.split(/\s+/));
+const readPlan = (file) => fs.readFileSync(file, 'utf8').split('\n').map((l) => l.trim())
+  .filter((l) => l && !l.startsWith('#')).map((l) => l.split(/\s+/));
+const plan = readPlan(planFile);
+const loadPlan = opt('--saves') ? readPlan(path.resolve(opt('--saves'))) : null;
+
+// Every file under dir, by its path relative to dir, with its bytes (read through any link); a link to nothing has none.
+function filesOf(dir) {
+  const found = new Map();
+  const walk = (rel) => {
+    for (const e of fs.readdirSync(path.join(dir, rel), { withFileTypes: true })) {
+      const r = path.join(rel, e.name), p = path.join(dir, r);
+      let st = null;
+      try { st = fs.statSync(p); } catch { /* a dangling link */ }
+      if (st?.isDirectory()) walk(r);
+      else found.set(r, st ? fs.readFileSync(p) : null);
+    }
+  };
+  if (fs.existsSync(dir)) walk('');
+  return found;
+}
 
 // The X server every run draws into, larger than any window a plan asks for: Xorg on NVIDIA's own X driver with no
 // display (tools/frame_dump.Dockerfile's /etc/X11/frame-dump.conf), so a present stays on the GPU. Into an X server
@@ -208,9 +244,9 @@ const runName = (i) => (windows ? runNames[i] : 'main');
 // A dump a finished run left (--keep), for --reuse.
 const kept = (i) => fs.existsSync(path.join(out, runName(i), 'dump.done'));
 
-// One run of the plan as <out>/<name>: in a new copy of the game with config's files (<out>/<name>/run), or, given
-// work, in that folder as an earlier run left it (a restart).
-async function playRun(name, size, signal, { config, work: keptWork }) {
+// One run of a plan (planSteps) as <out>/<name>: in a new copy of the game with config's files (<out>/<name>/run), or,
+// given work, in that folder as an earlier run left it (a restart, --saves' load run).
+async function playRun(name, planSteps, size, signal, { config, work: keptWork }) {
   const dir = path.join(out, name), work = keptWork ?? path.join(dir, 'run');
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
@@ -221,10 +257,11 @@ async function playRun(name, size, signal, { config, work: keptWork }) {
     for (const f of config ? fs.readdirSync(config) : []) fs.copyFileSync(path.join(config, f), path.join(work, f));
   }
   await xServer();
+  const savesDir = path.join(work, 'saves'), savesAtStart = filesOf(savesDir);
   const env = { ...process.env, DISPLAY: display, SDL_AUDIODRIVER: 'dummy' };
-  if (dumping) env.RT64_FRAME_DUMP = path.join(dir, 'dump');
+  if (dumping && !loadPlan) env.RT64_FRAME_DUMP = path.join(dir, 'dump');
   if (recorder) Object.assign(env, { LD_PRELOAD: recorder, SDL_AUDIO_RECORD: path.join(dir, 'sound') });
-  if (dumping && opt('--seconds')) env.RT64_FRAME_DUMP_SECONDS = opt('--seconds');
+  if (dumping && !loadPlan && opt('--seconds')) env.RT64_FRAME_DUMP_SECONDS = opt('--seconds');
   if (restart) env.RT64_FRAME_DUMP_RATE = String(rate); // a first launch has no graphics.json to set Manual in
   for (const kv of (opt('--env') ?? '').split(',').filter(Boolean)) { const k = kv.indexOf('='); env[kv.slice(0, k)] = kv.slice(k + 1); }
   const [w, h] = size ?? [1280, 720];
@@ -367,7 +404,7 @@ async function playRun(name, size, signal, { config, work: keptWork }) {
     await findWindow();
     if (size) xdo('windowsize', win, String(w), String(h));
     const watching = soak ? watch() : null;
-    plan: for (const p of plan) {
+    plan: for (const p of planSteps) {
       await idle(soak ? Math.min(Number(p[0]) + shift, soak) : Number(p[0]) + shift);
       if (soak && t() >= soak) break plan;
       live();
@@ -416,6 +453,27 @@ async function playRun(name, size, signal, { config, work: keptWork }) {
         case 'or': { const a = num(p[2]); write(a, read(a).readUInt32LE() | num(p[3])); say(`or ${p[2]} ${p[3]}`); break; }
         case 'peek': say('peek ' + p[2].split(',').map((a) => `${a}=0x${read(num(a)).readUInt32LE().toString(16).toUpperCase().padStart(8, '0')}`).join(' ')); break;
         case 'dump': fs.writeFileSync(path.join(dir, p[4] + '.bin'), read(num(p[2]), num(p[3]))); say(`dump ${p[2]} ${p[3]} ${p[4]}.bin`); break;
+        case 'saves': {
+          // The first file whose bytes differ from the run's start, or that appeared or went since.
+          const differs = () => {
+            const now = filesOf(savesDir);
+            for (const [r, b] of now) { const was = savesAtStart.get(r); if (!was !== !b || (b && !b.equals(was))) return r; }
+            for (const r of savesAtStart.keys()) if (!now.has(r)) return r;
+            return null;
+          };
+          if (p[2] === 'same') {
+            const r = differs();
+            if (r !== null) throw new RunFailed(`saves same: saves/${r} changed since the run started`);
+            say('saves same'); break;
+          }
+          if (p[2] !== 'changed') throw new RunFailed(`unknown plan step: ${p.join(' ')}`);
+          const began = t();
+          let r = null;
+          while ((r = differs()) === null && t() - began < Number(p[3] ?? 10)) { live(); await sleep(250); }
+          shift += t() - began;
+          if (r === null) throw new RunFailed(`saves changed: nothing in saves/ changed in ${p[3] ?? 10} s`);
+          say(`saves changed: saves/${r} after ${(t() - began).toFixed(1)}s`); break;
+        }
         case 'random':
           rand = p[2] === 'off' ? null : p[2].split(',');
           rand?.forEach(keysym);
@@ -535,13 +593,59 @@ async function dumps(signal) {
   for (const [i, size] of runs.entries()) {
     if (flag('--reuse') && kept(i)) { log(`${runName(i)} reused`); made.push(path.join(out, runName(i), 'dump')); continue; }
     config ??= await makeConfig();
-    made.push(await playRun(runName(i), size, signal, { config }));
+    made.push(await playRun(runName(i), plan, size, signal, { config }));
   }
   return made;
 }
 
+// --saves: the save run, saves/ put behind links, the load run in the same folder, and the links checked. Returns the
+// exit code.
+async function saveCheck(signal) {
+  const config = await makeConfig();
+  const work = path.join(out, 'save', 'run'), saves = path.join(work, 'saves'), size = windows?.[0] ?? null;
+  try { await playRun('save', plan, size, signal, { config }); }
+  catch (e) {
+    if (!(e instanceof RunFailed) || stopped) throw e;
+    log(`frame_dump: the save run failed, which checks nothing: ${e.message}`);
+    return 3;
+  }
+  const made = filesOf(saves);
+  for (const [r, b] of made) log(`saved saves/${r}: ${b ? `${b.length} bytes` : 'a link to nothing'}`);
+  if (!made.size) { log('frame_dump: FAIL: the save run left nothing in saves/'); return 1; }
+  // saves/ moves to saves-linked/ and each file in it to saves-files/, each reached through a relative link, which
+  // resolves to the same file whether it is read from the link's folder or from its target's.
+  const links = new Map([['saves', 'saves-linked']]);
+  fs.renameSync(saves, path.join(work, 'saves-linked'));
+  fs.symlinkSync('saves-linked', saves);
+  for (const r of made.keys()) {
+    const at = path.join(work, 'saves-linked', r), to = path.join(work, 'saves-files', r);
+    if (fs.lstatSync(at).isSymbolicLink()) continue;
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    fs.renameSync(at, to);
+    links.set(path.join('saves', r), path.relative(path.dirname(at), to));
+    fs.symlinkSync(links.get(path.join('saves', r)), at);
+  }
+  let failed = null;
+  try { await playRun('load', loadPlan, size, signal, { config, work }); }
+  catch (e) {
+    if (!(e instanceof RunFailed) || stopped) throw e;
+    failed = `the load run: ${e.message}`;
+  }
+  const broken = [...links].map(([l, target]) => {
+    let now = null;
+    try { now = fs.readlinkSync(path.join(work, l)); } catch { /* not a link */ }
+    if (now === target) return null;
+    const what = now !== null ? `a link to ${now}` : fs.existsSync(path.join(work, l)) ? 'no longer a link' : 'gone';
+    return `${l}, a link to ${target}, is ${what}`;
+  }).filter(Boolean);
+  for (const f of [failed, ...broken].filter(Boolean)) log(`frame_dump: FAIL: ${f}`);
+  if (failed || broken.length) return 1;
+  log(`frame_dump: the save check passes: the save was found after a restart, through ${links.size} link(s) that stayed`);
+  return 0;
+}
+
 async function soakRun(signal) {
-  try { await playRun('soak', windows?.[0] ?? null, signal, { config: await makeConfig() }); return 0; }
+  try { await playRun('soak', plan, windows?.[0] ?? null, signal, { config: await makeConfig() }); return 0; }
   catch (e) { if (!(e instanceof SoakFailed)) throw e; log(`soak FAILED: ${e.message}`); return 1; }
 }
 
@@ -553,7 +657,7 @@ async function restartRuns(signal) {
   const config = opt('--config') ? path.resolve(opt('--config')) : null;
   const work = path.join(out, 'first', 'run');
   for (const name of restartNames) {
-    await playRun(name, windows?.[0] ?? null, signal, { config, work: name === 'first' ? undefined : work });
+    await playRun(name, plan, windows?.[0] ?? null, signal, { config, work: name === 'first' ? undefined : work });
     const kept = path.join(out, name, 'settings');
     fs.mkdirSync(kept, { recursive: true });
     for (const f of jsonFiles(work)) fs.copyFileSync(path.join(work, f), path.join(kept, f));
@@ -712,7 +816,8 @@ try {
       url: opt('--url') || undefined, ref: process.env.HOSTNAME,
       onUpdate: (j) => j.state === 'waiting' && log(`queue: ${type} waiting, ${j.ahead} ahead${j.waitMs != null ? `, ~${Math.ceil(j.waitMs / 60000)} min` : ''}: ${j.why?.text ?? 'going next'}`) });
     const vram = opt('--vram', 'auto') === 'auto' ? 'auto' : Number(opt('--vram'));
-    if (soak) code = await gpuRun(spec('soak', `Soak: ${gameId}, ${soak} s`, vram), (signal) => soakRun(signal));
+    if (loadPlan) code = await gpuRun(spec('frame-dump', `Save check: ${gameId}`, vram), (signal) => saveCheck(signal));
+    else if (soak) code = await gpuRun(spec('soak', `Soak: ${gameId}, ${soak} s`, vram), (signal) => soakRun(signal));
     else {
       const made = reusing() && !restart ? await dumps(null) : await gpuRun(spec('frame-dump', `Frame dump: ${gameId}`, vram),
         (signal) => (restart ? restartRuns(signal) : dumps(signal)));
@@ -720,7 +825,8 @@ try {
       if (restart) code = restartCheck();
       else code = dumping ? await gpuRun(spec('frame-check', `frame_check: ${gameId}`, 0), async () => both(made)) : 0;
     }
-  } else if (soak) code = await soakRun(null);
+  } else if (loadPlan) code = await saveCheck(null);
+  else if (soak) code = await soakRun(null);
   else if (restart) { await restartRuns(null); code = restartCheck(); }
   else code = dumping ? both(await dumps(null)) : (await dumps(null), 0);
   if (speedFails) { log("frame_dump: the game's speed fails (the clock step's lines above)"); code = 1; }
@@ -728,7 +834,7 @@ try {
   log(`frame_dump: ${e instanceof RunFailed ? e.message : e?.stack ?? e}`);
   code = stopped ? 75 : 3;
 }
-for (const n of [...runNames, ...restartNames, 'soak', 'first-start']) {
+for (const n of [...runNames, ...restartNames, 'save', 'load', 'soak', 'first-start']) {
   if (!flag('--keep')) fs.rmSync(path.join(out, n, 'dump'), { recursive: true, force: true });
   fs.rmSync(path.join(out, n, 'run'), { recursive: true, force: true });
 }
