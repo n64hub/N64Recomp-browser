@@ -16,7 +16,10 @@
 // cgroup), so what the queue reserves is what the play can hold, never the queue's 8 GiB for a game it hasn't measured;
 // with no cap it is the queue's reading of the game's last runs. The cores are capped by the docker run (--cpus). Both
 // are --priority (low), linked to --url and filed from $GPU_QUEUE_BOARD where it is set (the label of what files them,
-// which a queue may require of its key's jobs). A stop the queue asks for ends the play, and this, with 75.
+// which a queue may require of its key's jobs). A stop the queue asks for ends the play, and this, with 75. A line
+// `gpu-queue: more` in the command's output ends an item of the job there (the queue's more()): record_shaders.mjs
+// prints one between two sections, so a recording's items are its sections, each under the queue's 5-minute shield of a
+// low job, and a stop the queue asks for at one costs the recording only the load it had begun (it goes on with --from).
 //
 // Where the command records a run (play_page's --record <file>) and gives no --host-reading, the line it appended is
 // given one from the queue's account of the job once it ends: gpuOthers, the jobs that ran on the GPU beside it, and
@@ -70,16 +73,28 @@ const recordAt = command.indexOf('--record');
 const recordFile = recordAt >= 0 && !command.includes('--host-reading') ? command[recordAt + 1] : null;
 const linesBefore = recordFile && fs.existsSync(recordFile) ? fs.readFileSync(recordFile, 'utf8').split('\n').filter(Boolean).length : 0;
 
-// The command, in a process group of its own so a stop ends the browser it started too.
-const play = async (signal) => { await startX(); return new Promise((resolve) => {
-  const proc = spawn(command[0], command.slice(1), { env, stdio: 'inherit', detached: true });
+// The command, in a process group of its own so a stop ends the browser it started too, its output passed on and read
+// for the lines that end an item of the job (more, the queue's more()): a more() that says no fires the signal.
+const play = async (signal, more) => { await startX(); return new Promise((resolve) => {
+  const proc = spawn(command[0], command.slice(1), { env, stdio: ['inherit', more ? 'pipe' : 'inherit', 'inherit'], detached: true });
+  if (more) {
+    let rest = '', asked = Promise.resolve();
+    proc.stdout.on('data', (chunk) => {
+      process.stdout.write(chunk);
+      const lines = (rest + chunk).split('\n');
+      rest = lines.pop();
+      for (const line of lines.filter((l) => /^gpu-queue: more\s*$/.test(l))) {
+        asked = asked.then(() => more()).catch((e) => console.log(`play_job: the queue's more() failed (${e.message}), going on`));
+      }
+    });
+  }
   const stop = () => { try { process.kill(-proc.pid, 'SIGTERM'); } catch { /* gone */ } };
   signal?.addEventListener('abort', () => {
     console.log(`play_job: the queue asked it to stop (${signal.reason?.message ?? signal.reason}), ending the play`);
     stop();
     setTimeout(() => { try { process.kill(-proc.pid, 'SIGKILL'); } catch { /* gone */ } }, 10000).unref();
   }, { once: true });
-  proc.on('exit', (code, sig) => resolve(signal?.aborted ? 75 : code ?? (sig ? 128 + os.constants.signals[sig] : 1)));
+  proc.on(more ? 'close' : 'exit', (code, sig) => resolve(signal?.aborted ? 75 : code ?? (sig ? 128 + os.constants.signals[sig] : 1)));
 }); };
 
 // The container's memory cap in MiB (cgroup v2's memory.max), null when it has none.
@@ -107,10 +122,10 @@ else {
         console.log(`play_job: waiting for the GPU, ${j.ahead ?? '?'} ahead${j.waitMs != null ? `, ~${Math.ceil(j.waitMs / 60000)} min` : ''}${j.why?.text ? `: ${j.why.text}` : ''}`);
       }
     },
-  }, async (signal, j) => {
+  }, async (signal, j, more) => {
     job = j;
     console.log(`play_job: job ${j.id} running, asking ${j.vramMiB ?? 'the whole GPU'} MiB of the GPU and ${j.ramMiB} MiB of the host`);
-    const c = await play(signal);
+    const c = await play(signal, more);
     if (c === 75) throw Object.assign(new Error('stopped by the queue'), { code: 75 });
     return c;
   }).catch((e) => { console.log(`play_job: ${e.message}`); return e.code === 75 || e.name === 'AbortError' ? 75 : 1; });

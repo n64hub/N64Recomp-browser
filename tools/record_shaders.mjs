@@ -37,7 +37,11 @@
 // names get the shaders they lack, and a section the list hasn't is added at its end. That is a second plan's way into a
 // game's list, for what the first can't reach in its loads (Goin' Quackers' attract demos, which play only from the
 // title its plan's start presses through). Console lines go to stdout as they come, with the seconds since start, and
-// the list is written after every section, so one stopped partway holds what was recorded until then.
+// the list is written after every section, so one stopped partway holds what was recorded until then (--from the load
+// after the last its log names goes on from there). Between two loads, the list written, it prints `gpu-queue: more` on
+// a line of its own: what runs the recording as one job of a GPU queue (tools/play_job.mjs) calls the queue's more()
+// there, so each section is an item of the job and stays under the queue's shield of a low job (5 minutes; a recording
+// as one item ran 20 minutes for 8 sections), and a stop the queue asks for there loses no section.
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -113,6 +117,7 @@ if (from > 1 || add) {
 let first = true;
 for (const [index, section] of plan.sections.entries()) {
   if (index + 1 < from || (only && !only.includes(section.name))) continue;
+  if (!first) console.log('gpu-queue: more');
   log(`section ${section.name} (load ${index + 1} of ${plan.sections.length})`);
   printed = [];
   keep = true;
