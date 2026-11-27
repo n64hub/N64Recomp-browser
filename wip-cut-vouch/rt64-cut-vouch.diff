@@ -1,0 +1,83 @@
+diff --git a/src/hle/rt64_game_frame.cpp b/src/hle/rt64_game_frame.cpp
+index ef29f5c..742a01b 100644
+--- a/src/hle/rt64_game_frame.cpp
++++ b/src/hle/rt64_game_frame.cpp
+@@ -327,6 +327,22 @@ namespace RT64 {
+         return false;
+     }
+ 
++    // Whether a camera that wasn't judged a cut moved on from the frame before as a camera does: its step and the one
++    // before it are known, and it moved. Its workload's other cameras judged cuts then cut only their own scenes, and
++    // its rects pair (GameFrameMap::WorkloadMap::cameraMoved). A game can draw each thing with a view of its own, the
++    // camera's with the thing's place in it: Excitebike 64 draws each rider and bike so in a race, 5-9 cameras a
++    // frame that turn together. Scenes pair with the frame before's in their order, so a rider that came into view
++    // had no step before (-1, and any step over 8 near plane distances was a jump) and one that changed places in the
++    // order was judged against another's step: a rider 15 near plane distances from where it was beside one that had
++    // moved 3.7. Each was judged a cut, and the frame's rects held for its frames between while the world went on: the
++    // place arrow over the rider ahead stopped and jumped as it swept 8-21 pixels a game frame. A real cut moves every
++    // camera by the jump, so a camera moving more than a quarter as fast as that to begin with is all that hides one,
++    // and one held still (a 3D model on a HUD) never vouches for a frame.
++    static bool movedOn(float step, float prevEyeStep) {
++        const float MinMovedStep = 0.05f;
++        return (step >= MinMovedStep) && (prevEyeStep >= 0.0f);
++    }
++
+     struct CameraMove {
+         float nearDistance = 0.0f;
+         float turnCosine = 1.0f;
+@@ -2120,6 +2136,7 @@ namespace RT64 {
+             workloadMap.prevWorkloadIndex = drawnPair.second;
+             workloadMap.mapped = true;
+             workloadMap.cameraCut = false;
++            workloadMap.cameraMoved = false;
+ 
+             Workload &curWorkload = workloadQueue.workloads[curWorkloadIndex];
+             const Workload &prevWorkload = workloadQueue.workloads[workloadMap.prevWorkloadIndex];
+@@ -2293,6 +2310,13 @@ namespace RT64 {
+         // The rects pair last: none of their tiles is one matchScene() maps, and tileInterpolationUsed is read once
+         // match() returns. A workload whose camera cut to another shot (RT64_SKIP_CAMERA_CUTS) pairs none: its rects
+         // are drawn where the game put them, as its scene is.
++#if RT64_SKIP_CAMERA_CUTS
++        for (const std::pair<uint32_t, uint32_t> &drawnPair : drawnPairs) {
++            GameFrameMap::WorkloadMap &workloadMap = frameMap.workloads[drawnPair.first];
++            workloadMap.cameraCut = workloadMap.cameraCut && !workloadMap.cameraMoved;
++        }
++#endif
++
+ #if RT64_INTERPOLATE_RECT_SCROLLS
+         for (const std::pair<uint32_t, uint32_t> &drawnPair : drawnPairs) {
+             if (frameMap.workloads[drawnPair.first].cameraCut) {
+@@ -2417,6 +2441,8 @@ namespace RT64 {
+                                 return;
+                             }
+ 
++                            firstCurWorkloadMap.cameraMoved = firstCurWorkloadMap.cameraMoved || movedOn(move.step, prevEyeStep);
++
+                             // A camera whose eye the view leaves at the world's origin: its step is read from the
+                             // world's transforms once they are paired, and judged then.
+                             if (move.step < 0.0f) {
+@@ -2653,6 +2679,8 @@ namespace RT64 {
+                 firstCurWorkloadMap.cameraCut = true;
+                 return;
+             }
++
++            firstCurWorkloadMap.cameraMoved = firstCurWorkloadMap.cameraMoved || movedOn(viewProjMap.eyeStep, worldStepPrevEyeStep);
+         }
+ #endif
+ 
+diff --git a/src/hle/rt64_game_frame.h b/src/hle/rt64_game_frame.h
+index 5907961..a2e8f1b 100644
+--- a/src/hle/rt64_game_frame.h
++++ b/src/hle/rt64_game_frame.h
+@@ -112,8 +112,10 @@ namespace RT64 {
+             std::vector<hlslpp::float4> rectMoves;
+ 
+             // RT64_SKIP_CAMERA_CUTS: a camera of the workload's cut to another shot (isCameraCut()), so its rects pair
+-            // with none of the frame before either.
++            // with none of the frame before either, unless another camera of it moved on as a camera does
++            // (cameraMoved, movedOn()): match() clears cameraCut then.
+             bool cameraCut = false;
++            bool cameraMoved = false;
+ 
+             std::vector<ViewProjectionMap> viewProjections;
+             std::vector<TransformMap> transforms;
