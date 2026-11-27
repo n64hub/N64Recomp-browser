@@ -1642,4 +1642,10 @@ rt64 bfdb651           RT64_SLERP_CAMERA_ROTATION, off on every build, Emscripte
 rt64 b486953           the same turn with its own copy of the eye's math, called after the interpolateProjection line,
                        so it leaves RT64_INTERPOLATE_CAMERA_EYE's #if and the two lerps' lines as they were: Rogue
                        Squadron's and Conker's own rt64 changes meet those, and the patch didn't merge into them
+rt64 72566fb           RT64_SKIP_CAMERA_CUTS: a step the frame before that isn't known is taken as 8 near plane
+                       distances, not 0, so a jump cuts only past 32 and never from rest, and the world's step is
+                       always judged against one: in a race what most transforms moved by alike is the rider's, and
+                       Excitebike 64's bike lurching 8.4-9.3 against the camera in a hard turn was cut from rest, the
+                       picture held for a game frame and then jumped; with this its race has none and its credits
+                       keep all seven cuts
 ```
