@@ -41,7 +41,9 @@
 #
 # Or $PLAY_RUNNER, in place of the queue's client: a command (split on spaces) that is given the container's
 # `docker run` line, without --name or --rm, as its last argument, and runs it as a job of the queue from here: it
-# names the container itself, starts it on the host once the job is let in there, and exits with its code. Such a
+# names the container itself, starts it on the host once the job is let in there, and exits with its code. A line
+# `gpu-queue: more` in the output (a recording prints one between two sections) is where the runner calls the queue's
+# more(), as play_job.mjs does (its header), or a recording is one item of its job from start to end. Such a
 # runner may let the queue put the job on this machine instead: $PLAY_HERE is then the path of a file holding the
 # command that makes the same run here (NUL-separated: this script's --here form, below), and $PLAY_MODEL the job's
 # --model. The container then never started (it marks /work/.ran first thing), so nothing comes back from the host and
