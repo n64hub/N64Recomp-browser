@@ -39,6 +39,10 @@ Four are off with Emscripten too, on only where a game turns them on: `RT64_DRAW
 `RT64_FILTER_BY_ALPHA` (rt64 11878b7, 18066b5), which Mario Party 3 turns on, `RT64_RDP_DECAL_TOLERANCE` (rt64
 bbc5ba1), which Mario Party does, and `RT64_SLERP_CAMERA_ROTATION` (rt64 bfdb651), which Turok 2 does.
 
+CI and the pages build none of these for Windows, so an option a game's desktop build turns on meets Windows' headers
+only in that game's Windows build, which is played before it lands. Those headers define `far` and `near` as nothing:
+an identifier named either compiles there as no name (rt64 1d833b1 renames one).
+
 ## Every commit
 
 ```
