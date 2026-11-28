@@ -5,10 +5,10 @@
 # pointers. Run it after every change to forks.txt or to an upstream commit in patches.txt; CI checks that the patches
 # match.
 #
-#   bash tools/export_patches.sh [<work dir>]      fetches into <work dir> (default: a temporary one)
+#   bash tools/export_patches.sh [<work dir>]   fetches into <work dir>; without one, a temporary one removed at the end
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-work="${1:-$(mktemp -d)}"
+if [[ $# -ge 1 ]]; then work="$1"; else work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT; fi
 mkdir -p "$work"
 
 fetch() { # <dir> <url> <commit>...
