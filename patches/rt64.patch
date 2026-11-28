@@ -1,4 +1,4 @@
-rt64: https://github.com/n64hub/rt64-web 72566fb658b7e6901920fb4cf31004e613f3cc82
+rt64: https://github.com/n64hub/rt64-web 1d833b1e772b2cebbb8f2e199cb074bd42c62a7c
 on upstream 5473732a822a4423b5696e7cb18fecc425a59875 (tools/export_patches.sh)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
@@ -11329,7 +11329,7 @@ index 69a82ac..1dd31f7 100644
              dstNorm = builder.addReadWriteStructuredBuffer(9);
              dstVel = builder.addReadWriteStructuredBuffer(10);
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index 9fae0d4..f09c6c7 100644
+index 9fae0d4..587f46e 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -10,6 +10,7 @@
@@ -11681,7 +11681,7 @@ index 9fae0d4..f09c6c7 100644
                              instanceDrawCall.type = InstanceDrawCall::Type::IndexedTriangles;
                              triangles.indexStart = triangles.vertexTestZ ? vertexTestZFaceIndicesStart : call.meshDesc.faceIndicesStart;
                              invRatioScale = projInvRatioScale;
-@@ -1656,6 +1810,109 @@ namespace RT64 {
+@@ -1656,6 +1810,110 @@ namespace RT64 {
                              triangles.screenScale = { viewportRect.width / framebuffer.viewport.width, viewportRect.height / framebuffer.viewport.height };
                              triangles.screenOffset.x = halfPixelOffset.x + ((viewportRect.x + viewportRect.width / 2.0f) - halfViewportSize.x) / halfViewportSize.x;
                              triangles.screenOffset.y = halfPixelOffset.y + (halfViewportSize.y - (viewportRect.y + viewportRect.height / 2.0f)) / halfViewportSize.y;
@@ -11773,10 +11773,11 @@ index 9fae0d4..f09c6c7 100644
 +                                ((size_t(call.meshDesc.rawVertexStart) + 6) * 2 <= drawData.triTcFloats.size()))
 +                            {
 +                                const float *rectTc = &drawData.triTcFloats[size_t(call.meshDesc.rawVertexStart) * 2];
-+                                auto lastTexel = [](float first, float far, int16_t step) {
++                                // Not named far: Windows' minwindef.h defines far and near empty.
++                                auto lastTexel = [](float first, float edge, int16_t step) {
 +                                    const float stepTexels = fabsf(float(step)) / 1024.0f;
-+                                    const float span = far - first;
-+                                    return (fabsf(span) <= stepTexels) ? first : (far - copysignf(stepTexels, span));
++                                    const float span = edge - first;
++                                    return (fabsf(span) <= stepTexels) ? first : (edge - copysignf(stepTexels, span));
 +                                };
 +
 +                                const float lastU = lastTexel(rectTc[0], rectTc[6], call.callDesc.rectDsdx);
@@ -11791,7 +11792,7 @@ index 9fae0d4..f09c6c7 100644
  
                              if (p.postBlendNoise) {
                                  // Indicate if post blend dither noise should be applied.
-@@ -1683,6 +1940,17 @@ namespace RT64 {
+@@ -1683,6 +1941,17 @@ namespace RT64 {
                              triangles.scissor = viewportScissorIntersection(viewportClip, triangles.scissor);
                          }
                          
@@ -11809,7 +11810,7 @@ index 9fae0d4..f09c6c7 100644
                          if (triangles.vertexTestZ && usesViewport) {
                              instanceDrawCallVector[vertexTestZCallIndex].vertexTestZ.indexCount += call.callDesc.triangleCount * 3;
                              vertexTestZFaceIndicesStart += call.callDesc.triangleCount * 3;
-@@ -1749,6 +2017,16 @@ namespace RT64 {
+@@ -1749,6 +2018,16 @@ namespace RT64 {
                      rasterScene.instanceIndices.push_back(instanceIndex);
                  }
  
@@ -11826,7 +11827,7 @@ index 9fae0d4..f09c6c7 100644
                  instanceDrawCallVector.push_back(instanceDrawCall);
                  globalCallIndex++;
              }
-@@ -1760,7 +2038,215 @@ namespace RT64 {
+@@ -1760,7 +2039,215 @@ namespace RT64 {
          checkRasterScene(rasterScene);
      }
  
@@ -12043,7 +12044,7 @@ index 9fae0d4..f09c6c7 100644
          bool shaderViewRtEnabled = false;
          std::vector<BufferUploader::Upload> shaderUploads = {
              { renderIndicesVector.data(), { 0, renderIndicesVector.size() }, sizeof(interop::RenderIndices), RenderBufferFlag::STORAGE, { }, &renderIndicesBuffer},
-@@ -1816,8 +2302,16 @@ namespace RT64 {
+@@ -1816,8 +2303,16 @@ namespace RT64 {
          }
  #   endif
  
