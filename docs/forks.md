@@ -25,7 +25,7 @@ too), `RT64_HASH_FILLED_FRAMEBUFFERS` (rt64 5e192d2, bf5c70d, 1ff931b, which Exc
 `RT64_REJ_WITHOUT_NEAR_CLIP` (rt64 19014a4, which it turns on too),
 `RT64_MOVE_UNPAIRED_WITH_CAMERA` (rt64 7cec4af, e6c18c3, which it turns on too), `RT64_RECT_OWN_PIXEL_GRID` (rt64
 f754c0d, 401c02e, a9ac524, which it turns on too), `RT64_FIX_LR_SPANNING_RECTS` (rt64 4843534),
-`RT64_UPSCALED_RECT_LAST_TEXEL` (rt64 e504e65, which it turns on too),
+`RT64_UPSCALED_RECT_LAST_TEXEL` (rt64 e504e65, 1d833b1, which it turns on too),
 `ULTRAMODERN_LIBULTRA_THREAD_STOP` (N64ModernRuntime 0df8334),
 `ULTRAMODERN_HOLD_BLOCKED_MESSAGES` (N64ModernRuntime 66539ab), `ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS`
 (N64ModernRuntime bf96a62), `ULTRAMODERN_RSP_TASKS_COPIED` (N64ModernRuntime 0ec6c51),
@@ -1648,4 +1648,9 @@ rt64 72566fb           RT64_SKIP_CAMERA_CUTS: a step the frame before that isn't
                        Excitebike 64's bike lurching 8.4-9.3 against the camera in a hard turn was cut from rest, the
                        picture held for a game frame and then jumped; with this its race has none and its credits
                        keep all seven cuts
+rt64 1d833b1           RT64_UPSCALED_RECT_LAST_TEXEL: the last texel's lambda names its parameter edge, not far,
+                       which Windows' minwindef.h defines as nothing: on Windows `far - first` read `- first`, and
+                       each upscaled rect was kept to texels outside its own (24..43.06 boxed as 1.004..24), so a
+                       Windows build of Excitebike 64 drew its outdoor skies as flat bands, one colour each 8-row
+                       strip, and lost its minimap's outline, its place readout and its dust. A page never did
 ```
